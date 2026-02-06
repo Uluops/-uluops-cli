@@ -1,0 +1,307 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { captureOutput } from './helpers/capture.js';
+
+// Mock the SDK modules — factories cannot reference outer variables (hoisted)
+vi.mock('@uluops/ops-sdk', () => {
+  class OpsApiError extends Error {
+    constructor(
+      public statusCode: number,
+      message: string,
+      public code: string = 'UNKNOWN',
+      public details?: Record<string, unknown>,
+      public requestId?: string
+    ) {
+      super(message);
+      this.name = 'OpsApiError';
+    }
+    toJSON() {
+      return { name: this.name, message: this.message, statusCode: this.statusCode, code: this.code, details: this.details, requestId: this.requestId };
+    }
+  }
+  return {
+    OpsClient: vi.fn().mockReturnValue({}),
+    loadConfig: vi.fn(),
+    OpsApiError,
+  };
+});
+
+vi.mock('@uluops/registry-sdk', () => ({
+  RegistryClient: vi.fn().mockReturnValue({}),
+}));
+
+vi.mock('@uluops/registry-sdk/errors', () => {
+  class RegistryApiError extends Error {
+    constructor(
+      public statusCode: number,
+      message: string,
+      public code: string = 'UNKNOWN',
+      public details?: Record<string, unknown>,
+      public requestId?: string
+    ) {
+      super(message);
+      this.name = 'RegistryApiError';
+    }
+    toJSON() {
+      return { name: this.name, message: this.message, statusCode: this.statusCode, code: this.code };
+    }
+  }
+  return { RegistryApiError };
+});
+
+vi.mock('@uluops/registry-sdk/config', () => ({
+  loadConfig: vi.fn(),
+}));
+
+// Import after mocks are set up
+import { OpsClient, loadConfig as loadOpsConfig, OpsApiError } from '@uluops/ops-sdk';
+import { RegistryClient } from '@uluops/registry-sdk';
+import { RegistryApiError } from '@uluops/registry-sdk/errors';
+import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
+import {
+  createOpsContext,
+  createRegistryContext,
+  createUnauthenticatedContext,
+  handleOpsError,
+  handleRegistryError,
+} from '../src/context.js';
+
+const mockedLoadOpsConfig = vi.mocked(loadOpsConfig);
+const mockedLoadRegistryConfig = vi.mocked(loadRegistryConfig);
+const mockedOpsClient = vi.mocked(OpsClient);
+const mockedRegistryClient = vi.mocked(RegistryClient);
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('createOpsContext', () => {
+  it('should return context with correct flags', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { apiKey: 'ulr_test-key' },
+    } as ReturnType<typeof loadOpsConfig>);
+
+    const ctx = createOpsContext({ json: true, debug: true, quiet: true });
+    expect(ctx.json).toBe(true);
+    expect(ctx.debug).toBe(true);
+    expect(ctx.quiet).toBe(true);
+  });
+
+  it('should create client with API key credentials', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { apiKey: 'ulr_my-key' },
+    } as ReturnType<typeof loadOpsConfig>);
+
+    createOpsContext({});
+    expect(mockedOpsClient).toHaveBeenCalledWith(
+      expect.objectContaining({ apiKey: 'ulr_my-key' })
+    );
+  });
+
+  it('should exit when no credentials found', () => {
+    const output = captureOutput();
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: {},
+    } as ReturnType<typeof loadOpsConfig>);
+
+    expect(() => createOpsContext({})).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('No credentials found');
+    output.restore();
+  });
+
+  it('should accept sessionToken as credentials', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { sessionToken: 'jwt-token' },
+    } as ReturnType<typeof loadOpsConfig>);
+
+    createOpsContext({});
+    expect(mockedOpsClient).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionToken: 'jwt-token' })
+    );
+  });
+
+  it('should accept email+password as credentials', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { email: 'test@example.com', password: 'secret' },
+    } as ReturnType<typeof loadOpsConfig>);
+
+    createOpsContext({});
+    expect(mockedOpsClient).toHaveBeenCalledWith(
+      expect.objectContaining({ email: 'test@example.com', password: 'secret' })
+    );
+  });
+});
+
+describe('createRegistryContext', () => {
+  it('should return context with client', () => {
+    mockedLoadRegistryConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3200',
+      debug: false,
+      credentials: { apiKey: 'ulr_test-key' },
+    } as ReturnType<typeof loadRegistryConfig>);
+
+    const ctx = createRegistryContext({ json: true });
+    expect(ctx.json).toBe(true);
+    expect(ctx.client).toBeDefined();
+  });
+
+  it('should exit when no credentials found', () => {
+    const output = captureOutput();
+    mockedLoadRegistryConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3200',
+      debug: false,
+      credentials: {},
+    } as ReturnType<typeof loadRegistryConfig>);
+
+    expect(() => createRegistryContext({})).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('No credentials found');
+    output.restore();
+  });
+});
+
+describe('createUnauthenticatedContext', () => {
+  it('should return baseUrl and flags without credential check', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: {},
+    } as ReturnType<typeof loadOpsConfig>);
+
+    const ctx = createUnauthenticatedContext({ json: true, quiet: true });
+    expect(ctx.baseUrl).toBe('http://localhost:3100');
+    expect(ctx.json).toBe(true);
+    expect(ctx.quiet).toBe(true);
+  });
+});
+
+describe('handleOpsError', () => {
+  it('should show error message and exit', () => {
+    const output = captureOutput();
+    const error = new OpsApiError(400, 'Bad request', 'VALIDATION_ERROR');
+
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Error: Bad request');
+    output.restore();
+  });
+
+  it('should show JSON in json mode', () => {
+    const output = captureOutput();
+    const error = new OpsApiError(400, 'Bad request', 'VALIDATION_ERROR');
+
+    expect(() => handleOpsError(error, { json: true, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('"statusCode": 400');
+    output.restore();
+  });
+
+  it('should show auth hint for 401', () => {
+    const output = captureOutput();
+    const error = new OpsApiError(401, 'Unauthorized', 'UNAUTHORIZED');
+
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('credentials may be invalid');
+    output.restore();
+  });
+
+  it('should show not found hint for 404', () => {
+    const output = captureOutput();
+    const error = new OpsApiError(404, 'Not found', 'NOT_FOUND');
+
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('not found');
+    output.restore();
+  });
+
+  it('should show rate limit hint for 429', () => {
+    const output = captureOutput();
+    const error = new OpsApiError(429, 'Rate limited', 'RATE_LIMITED');
+
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Rate limited');
+    output.restore();
+  });
+
+  it('should show details in debug mode', () => {
+    const output = captureOutput();
+    const error = new OpsApiError(400, 'Bad request', 'VALIDATION_ERROR', { field: 'name' });
+
+    expect(() => handleOpsError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Details:');
+    expect(output.stderr()).toContain('name');
+    output.restore();
+  });
+
+  it('should show requestId when present', () => {
+    const output = captureOutput();
+    const error = new OpsApiError(500, 'Server error', 'INTERNAL', undefined, 'req-abc-123');
+
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Request ID: req-abc-123');
+    output.restore();
+  });
+
+  it('should handle non-API errors with network hint', () => {
+    const output = captureOutput();
+    const error = new Error('ECONNREFUSED');
+
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('ECONNREFUSED');
+    expect(output.stderr()).toContain('Cannot connect');
+    output.restore();
+  });
+
+  it('should show stack trace for generic errors in debug mode', () => {
+    const output = captureOutput();
+    const error = new Error('Something broke');
+
+    expect(() => handleOpsError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Stack trace:');
+    output.restore();
+  });
+
+  it('should show JSON for generic errors in json mode', () => {
+    const output = captureOutput();
+    const error = new Error('Boom');
+
+    expect(() => handleOpsError(error, { json: true, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('"error"');
+    output.restore();
+  });
+});
+
+describe('handleRegistryError', () => {
+  it('should show error message for RegistryApiError', () => {
+    const output = captureOutput();
+    const error = new RegistryApiError(404, 'Definition not found', 'NOT_FOUND');
+
+    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Definition not found');
+    output.restore();
+  });
+
+  it('should show JSON in json mode', () => {
+    const output = captureOutput();
+    const error = new RegistryApiError(400, 'Invalid YAML', 'VALIDATION_ERROR');
+
+    expect(() => handleRegistryError(error, { json: true, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('"statusCode": 400');
+    output.restore();
+  });
+
+  it('should fall through to generic handler for non-registry errors', () => {
+    const output = captureOutput();
+    const error = new Error('Network fail');
+
+    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Network fail');
+    output.restore();
+  });
+});
