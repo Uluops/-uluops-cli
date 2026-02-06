@@ -81,25 +81,41 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
  * Create CLI context for registry commands
  */
 export function createRegistryContext(options: GlobalOptions): RegistryCliContext {
-  const config = loadRegistryConfig({
-    apiKey: options.apiKey,
+  // Load ops config to get authBaseUrl (ops API URL for login/refresh)
+  const opsConfig = loadOpsConfig({
     baseUrl: options.baseUrl,
+    profile: options.profile,
     debug: options.debug,
   });
 
-  const hasCredentials = config.credentials.apiKey || config.credentials.sessionToken;
+  const config = loadRegistryConfig({
+    apiKey: options.apiKey,
+    baseUrl: options.baseUrl,
+    authBaseUrl: opsConfig.baseUrl,
+    profile: options.profile,
+    debug: options.debug,
+  });
+
+  const hasCredentials =
+    config.credentials.apiKey ||
+    config.credentials.sessionToken ||
+    (config.credentials.email && config.credentials.password);
 
   if (!hasCredentials) {
     exitWithError(
       'No credentials found.\n' +
-        'Set ULUOPS_API_KEY environment variable or use --api-key flag.'
+        'Set ULUOPS_API_KEY environment variable, use --api-key flag,\n' +
+        'or run "ulu auth login" to authenticate.'
     );
   }
 
   const client = new RegistryClient({
     apiKey: config.credentials.apiKey,
+    email: config.credentials.email,
+    password: config.credentials.password,
     sessionToken: config.credentials.sessionToken,
     baseUrl: config.baseUrl,
+    authBaseUrl: config.authBaseUrl,
     debug: config.debug,
   });
 

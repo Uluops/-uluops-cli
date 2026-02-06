@@ -143,8 +143,14 @@ describe('createOpsContext', () => {
 
 describe('createRegistryContext', () => {
   it('should return context with client', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: {},
+    } as ReturnType<typeof loadOpsConfig>);
     mockedLoadRegistryConfig.mockReturnValue({
       baseUrl: 'http://localhost:3200',
+      authBaseUrl: 'http://localhost:3100',
       debug: false,
       credentials: { apiKey: 'ulr_test-key' },
     } as ReturnType<typeof loadRegistryConfig>);
@@ -156,8 +162,14 @@ describe('createRegistryContext', () => {
 
   it('should exit when no credentials found', () => {
     const output = captureOutput();
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: {},
+    } as ReturnType<typeof loadOpsConfig>);
     mockedLoadRegistryConfig.mockReturnValue({
       baseUrl: 'http://localhost:3200',
+      authBaseUrl: 'http://localhost:3100',
       debug: false,
       credentials: {},
     } as ReturnType<typeof loadRegistryConfig>);
