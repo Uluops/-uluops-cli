@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { readFileSync } from 'node:fs';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
 import { withSpinner } from '../utils.js';
-import { formatDefinitions, formatDefinition } from '../formatters/registry.js';
+import { formatDefinitions, formatDefinition, formatValidationResult } from '../formatters/registry.js';
 import type { DefinitionType } from '@uluops/registry-sdk';
 
 /**
@@ -208,6 +208,38 @@ export function registerDefinitionCommands(program: Command): void {
           console.log(JSON.stringify(def, null, 2));
         } else {
           console.log(formatDefinition(def));
+        }
+      } catch (error) {
+        handleRegistryError(error, ctx);
+      }
+    });
+
+  // ulu definitions validate <type>
+  defs
+    .command('validate <type>')
+    .description('Validate YAML without creating a definition')
+    .requiredOption('-f, --file <path>', 'Path to YAML file')
+    .action(async (type: string, options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createRegistryContext(globalOpts);
+
+      try {
+        const yaml = readFileSync(options.file, 'utf-8');
+
+        const result = await withSpinner(
+          ctx,
+          { start: 'Validating...', failure: 'Validation failed' },
+          () => ctx.client.validation.validate(type as DefinitionType, yaml)
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(formatValidationResult(result));
+        }
+
+        if (!result.valid) {
+          process.exit(1);
         }
       } catch (error) {
         handleRegistryError(error, ctx);

@@ -133,6 +133,17 @@ describe('definitions delete', () => {
   });
 });
 
+describe('definitions validate', () => {
+  it('should validate YAML and show result', async () => {
+    mockClient.validation.validate.mockResolvedValue({ valid: true });
+    const output = captureOutput();
+    await parse('definitions', 'validate', 'agent', '--file', '/tmp/test.yaml');
+    expect(mockClient.validation.validate).toHaveBeenCalledWith('agent', expect.any(String));
+    expect(output.stdout()).toContain('Valid');
+    output.restore();
+  });
+});
+
 describe('error handling', () => {
   it('should delegate to handleRegistryError on failure', async () => {
     const error = new Error('Registry fail');

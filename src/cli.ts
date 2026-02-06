@@ -11,9 +11,14 @@ import { registerRunCommands } from './commands/runs.js';
 import { registerIssueCommands } from './commands/issues.js';
 import { registerAnalyticsCommands } from './commands/analytics.js';
 import { registerAdminCommands } from './commands/admin.js';
+import { registerTaxonomyCommands } from './commands/taxonomy.js';
 
 // Registry commands
 import { registerDefinitionCommands } from './commands/definitions.js';
+import { registerVersionCommands } from './commands/versions.js';
+import { registerRenderCommands } from './commands/render.js';
+import { registerDepsCommands } from './commands/deps.js';
+import { registerForkCommands } from './commands/forks.js';
 import { registerModelCommands } from './commands/models.js';
 
 // Get package.json for version
@@ -42,9 +47,14 @@ registerRunCommands(program);
 registerIssueCommands(program);
 registerAnalyticsCommands(program);
 registerAdminCommands(program);
+registerTaxonomyCommands(program);
 
 // Registry commands
 registerDefinitionCommands(program);
+registerVersionCommands(program);
+registerRenderCommands(program);
+registerDepsCommands(program);
+registerForkCommands(program);
 registerModelCommands(program);
 
 // Default action when no command is provided

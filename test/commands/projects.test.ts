@@ -159,6 +159,38 @@ describe('projects trends', () => {
   });
 });
 
+describe('projects rename', () => {
+  it('should rename a project', async () => {
+    mockClient.projects.rename.mockResolvedValue(createProject({ name: 'new-name' }));
+    const output = captureOutput();
+    await parse('projects', 'rename', 'old-name', '--new-name', 'new-name');
+    expect(mockClient.projects.rename).toHaveBeenCalledWith({ oldName: 'old-name', newName: 'new-name' });
+    expect(output.stdout()).toContain('old-name');
+    expect(output.stdout()).toContain('new-name');
+    output.restore();
+  });
+});
+
+describe('projects merge-issues', () => {
+  it('should merge duplicate issues', async () => {
+    mockClient.projects.mergeIssues.mockResolvedValue({
+      targetIssueId: 'target-id-1234',
+      mergedCount: 2,
+      migratedOccurrences: 5,
+    });
+    const output = captureOutput();
+    await parse('projects', 'merge-issues', 'my-proj', '--target', 'target-id-1234', '--sources', 'src-1,src-2');
+    expect(mockClient.projects.mergeIssues).toHaveBeenCalledWith('my-proj', {
+      targetIssueId: 'target-id-1234',
+      sourceIssueIds: ['src-1', 'src-2'],
+      strategy: 'keep_target',
+    });
+    expect(output.stdout()).toContain('Merged 2 issues');
+    expect(output.stdout()).toContain('5 occurrences');
+    output.restore();
+  });
+});
+
 describe('error handling', () => {
   it('should delegate to handleOpsError on failure', async () => {
     const error = new Error('API fail');

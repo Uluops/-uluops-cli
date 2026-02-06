@@ -1,0 +1,139 @@
+import { Command } from 'commander';
+import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
+import { withSpinner } from '../utils.js';
+import { formatDefinitions } from '../formatters/registry.js';
+import type { DefinitionType } from '@uluops/registry-sdk';
+
+/**
+ * Register fork commands
+ */
+export function registerForkCommands(program: Command): void {
+  const forks = program
+    .command('forks')
+    .description('Manage definition forks');
+
+  // ulu forks list <type> <name> <version>
+  forks
+    .command('list <type> <name> <version>')
+    .description('List forks of a definition')
+    .action(async (type: string, name: string, version: string, _, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createRegistryContext(globalOpts);
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          { start: 'Fetching forks...', failure: 'Failed to fetch forks' },
+          () => ctx.client.forks.list(type as DefinitionType, name, version)
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else if (result.items.length === 0) {
+          console.log('No forks found');
+        } else {
+          console.log(formatDefinitions(result.items));
+          console.log(`\n${result.total} fork(s)`);
+        }
+      } catch (error) {
+        handleRegistryError(error, ctx);
+      }
+    });
+
+  // ulu forks create <type> <name> <version>
+  forks
+    .command('create <type> <name> <version>')
+    .description('Fork a definition')
+    .requiredOption('-n, --fork-name <name>', 'Name for the forked definition')
+    .option('--visibility <visibility>', 'Visibility (public|private)', 'private')
+    .option('--display-name <name>', 'Display name for the fork')
+    .option('--description <text>', 'Description for the fork')
+    .action(async (type: string, name: string, version: string, options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createRegistryContext(globalOpts);
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          { start: 'Forking definition...', success: 'Definition forked', failure: 'Failed to fork definition' },
+          () => ctx.client.forks.create(type as DefinitionType, name, version, {
+            name: options.forkName,
+            visibility: options.visibility,
+            displayName: options.displayName,
+            description: options.description,
+          })
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(`Forked as: ${result.definition.type}/${result.definition.name}@${result.definition.version}`);
+        }
+      } catch (error) {
+        handleRegistryError(error, ctx);
+      }
+    });
+
+  // ulu forks check <type> <name> <version>
+  forks
+    .command('check <type> <name> <version>')
+    .description('Check if a definition can be forked')
+    .action(async (type: string, name: string, version: string, _, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createRegistryContext(globalOpts);
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          { start: 'Checking...', failure: 'Failed to check forkability' },
+          () => ctx.client.forks.checkForkable(type as DefinitionType, name, version)
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(`Forkable: ${result.canFork ? 'Yes' : 'No'}`);
+          if (result.reason) {
+            console.log(`Reason: ${result.reason}`);
+          }
+          if (result.requiresSubscription) {
+            console.log('Note: Requires a subscription upgrade');
+          }
+        }
+      } catch (error) {
+        handleRegistryError(error, ctx);
+      }
+    });
+
+  // ulu forks lineage <type> <name> <version>
+  forks
+    .command('lineage <type> <name> <version>')
+    .description('Show fork lineage chain')
+    .action(async (type: string, name: string, version: string, _, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createRegistryContext(globalOpts);
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          { start: 'Fetching lineage...', failure: 'Failed to fetch lineage' },
+          () => ctx.client.forks.getLineage(type as DefinitionType, name, version)
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log('Fork Lineage:');
+          for (const item of result.chain) {
+            console.log(`  ${item.type}/${item.name}@${item.version} (${item.status})`);
+          }
+          console.log(`  -> ${result.current.type}/${result.current.name}@${result.current.version} (current)`);
+          if (result.source) {
+            console.log(`\nOriginal source: ${result.source.type}/${result.source.name}@${result.source.version}`);
+          }
+        }
+      } catch (error) {
+        handleRegistryError(error, ctx);
+      }
+    });
+}

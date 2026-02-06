@@ -177,3 +177,102 @@ describe('issues undo', () => {
     output.restore();
   });
 });
+
+describe('issues create', () => {
+  it('should create a user-submitted issue', async () => {
+    mockClient.issues.create.mockResolvedValue(createIssue({ title: 'Manual bug report' }));
+    const output = captureOutput();
+    await parse('issues', 'create', '--project', 'my-proj', '--title', 'Manual bug report', '--priority', 'critical');
+    expect(mockClient.issues.create).toHaveBeenCalledWith(expect.objectContaining({
+      project: 'my-proj',
+      title: 'Manual bug report',
+      priority: 'critical',
+    }));
+    expect(output.stdout()).toContain('Manual bug report');
+    output.restore();
+  });
+
+  it('should pass optional fields', async () => {
+    mockClient.issues.create.mockResolvedValue(createIssue());
+    const output = captureOutput();
+    await parse('issues', 'create', '--project', 'p', '--title', 't', '--priority', 'suggested',
+      '--severity', 'high', '--validator', 'code-validator', '--file-path', 'src/foo.ts', '--line', '42');
+    expect(mockClient.issues.create).toHaveBeenCalledWith(expect.objectContaining({
+      severity: 'high',
+      validator: 'code-validator',
+      filePath: 'src/foo.ts',
+      lineNumber: 42,
+    }));
+    output.restore();
+  });
+});
+
+describe('issues edit', () => {
+  it('should edit issue metadata', async () => {
+    mockClient.issues.edit.mockResolvedValue(createIssue({ title: 'Updated title', severity: 'high' }));
+    const output = captureOutput();
+    await parse('issues', 'edit', 'abc-123', '--title', 'Updated title', '--severity', 'high');
+    expect(mockClient.issues.edit).toHaveBeenCalledWith('abc-123', expect.objectContaining({
+      title: 'Updated title',
+      severity: 'high',
+    }));
+    expect(output.stdout()).toContain('Updated title');
+    output.restore();
+  });
+});
+
+describe('issues restore', () => {
+  it('should restore a soft-deleted issue', async () => {
+    mockClient.issues.restore.mockResolvedValue({ ...createIssue(), status: 'open' });
+    const output = captureOutput();
+    await parse('issues', 'restore', 'abc-123');
+    expect(mockClient.issues.restore).toHaveBeenCalledWith('abc-123');
+    expect(output.stdout()).toContain('restored');
+    output.restore();
+  });
+});
+
+describe('issues bulk-update', () => {
+  it('should bulk update issue statuses', async () => {
+    mockClient.issues.bulkUpdateStatus.mockResolvedValue([
+      { id: 'id-1', previousStatus: 'open', newStatus: 'completed', fingerprint: 'a', updatedAt: '2025-01-01' },
+      { id: 'id-2', previousStatus: 'open', newStatus: 'completed', fingerprint: 'b', updatedAt: '2025-01-01' },
+    ]);
+    const output = captureOutput();
+    await parse('issues', 'bulk-update', '--ids', 'id-1,id-2', '--status', 'completed', '--reason', 'Fixed all');
+    expect(mockClient.issues.bulkUpdateStatus).toHaveBeenCalledWith([
+      { issueId: 'id-1', status: 'completed', reason: 'Fixed all' },
+      { issueId: 'id-2', status: 'completed', reason: 'Fixed all' },
+    ]);
+    expect(output.stdout()).toContain('Updated 2 issues');
+    output.restore();
+  });
+});
+
+describe('issues by-fingerprint', () => {
+  it('should fetch issue by fingerprint', async () => {
+    mockClient.issues.getByFingerprint.mockResolvedValue(createIssue({ title: 'Fingerprint match' }));
+    const output = captureOutput();
+    await parse('issues', 'by-fingerprint', 'abc123hash', '--project', 'my-proj');
+    expect(mockClient.issues.getByFingerprint).toHaveBeenCalledWith('abc123hash', 'my-proj');
+    expect(output.stdout()).toContain('Fingerprint match');
+    output.restore();
+  });
+});
+
+describe('issues update-by-fingerprint', () => {
+  it('should update issue status by fingerprint', async () => {
+    mockClient.issues.updateStatusByFingerprint.mockResolvedValue({
+      id: 'abc-12345678', previousStatus: 'open', newStatus: 'completed', fingerprint: 'fp', updatedAt: '2025-01-01',
+    });
+    const output = captureOutput();
+    await parse('issues', 'update-by-fingerprint', 'abc123hash', '--project', 'my-proj', '--status', 'completed');
+    expect(mockClient.issues.updateStatusByFingerprint).toHaveBeenCalledWith('abc123hash', 'my-proj', {
+      status: 'completed',
+      reason: undefined,
+    });
+    expect(output.stdout()).toContain('open');
+    expect(output.stdout()).toContain('completed');
+    output.restore();
+  });
+});

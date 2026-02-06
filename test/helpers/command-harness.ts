@@ -14,11 +14,16 @@ export function createMockOpsClient() {
       list: vi.fn(),
       get: vi.fn(),
       create: vi.fn(),
+      update: vi.fn(),
       delete: vi.fn(),
       softDelete: vi.fn(),
       restore: vi.fn(),
+      rename: vi.fn(),
       getSummary: vi.fn(),
       getTrends: vi.fn(),
+      listIssues: vi.fn(),
+      bulkUpdateIssueStatus: vi.fn(),
+      mergeIssues: vi.fn(),
     },
     runs: {
       list: vi.fn(),
@@ -30,6 +35,8 @@ export function createMockOpsClient() {
       validate: vi.fn(),
       diff: vi.fn(),
       archive: vi.fn(),
+      update: vi.fn(),
+      updateById: vi.fn(),
       delete: vi.fn(),
     },
     issues: {
@@ -44,6 +51,10 @@ export function createMockOpsClient() {
       bulkUpdateStatus: vi.fn(),
       listByProject: vi.fn(),
       create: vi.fn(),
+      edit: vi.fn(),
+      restore: vi.fn(),
+      getByFingerprint: vi.fn(),
+      updateStatusByFingerprint: vi.fn(),
       merge: vi.fn(),
     },
     analytics: {
@@ -72,6 +83,9 @@ export function createMockOpsClient() {
       terminateUserSessions: vi.fn(),
       listKeys: vi.fn(),
       revokeKey: vi.fn(),
+    },
+    taxonomy: {
+      get: vi.fn(),
     },
     auth: {
       register: vi.fn(),
@@ -105,10 +119,40 @@ export function createMockRegistryClient() {
       publish: vi.fn(),
       deprecate: vi.fn(),
       delete: vi.fn(),
-      validate: vi.fn(),
-      render: vi.fn(),
-      versions: vi.fn(),
+    },
+    versions: {
+      list: vi.fn(),
       diff: vi.fn(),
+    },
+    validation: {
+      validate: vi.fn(),
+    },
+    dependencies: {
+      get: vi.fn(),
+      getDependents: vi.fn(),
+    },
+    forks: {
+      list: vi.fn(),
+      create: vi.fn(),
+      checkForkable: vi.fn(),
+      getLineage: vi.fn(),
+    },
+    executions: {
+      record: vi.fn(),
+      getStats: vi.fn(),
+    },
+    translation: {
+      getVersion: vi.fn(),
+      retranslate: vi.fn(),
+      upgrade: vi.fn(),
+    },
+    render: {
+      get: vi.fn(),
+      preview: vi.fn(),
+    },
+    users: {
+      get: vi.fn(),
+      batch: vi.fn(),
     },
     models: {
       list: vi.fn(),

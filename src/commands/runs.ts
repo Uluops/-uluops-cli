@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
 import { withSpinner, exitWithError, getFlexibleProperty } from '../utils.js';
 import { formatRuns, formatRun } from '../formatters/ops.js';
-import type { SaveFeaturesListInput } from '@uluops/ops-sdk';
+import type { SaveFeaturesListInput, UpdateRunByNumberInput } from '@uluops/ops-sdk';
 
 /**
  * Read JSON input from file or stdin
@@ -392,6 +392,80 @@ export function registerRunCommands(program: Command): void {
           console.log(JSON.stringify(result, null, 2));
         } else {
           console.log(`Archived ${result.archivedCount} runs`);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu runs update <project>
+  runs
+    .command('update <project>')
+    .description('Update run metadata (scores, tokens) by project and run number')
+    .requiredOption('-n, --number <number>', 'Run number')
+    .option('--score <number>', 'New average score')
+    .option('--passed <boolean>', 'All gates passed (true/false)')
+    .option('-f, --file <path>', 'JSON file with validator updates')
+    .option('--stdin', 'Read validator updates from stdin')
+    .action(async (project: string, options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      try {
+        const input: UpdateRunByNumberInput = {
+          project,
+          runNumber: parseInt(options.number, 10),
+        };
+
+        if (options.score !== undefined) input.averageScore = parseFloat(options.score);
+        if (options.passed !== undefined) input.allGatesPassed = options.passed === 'true';
+
+        // Read validator updates from file/stdin if provided
+        if (options.file || options.stdin) {
+          const data = await readJsonInput(options) as { validators?: unknown[] };
+          if (data.validators) input.validators = data.validators as UpdateRunByNumberInput['validators'];
+        }
+
+        const run = await withSpinner(
+          ctx,
+          { start: 'Updating run...', success: 'Run updated', failure: 'Failed to update run' },
+          () => ctx.client.runs.update(input)
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(run, null, 2));
+        } else {
+          console.log(formatRun(run));
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu runs delete <runId>
+  runs
+    .command('delete <runId>')
+    .description('Delete a run')
+    .option('-y, --yes', 'Skip confirmation')
+    .action(async (runId: string, options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      if (!options.yes) {
+        console.log(`\nThis will permanently delete run: ${runId}`);
+        console.log('To confirm, run again with --yes flag');
+        process.exit(0);
+      }
+
+      try {
+        await withSpinner(
+          ctx,
+          { start: 'Deleting run...', success: 'Run deleted', failure: 'Failed to delete run' },
+          () => ctx.client.runs.delete(runId)
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify({ success: true, runId }, null, 2));
         }
       } catch (error) {
         handleOpsError(error, ctx);

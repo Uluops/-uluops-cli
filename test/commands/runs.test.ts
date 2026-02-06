@@ -165,6 +165,31 @@ describe('runs archive', () => {
   });
 });
 
+describe('runs update', () => {
+  it('should update run metadata by project and run number', async () => {
+    mockClient.runs.update.mockResolvedValue(createRun({ runNumber: 3, averageScore: 92 }));
+    const output = captureOutput();
+    await parse('runs', 'update', 'my-proj', '--number', '3', '--score', '92');
+    expect(mockClient.runs.update).toHaveBeenCalledWith(expect.objectContaining({
+      project: 'my-proj',
+      runNumber: 3,
+      averageScore: 92,
+    }));
+    expect(output.stdout()).toContain('Run Number: 3');
+    output.restore();
+  });
+});
+
+describe('runs delete', () => {
+  it('should delete a run with --yes', async () => {
+    mockClient.runs.delete.mockResolvedValue(undefined);
+    const output = captureOutput();
+    await parse('runs', 'delete', 'run-uuid-123', '--yes');
+    expect(mockClient.runs.delete).toHaveBeenCalledWith('run-uuid-123');
+    output.restore();
+  });
+});
+
 describe('error handling', () => {
   it('should delegate to handleOpsError on failure', async () => {
     const error = new Error('API fail');

@@ -218,4 +218,65 @@ export function registerProjectCommands(program: Command): void {
         handleOpsError(error, ctx);
       }
     });
+
+  // ulu projects rename <name>
+  projects
+    .command('rename <name>')
+    .description('Rename a project')
+    .requiredOption('-n, --new-name <name>', 'New project name')
+    .action(async (name: string, options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      try {
+        const project = await withSpinner(
+          ctx,
+          { start: 'Renaming project...', success: 'Project renamed', failure: 'Failed to rename project' },
+          () => ctx.client.projects.rename({ oldName: name, newName: options.newName })
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(project, null, 2));
+        } else {
+          console.log(`Project renamed: ${name} → ${project.name}`);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu projects merge-issues <name>
+  projects
+    .command('merge-issues <name>')
+    .description('Merge duplicate issues into a target issue')
+    .requiredOption('-t, --target <id>', 'Target issue ID (issues merge into this)')
+    .requiredOption('-s, --sources <ids>', 'Comma-separated source issue IDs')
+    .option('--strategy <strategy>', 'Merge strategy (keep_target, keep_highest_priority)', 'keep_target')
+    .action(async (name: string, options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      const sourceIds = (options.sources as string).split(',').map((id: string) => id.trim()).filter(Boolean);
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          { start: 'Merging issues...', success: 'Issues merged', failure: 'Failed to merge issues' },
+          () => ctx.client.projects.mergeIssues(name, {
+            targetIssueId: options.target,
+            sourceIssueIds: sourceIds,
+            strategy: options.strategy as 'keep_target' | 'keep_highest_priority',
+          })
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(`Merged ${result.mergedCount} issues into ${result.targetIssueId.slice(0, 8)}`);
+          console.log(`Migrated ${result.migratedOccurrences} occurrences`);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
 }
