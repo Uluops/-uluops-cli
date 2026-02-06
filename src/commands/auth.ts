@@ -88,8 +88,6 @@ export function registerAuthCommands(program: Command): void {
           { start: 'Logging in...', success: 'Login successful', failure: 'Login failed' },
           async () => {
             const client = new OpsClient({
-              email: options.email,
-              password: options.password,
               baseUrl: ctx.baseUrl,
             });
             return client.login(options.email, options.password);
