@@ -23,6 +23,10 @@ import { registerModelCommands } from './commands/models.js';
 import { registerExecutionCommands } from './commands/executions.js';
 import { registerTranslationCommands } from './commands/translation.js';
 
+// Infrastructure commands
+import { registerConfigCommands } from './commands/config.js';
+import { registerCompletionCommands } from './commands/completion.js';
+
 // Get package.json for version
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -60,6 +64,10 @@ registerForkCommands(program);
 registerModelCommands(program);
 registerExecutionCommands(program);
 registerTranslationCommands(program);
+
+// Infrastructure commands
+registerConfigCommands(program);
+registerCompletionCommands(program);
 
 // Default action when no command is provided
 program.action(() => {

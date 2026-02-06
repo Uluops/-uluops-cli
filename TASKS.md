@@ -2,8 +2,8 @@
 
 > Auto-generated from CLI completeness audit. Updated as commands are implemented.
 >
-> **Overall**: ~108/114 SDK methods wired (95%)
-> **Ops SDK**: ~76/83 (92%) | **Registry SDK**: 31/31 (100%)
+> **Overall**: ~108/114 SDK methods wired (95%) + config + completions
+> **Ops SDK**: ~76/83 (92%) | **Registry SDK**: 31/31 (100%) | **Infrastructure**: 2/2 (100%)
 
 ## Legend
 - [ ] Not started
@@ -90,8 +90,8 @@
 - [x] `ulu admin users bulk-deactivate` — Bulk deactivation (`client.admin.bulkDeactivate`)
 
 ### Infrastructure
-- [ ] `ulu config` — Profile/settings management
-- [ ] Shell completions (`ulu completion bash/zsh/fish`)
+- [x] `ulu config` — Profile/settings management (list, get, set, unset, profiles, use, path)
+- [x] Shell completions (`ulu completion bash/zsh/fish`)
 
 ---
 
