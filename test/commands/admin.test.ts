@@ -155,6 +155,18 @@ describe('admin sessions terminate', () => {
   });
 });
 
+describe('admin users bulk-deactivate', () => {
+  it('should bulk deactivate users', async () => {
+    mockClient.admin.bulkDeactivate.mockResolvedValue({ succeeded: 3, failed: 0 });
+    const output = captureOutput();
+    await parse('admin', 'users', 'bulk-deactivate', '--ids', 'user-1,user-2,user-3');
+    expect(mockClient.admin.bulkDeactivate).toHaveBeenCalledWith(['user-1', 'user-2', 'user-3']);
+    expect(output.stdout()).toContain('Deactivated');
+    expect(output.stdout()).toContain('3 succeeded');
+    output.restore();
+  });
+});
+
 describe('admin keys list', () => {
   it('should display admin API keys table', async () => {
     mockClient.admin.listKeys.mockResolvedValue({

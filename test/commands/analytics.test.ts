@@ -135,3 +135,66 @@ describe('analytics resolution', () => {
     output.restore();
   });
 });
+
+describe('analytics taxonomy', () => {
+  it('should display taxonomy distribution', async () => {
+    mockClient.analytics.getTaxonomyDistribution.mockResolvedValue([
+      { domain: 'SEM', mode: 'VAL', count: 15 },
+      { domain: 'STR', mode: 'OMI', count: 8 },
+    ]);
+    const output = captureOutput();
+    await parse('analytics', 'taxonomy');
+    expect(output.stdout()).toContain('SEM');
+    expect(output.stdout()).toContain('VAL');
+    expect(output.stdout()).toContain('15');
+    output.restore();
+  });
+
+  it('should show message when empty', async () => {
+    mockClient.analytics.getTaxonomyDistribution.mockResolvedValue([]);
+    const output = captureOutput();
+    await parse('analytics', 'taxonomy');
+    expect(output.stdout()).toContain('No taxonomy data');
+    output.restore();
+  });
+});
+
+describe('analytics full-taxonomy', () => {
+  it('should display full taxonomy breakdown', async () => {
+    mockClient.analytics.getFullTaxonomy.mockResolvedValue({
+      data: {
+        byDomain: [{ domain: 'SEM', count: 20 }],
+        bySeverity: [{ severity: 'high', count: 10 }],
+      },
+      computedAt: '2025-06-15T10:00:00Z',
+    });
+    const output = captureOutput();
+    await parse('analytics', 'full-taxonomy');
+    expect(output.stdout()).toContain('Full Taxonomy Analytics');
+    expect(output.stdout()).toContain('SEM');
+    expect(output.stdout()).toContain('20');
+    output.restore();
+  });
+});
+
+describe('analytics trends', () => {
+  it('should display trend summary', async () => {
+    mockClient.analytics.getTrendSummary.mockResolvedValue([
+      { metric: 'open_issues', current: 10, previous: 15, change: -5, changePercent: -33.3, trend: 'improving' },
+      { metric: 'resolution_rate', current: 87, previous: 75, change: 12, changePercent: 16.0, trend: 'improving' },
+    ]);
+    const output = captureOutput();
+    await parse('analytics', 'trends');
+    expect(output.stdout()).toContain('open_issues');
+    expect(output.stdout()).toContain('improving');
+    output.restore();
+  });
+
+  it('should show message when empty', async () => {
+    mockClient.analytics.getTrendSummary.mockResolvedValue([]);
+    const output = captureOutput();
+    await parse('analytics', 'trends');
+    expect(output.stdout()).toContain('No trend data');
+    output.restore();
+  });
+});

@@ -20,6 +20,8 @@ import { registerRenderCommands } from './commands/render.js';
 import { registerDepsCommands } from './commands/deps.js';
 import { registerForkCommands } from './commands/forks.js';
 import { registerModelCommands } from './commands/models.js';
+import { registerExecutionCommands } from './commands/executions.js';
+import { registerTranslationCommands } from './commands/translation.js';
 
 // Get package.json for version
 const __filename = fileURLToPath(import.meta.url);
@@ -56,6 +58,8 @@ registerRenderCommands(program);
 registerDepsCommands(program);
 registerForkCommands(program);
 registerModelCommands(program);
+registerExecutionCommands(program);
+registerTranslationCommands(program);
 
 // Default action when no command is provided
 program.action(() => {

@@ -171,6 +171,260 @@ export function registerAuthCommands(program: Command): void {
       }
     });
 
+  // ulu auth register
+  auth
+    .command('register')
+    .description('Register a new account')
+    .requiredOption('-e, --email <email>', 'Email address')
+    .requiredOption('-p, --password <password>', 'Password')
+    .action(async (options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createUnauthenticatedContext(globalOpts);
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          { start: 'Registering...', success: 'Registration successful', failure: 'Registration failed' },
+          async () => {
+            const client = new OpsClient({ baseUrl: ctx.baseUrl });
+            return client.auth.register({ email: options.email, password: options.password });
+          }
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(`Account registered for ${options.email}`);
+          console.log('You can now login with: ulu auth login');
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu auth forgot-password
+  auth
+    .command('forgot-password')
+    .description('Request a password reset email')
+    .requiredOption('-e, --email <email>', 'Email address')
+    .action(async (options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createUnauthenticatedContext(globalOpts);
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          { start: 'Sending reset email...', success: 'Reset email sent', failure: 'Failed to send reset email' },
+          async () => {
+            const client = new OpsClient({ baseUrl: ctx.baseUrl });
+            return client.auth.forgotPassword(options.email);
+          }
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(result.message);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu auth reset-password
+  auth
+    .command('reset-password')
+    .description('Reset password using a token')
+    .requiredOption('-t, --token <token>', 'Reset token from email')
+    .requiredOption('-p, --password <password>', 'New password')
+    .action(async (options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createUnauthenticatedContext(globalOpts);
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          { start: 'Resetting password...', success: 'Password reset', failure: 'Failed to reset password' },
+          async () => {
+            const client = new OpsClient({ baseUrl: ctx.baseUrl });
+            return client.auth.resetPassword({ token: options.token, password: options.password });
+          }
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(result.message);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu auth change-password
+  auth
+    .command('change-password')
+    .description('Change your current password')
+    .requiredOption('-c, --current <password>', 'Current password')
+    .requiredOption('-n, --new-password <password>', 'New password')
+    .action(async (options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          { start: 'Changing password...', success: 'Password changed', failure: 'Failed to change password' },
+          () => ctx.client.auth.changePassword({
+            currentPassword: options.current,
+            newPassword: options.newPassword,
+          })
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(result.message);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu auth profile
+  auth
+    .command('profile')
+    .description('View your profile')
+    .action(async (_, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      try {
+        const data = await withSpinner(
+          ctx,
+          { start: 'Fetching profile...', failure: 'Failed to fetch profile' },
+          () => ctx.client.auth.getProfile()
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(data, null, 2));
+        } else {
+          const u = data.user;
+          console.log(`Email: ${u.email}`);
+          console.log(`Role: ${u.role}`);
+          if (u.username) console.log(`Username: ${u.username}`);
+          if (u.name) console.log(`Name: ${u.name}`);
+          if (u.bio) console.log(`Bio: ${u.bio}`);
+          if (u.timezone) console.log(`Timezone: ${u.timezone}`);
+          if (u.websiteUrl) console.log(`Website: ${u.websiteUrl}`);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu auth update-profile
+  auth
+    .command('update-profile')
+    .description('Update your profile')
+    .option('-u, --username <username>', 'Username')
+    .option('-n, --name <name>', 'Display name')
+    .option('--bio <bio>', 'Bio')
+    .option('--timezone <tz>', 'Timezone')
+    .option('--website <url>', 'Website URL')
+    .action(async (options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      const input: Record<string, string | undefined> = {};
+      if (options.username !== undefined) input.username = options.username;
+      if (options.name !== undefined) input.name = options.name;
+      if (options.bio !== undefined) input.bio = options.bio;
+      if (options.timezone !== undefined) input.timezone = options.timezone;
+      if (options.website !== undefined) input.websiteUrl = options.website;
+
+      if (Object.keys(input).length === 0) {
+        console.error('Error: At least one field must be specified');
+        process.exit(1);
+      }
+
+      try {
+        const data = await withSpinner(
+          ctx,
+          { start: 'Updating profile...', success: 'Profile updated', failure: 'Failed to update profile' },
+          () => ctx.client.auth.updateProfile(input)
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(data, null, 2));
+        } else {
+          console.log(`Profile updated for ${data.user.email}`);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu auth sessions
+  const authSessions = auth
+    .command('sessions')
+    .description('Manage your sessions');
+
+  // ulu auth sessions list
+  authSessions
+    .command('list')
+    .description('List your active sessions')
+    .action(async (_, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      try {
+        const sessions = await withSpinner(
+          ctx,
+          { start: 'Fetching sessions...', failure: 'Failed to fetch sessions' },
+          () => ctx.client.auth.listSessions()
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(sessions, null, 2));
+        } else if (sessions.length === 0) {
+          console.log('No active sessions');
+        } else {
+          console.log(`Active sessions: ${sessions.length}\n`);
+          for (const s of sessions) {
+            console.log(`  ${s.id.slice(0, 8)}  ${s.ipAddress ?? '-'}  ${s.createdAt}`);
+          }
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu auth sessions revoke <id>
+  authSessions
+    .command('revoke <sessionId>')
+    .description('Revoke a session')
+    .action(async (sessionId: string, _, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      try {
+        await withSpinner(
+          ctx,
+          { start: 'Revoking session...', success: 'Session revoked', failure: 'Failed to revoke session' },
+          () => ctx.client.auth.revokeSession(sessionId)
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify({ success: true, sessionId }, null, 2));
+        } else {
+          console.log(`Session ${sessionId.slice(0, 8)} revoked`);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
   // ulu auth api-keys
   const apiKeys = auth
     .command('api-keys')

@@ -171,6 +171,23 @@ describe('projects rename', () => {
   });
 });
 
+describe('projects bulk-update-issues', () => {
+  it('should batch update issue statuses', async () => {
+    mockClient.projects.bulkUpdateIssueStatus.mockResolvedValue([
+      { issueId: 'issue-1', status: 'completed' },
+      { issueId: 'issue-2', status: 'completed' },
+    ]);
+    const output = captureOutput();
+    await parse('projects', 'bulk-update-issues', 'my-proj', '--ids', 'issue-1,issue-2', '--status', 'completed', '--reason', 'Fixed in v2');
+    expect(mockClient.projects.bulkUpdateIssueStatus).toHaveBeenCalledWith('my-proj', [
+      { issueId: 'issue-1', status: 'completed', reason: 'Fixed in v2' },
+      { issueId: 'issue-2', status: 'completed', reason: 'Fixed in v2' },
+    ]);
+    expect(output.stdout()).toContain('Updated 2 issues');
+    output.restore();
+  });
+});
+
 describe('projects merge-issues', () => {
   it('should merge duplicate issues', async () => {
     mockClient.projects.mergeIssues.mockResolvedValue({

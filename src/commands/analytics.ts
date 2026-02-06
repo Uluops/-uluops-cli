@@ -371,6 +371,130 @@ export function registerAnalyticsCommands(program: Command): void {
         handleOpsError(error, ctx);
       }
     });
+  // ulu analytics taxonomy
+  analytics
+    .command('taxonomy')
+    .description('Get taxonomy distribution across issues')
+    .option('-p, --project <name>', 'Filter by project')
+    .option('-d, --days <number>', 'Time window in days', '30')
+    .option('-l, --limit <number>', 'Maximum results', '20')
+    .action(async (options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      try {
+        const data = await withSpinner(
+          ctx,
+          { start: 'Fetching taxonomy distribution...', failure: 'Failed to fetch taxonomy distribution' },
+          () => ctx.client.analytics.getTaxonomyDistribution({
+            project: options.project,
+            days: parseInt(options.days, 10),
+            limit: parseInt(options.limit, 10),
+          })
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(data, null, 2));
+        } else if (data.length === 0) {
+          console.log('No taxonomy data found');
+        } else {
+          const columns: Column<(typeof data)[0]>[] = [
+            { header: 'DOMAIN', accessor: (d) => d.domain ?? '-', width: 10 },
+            { header: 'MODE', accessor: (d) => d.mode ?? '-', width: 10 },
+            { header: 'COUNT', accessor: (d) => String(d.count ?? 0), width: 8, align: 'right' },
+            { header: '%', accessor: (d) => `${d.percentage?.toFixed(1) ?? '-'}%`, width: 8, align: 'right' },
+          ];
+          console.log(formatTable(data, columns));
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu analytics full-taxonomy
+  analytics
+    .command('full-taxonomy')
+    .description('Get full taxonomy analytics breakdown')
+    .option('-p, --project <name>', 'Filter by project')
+    .option('-d, --days <number>', 'Time window in days', '30')
+    .option('-l, --limit <number>', 'Maximum results', '20')
+    .action(async (options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          { start: 'Fetching full taxonomy...', failure: 'Failed to fetch full taxonomy' },
+          () => ctx.client.analytics.getFullTaxonomy({
+            project: options.project,
+            days: parseInt(options.days, 10),
+            limit: parseInt(options.limit, 10),
+          })
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log('Full Taxonomy Analytics:\n');
+          console.log(`  Computed at: ${result.computedAt}`);
+
+          const d = result.data;
+          if (d.byDomain && d.byDomain.length > 0) {
+            console.log('\n  By Domain:');
+            for (const item of d.byDomain) {
+              console.log(`    ${item.domain}: ${item.count}`);
+            }
+          }
+          if (d.bySeverity && d.bySeverity.length > 0) {
+            console.log('\n  By Severity:');
+            for (const item of d.bySeverity) {
+              console.log(`    ${item.severity}: ${item.count}`);
+            }
+          }
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu analytics trends
+  analytics
+    .command('trends')
+    .description('Get trend summary metrics')
+    .option('-p, --project <name>', 'Filter by project')
+    .option('-d, --days <number>', 'Time window in days', '30')
+    .option('-l, --limit <number>', 'Maximum results', '20')
+    .action(async (options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      try {
+        const data = await withSpinner(
+          ctx,
+          { start: 'Fetching trend summary...', failure: 'Failed to fetch trend summary' },
+          () => ctx.client.analytics.getTrendSummary({
+            project: options.project,
+            days: parseInt(options.days, 10),
+            limit: parseInt(options.limit, 10),
+          })
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(data, null, 2));
+        } else if (data.length === 0) {
+          console.log('No trend data found');
+        } else {
+          console.log('Trend Summary:\n');
+          for (const item of data) {
+            const arrow = item.trend === 'improving' ? '↓' : item.trend === 'degrading' ? '↑' : '→';
+            console.log(`  ${item.metric}: ${arrow} ${item.trend} (${item.change >= 0 ? '+' : ''}${item.change})`);
+          }
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
 }
 
 /**

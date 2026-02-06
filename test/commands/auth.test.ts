@@ -147,3 +147,88 @@ describe('auth api-keys revoke', () => {
     output.restore();
   });
 });
+
+describe('auth change-password', () => {
+  it('should change password', async () => {
+    mockClient.auth.changePassword.mockResolvedValue({ message: 'Password changed successfully' });
+    const output = captureOutput();
+    await parse('auth', 'change-password', '--current', 'oldpass', '--new-password', 'newpass');
+    expect(mockClient.auth.changePassword).toHaveBeenCalledWith({
+      currentPassword: 'oldpass',
+      newPassword: 'newpass',
+    });
+    expect(output.stdout()).toContain('Password changed');
+    output.restore();
+  });
+});
+
+describe('auth profile', () => {
+  it('should display profile', async () => {
+    mockClient.auth.getProfile.mockResolvedValue({
+      user: {
+        email: 'me@example.com',
+        role: 'developer',
+        username: 'myuser',
+        name: 'My Name',
+        bio: 'A dev',
+      },
+    });
+    const output = captureOutput();
+    await parse('auth', 'profile');
+    expect(output.stdout()).toContain('Email: me@example.com');
+    expect(output.stdout()).toContain('Username: myuser');
+    expect(output.stdout()).toContain('Name: My Name');
+    output.restore();
+  });
+});
+
+describe('auth update-profile', () => {
+  it('should update profile fields', async () => {
+    mockClient.auth.updateProfile.mockResolvedValue({
+      user: { email: 'me@example.com' },
+    });
+    const output = captureOutput();
+    await parse('auth', 'update-profile', '--username', 'newuser', '--bio', 'Updated bio');
+    expect(mockClient.auth.updateProfile).toHaveBeenCalledWith(
+      expect.objectContaining({ username: 'newuser', bio: 'Updated bio' })
+    );
+    expect(output.stdout()).toContain('Profile updated');
+    output.restore();
+  });
+
+  it('should require at least one field', async () => {
+    await expect(parse('auth', 'update-profile')).rejects.toThrow('process.exit(1)');
+  });
+});
+
+describe('auth sessions list', () => {
+  it('should list sessions', async () => {
+    mockClient.auth.listSessions.mockResolvedValue([
+      { id: '550e8400-e29b-41d4-a716-446655440000', ipAddress: '10.0.0.1', createdAt: '2025-01-15T10:00:00Z' },
+    ]);
+    const output = captureOutput();
+    await parse('auth', 'sessions', 'list');
+    expect(output.stdout()).toContain('Active sessions: 1');
+    expect(output.stdout()).toContain('10.0.0.1');
+    output.restore();
+  });
+
+  it('should show empty message', async () => {
+    mockClient.auth.listSessions.mockResolvedValue([]);
+    const output = captureOutput();
+    await parse('auth', 'sessions', 'list');
+    expect(output.stdout()).toContain('No active sessions');
+    output.restore();
+  });
+});
+
+describe('auth sessions revoke', () => {
+  it('should revoke a session', async () => {
+    mockClient.auth.revokeSession.mockResolvedValue(undefined);
+    const output = captureOutput();
+    await parse('auth', 'sessions', 'revoke', 'sess-123');
+    expect(mockClient.auth.revokeSession).toHaveBeenCalledWith('sess-123');
+    expect(output.stdout()).toContain('revoked');
+    output.restore();
+  });
+});

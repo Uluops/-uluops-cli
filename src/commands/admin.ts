@@ -291,6 +291,34 @@ export function registerAdminCommands(program: Command): void {
       }
     });
 
+  // ulu admin users bulk-deactivate
+  users
+    .command('bulk-deactivate')
+    .description('Bulk deactivate multiple users')
+    .requiredOption('--ids <ids>', 'Comma-separated user IDs')
+    .action(async (options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      const userIds = (options.ids as string).split(',').map((id: string) => id.trim()).filter(Boolean);
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          { start: `Deactivating ${userIds.length} users...`, success: 'Users deactivated', failure: 'Failed to bulk deactivate' },
+          () => ctx.client.admin.bulkDeactivate(userIds)
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(`Deactivated: ${result.succeeded} succeeded, ${result.failed} failed`);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
   // ============================================
   // SESSION MANAGEMENT
   // ============================================

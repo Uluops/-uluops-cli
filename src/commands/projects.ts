@@ -245,6 +245,41 @@ export function registerProjectCommands(program: Command): void {
       }
     });
 
+  // ulu projects bulk-update-issues <name>
+  projects
+    .command('bulk-update-issues <name>')
+    .description('Batch update issue statuses for a project')
+    .requiredOption('--ids <ids>', 'Comma-separated issue IDs')
+    .requiredOption('-s, --status <status>', 'New status (open, completed, deferred, wontfix)')
+    .option('-r, --reason <reason>', 'Reason for status change')
+    .action(async (name: string, options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      const issueIds = (options.ids as string).split(',').map((id: string) => id.trim()).filter(Boolean);
+      const updates = issueIds.map((id: string) => ({
+        issueId: id,
+        status: options.status,
+        reason: options.reason,
+      }));
+
+      try {
+        const results = await withSpinner(
+          ctx,
+          { start: `Updating ${updates.length} issues...`, success: 'Issues updated', failure: 'Failed to update issues' },
+          () => ctx.client.projects.bulkUpdateIssueStatus(name, updates)
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(results, null, 2));
+        } else {
+          console.log(`Updated ${results.length} issues in project ${name}`);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
   // ulu projects merge-issues <name>
   projects
     .command('merge-issues <name>')
