@@ -1,4 +1,5 @@
 import ora, { type Ora } from 'ora';
+import { writeFileSync, renameSync } from 'node:fs';
 
 /**
  * Create a spinner for long-running operations
@@ -81,6 +82,16 @@ export function exitWithError(message: string, code = 1): never {
 export function redact(value: string, showLast = 4): string {
   if (value.length <= showLast) return '[REDACTED]';
   return `${'*'.repeat(value.length - showLast)}${value.slice(-showLast)}`;
+}
+
+/**
+ * Write a file atomically by writing to a temp file then renaming.
+ * Prevents corruption if the process crashes mid-write.
+ */
+export function writeFileAtomic(filePath: string, content: string): void {
+  const tmpPath = `${filePath}.tmp`;
+  writeFileSync(tmpPath, content, { mode: 0o600 });
+  renameSync(tmpPath, filePath);
 }
 
 /**

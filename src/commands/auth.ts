@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { writeFileSync, mkdirSync, existsSync, readFileSync } from 'node:fs';
+import { mkdirSync, existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import { OpsClient } from '@uluops/ops-sdk';
@@ -9,7 +9,7 @@ import {
   handleOpsError,
   type GlobalOptions,
 } from '../context.js';
-import { withSpinner } from '../utils.js';
+import { withSpinner, writeFileAtomic, exitWithError } from '../utils.js';
 import { formatApiKeys } from '../formatters/ops.js';
 
 /**
@@ -54,8 +54,8 @@ function saveCredentials(
   // Update the profile
   stored[profile] = credentials;
 
-  // Write back
-  writeFileSync(credPath, JSON.stringify(stored, null, 2));
+  // Write back atomically (write to .tmp then rename)
+  writeFileAtomic(credPath, JSON.stringify(stored, null, 2));
 }
 
 /**
@@ -96,12 +96,23 @@ export function registerAuthCommands(program: Command): void {
 
         // Save credentials
         const profile = globalOpts.profile ?? 'default';
-        saveCredentials(profile, {
-          type: 'session',
-          sessionToken: result.sessionToken,
-          expiresAt: result.expiresAt,
-          email: options.email,
-        });
+        try {
+          saveCredentials(profile, {
+            type: 'session',
+            sessionToken: result.sessionToken,
+            expiresAt: result.expiresAt,
+            email: options.email,
+          });
+        } catch (saveError) {
+          const msg = saveError instanceof Error ? saveError.message : String(saveError);
+          if (msg.includes('EACCES') || msg.includes('permission denied')) {
+            exitWithError(
+              `Cannot save credentials: permission denied.\n` +
+                'Check file permissions on ~/.uluops/credentials.json'
+            );
+          }
+          exitWithError(`Failed to save credentials: ${msg}`);
+        }
 
         if (ctx.json) {
           console.log(JSON.stringify({ success: true, profile }, null, 2));

@@ -10,6 +10,7 @@ vi.mock('node:fs', async (importOriginal) => {
     existsSync: vi.fn(() => false),
     readFileSync: vi.fn(() => '{}'),
     writeFileSync: vi.fn(),
+    renameSync: vi.fn(),
     mkdirSync: vi.fn(),
   };
 });
@@ -97,7 +98,8 @@ describe('config set', () => {
     await parse('config', 'set', 'opsBaseUrl', 'http://new:3100');
     expect(mockedWriteFileSync).toHaveBeenCalledWith(
       expect.stringContaining('profiles.json'),
-      expect.stringContaining('"opsBaseUrl": "http://new:3100"')
+      expect.stringContaining('"opsBaseUrl": "http://new:3100"'),
+      expect.objectContaining({ mode: 0o600 })
     );
   });
 
@@ -105,7 +107,8 @@ describe('config set', () => {
     await parse('config', 'set', 'debug', 'true');
     expect(mockedWriteFileSync).toHaveBeenCalledWith(
       expect.stringContaining('profiles.json'),
-      expect.stringContaining('"debug": true')
+      expect.stringContaining('"debug": true'),
+      expect.objectContaining({ mode: 0o600 })
     );
   });
 

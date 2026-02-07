@@ -2,6 +2,9 @@ import { OpsClient, loadConfig as loadOpsConfig, OpsApiError } from '@uluops/ops
 import { RegistryClient } from '@uluops/registry-sdk';
 import { RegistryApiError } from '@uluops/registry-sdk/errors';
 import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 import { exitWithError } from './utils.js';
 
 /**
@@ -37,6 +40,25 @@ export interface RegistryCliContext {
 }
 
 /**
+ * Check if the stored session for a profile is expired.
+ * Used to give a specific error message instead of generic "No credentials found".
+ */
+function isSessionExpired(profile: string): boolean {
+  const credPath = join(homedir(), '.uluops', 'credentials.json');
+  if (!existsSync(credPath)) return false;
+  try {
+    const stored = JSON.parse(readFileSync(credPath, 'utf-8'));
+    const creds = stored[profile];
+    if (creds?.type === 'session' && creds.expiresAt) {
+      return new Date(creds.expiresAt) <= new Date();
+    }
+  } catch {
+    // Ignore parse errors — handled elsewhere
+  }
+  return false;
+}
+
+/**
  * Create CLI context for ops commands
  */
 export function createOpsContext(options: GlobalOptions): OpsCliContext {
@@ -53,6 +75,13 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
     (config.credentials.email && config.credentials.password);
 
   if (!hasCredentials) {
+    const profile = options.profile ?? 'default';
+    if (isSessionExpired(profile)) {
+      exitWithError(
+        `Session expired for profile "${profile}".\n` +
+          'Run "ulu auth login" to re-authenticate.'
+      );
+    }
     exitWithError(
       'No credentials found.\n' +
         'Set ULUOPS_API_KEY environment variable, use --api-key flag,\n' +
@@ -107,6 +136,13 @@ export function createRegistryContext(options: GlobalOptions): RegistryCliContex
     (config.credentials.email && config.credentials.password);
 
   if (!hasCredentials) {
+    const profile = options.profile ?? 'default';
+    if (isSessionExpired(profile)) {
+      exitWithError(
+        `Session expired for profile "${profile}".\n` +
+          'Run "ulu auth login" to re-authenticate.'
+      );
+    }
     exitWithError(
       'No credentials found.\n' +
         'Set ULUOPS_API_KEY environment variable, use --api-key flag,\n' +

@@ -8,12 +8,28 @@ import type { SaveFeaturesListInput, UpdateRunByNumberInput } from '@uluops/ops-
 /**
  * Read JSON input from file or stdin
  */
+/** Timeout for reading from stdin (30 seconds) */
+const STDIN_TIMEOUT_MS = 30_000;
+
 async function readJsonInput(options: { file?: string; stdin?: boolean }): Promise<unknown> {
   if (options.stdin) {
-    // Read from stdin
+    // Read from stdin with timeout to prevent indefinite hangs
     const chunks: Buffer[] = [];
-    for await (const chunk of process.stdin) {
-      chunks.push(chunk as Buffer);
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('stdin timeout')), STDIN_TIMEOUT_MS)
+    );
+    const read = async () => {
+      for await (const chunk of process.stdin) {
+        chunks.push(chunk as Buffer);
+      }
+    };
+    try {
+      await Promise.race([read(), timeout]);
+    } catch (error) {
+      if (error instanceof Error && error.message === 'stdin timeout') {
+        exitWithError(`No input received on stdin after ${STDIN_TIMEOUT_MS / 1000}s. Pipe data or use --file instead.`);
+      }
+      throw error;
     }
     const content = Buffer.concat(chunks).toString('utf-8');
     try {

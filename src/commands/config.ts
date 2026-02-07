@@ -1,8 +1,9 @@
 import { Command } from 'commander';
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
+import { readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { GlobalOptions } from '../context.js';
+import { writeFileAtomic } from '../utils.js';
 
 /**
  * Config file paths
@@ -52,7 +53,7 @@ function saveProfiles(profiles: ProfilesFile): void {
   if (!existsSync(CONFIG_DIR)) {
     mkdirSync(CONFIG_DIR, { recursive: true });
   }
-  writeFileSync(PROFILES_PATH, JSON.stringify(profiles, null, 2) + '\n');
+  writeFileAtomic(PROFILES_PATH, JSON.stringify(profiles, null, 2) + '\n');
 }
 
 /**
