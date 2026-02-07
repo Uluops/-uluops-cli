@@ -46,7 +46,8 @@ export async function withSpinner<T>(
 /**
  * Format a date for human-readable CLI display
  */
-export function formatDisplayDate(date: string | Date): string {
+export function formatDisplayDate(date: string | Date | undefined | null): string {
+  if (!date) return 'N/A';
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleString();
 }

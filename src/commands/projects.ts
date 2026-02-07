@@ -57,6 +57,11 @@ export function registerProjectCommands(program: Command): void {
           () => ctx.client.projects.get(name)
         );
 
+        if (!project || !project.id) {
+          console.error('Error: Project not found');
+          process.exit(1);
+        }
+
         if (ctx.json) {
           console.log(JSON.stringify(project, null, 2));
         } else {

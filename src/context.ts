@@ -60,14 +60,19 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
     );
   }
 
-  const client = new OpsClient({
-    apiKey: config.credentials.apiKey,
-    sessionToken: config.credentials.sessionToken,
-    email: config.credentials.email,
-    password: config.credentials.password,
-    baseUrl: config.baseUrl,
-    debug: config.debug,
-  });
+  let client: OpsClient;
+  try {
+    client = new OpsClient({
+      apiKey: config.credentials.apiKey,
+      sessionToken: config.credentials.sessionToken,
+      email: config.credentials.email,
+      password: config.credentials.password,
+      baseUrl: config.baseUrl,
+      debug: config.debug,
+    });
+  } catch (error) {
+    exitWithError(error instanceof Error ? error.message : String(error));
+  }
 
   return {
     client,
@@ -109,15 +114,20 @@ export function createRegistryContext(options: GlobalOptions): RegistryCliContex
     );
   }
 
-  const client = new RegistryClient({
-    apiKey: config.credentials.apiKey,
-    email: config.credentials.email,
-    password: config.credentials.password,
-    sessionToken: config.credentials.sessionToken,
-    baseUrl: config.baseUrl,
-    authBaseUrl: config.authBaseUrl,
-    debug: config.debug,
-  });
+  let client: RegistryClient;
+  try {
+    client = new RegistryClient({
+      apiKey: config.credentials.apiKey,
+      email: config.credentials.email,
+      password: config.credentials.password,
+      sessionToken: config.credentials.sessionToken,
+      baseUrl: config.baseUrl,
+      authBaseUrl: config.authBaseUrl,
+      debug: config.debug,
+    });
+  } catch (error) {
+    exitWithError(error instanceof Error ? error.message : String(error));
+  }
 
   return {
     client,
