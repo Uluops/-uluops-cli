@@ -131,7 +131,10 @@ export function formatAliasResolution(resolution: AliasResolution): string {
 export function formatVersions(versions: VersionListItem[]): string {
   const columns: Column<VersionListItem>[] = [
     { header: 'VERSION', accessor: 'version', width: 12 },
-    { header: 'STATUS', accessor: 'status', width: 12 },
+    { header: 'HASH', accessor: (v: VersionListItem) => {
+      return v.hash ? v.hash.replace('sha256:', '').slice(0, 8) : '';
+    }, width: 10 },
+    { header: 'CHANGE', accessor: (v: VersionListItem) => v.changeSummary || '', width: 24 },
     { header: 'CREATED', accessor: (v: VersionListItem) => formatDisplayDate(v.createdAt), width: 20 },
   ];
   return formatTable(versions, columns);
