@@ -251,4 +251,30 @@ describe('getFlexibleProperty', () => {
     const obj = { workflowType: 'camel', workflow_type: 'snake' };
     expect(getFlexibleProperty(obj, 'workflowType', 'default')).toBe('camel');
   });
+
+  it('returns default when camelCase key exists but is undefined', () => {
+    const obj = { workflowType: undefined };
+    expect(getFlexibleProperty(obj, 'workflowType', 'fallback')).toBe('fallback');
+  });
+
+  it('returns default when snake_case key exists but is undefined', () => {
+    const obj = { workflow_type: undefined };
+    expect(getFlexibleProperty(obj, 'workflowType', 'fallback')).toBe('fallback');
+  });
+
+  it('returns falsy values that are not undefined', () => {
+    expect(getFlexibleProperty({ count: 0 }, 'count', 99)).toBe(0);
+    expect(getFlexibleProperty({ flag: false }, 'flag', true)).toBe(false);
+    expect(getFlexibleProperty({ name: '' }, 'name', 'default')).toBe('');
+    expect(getFlexibleProperty({ value: null }, 'value', 'default')).toBe(null);
+  });
+
+  it('handles empty object', () => {
+    expect(getFlexibleProperty({}, 'anything', 42)).toBe(42);
+  });
+
+  it('works with typed default values', () => {
+    const result = getFlexibleProperty<string[]>({ items: ['a', 'b'] }, 'items', []);
+    expect(result).toEqual(['a', 'b']);
+  });
 });

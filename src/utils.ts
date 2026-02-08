@@ -95,14 +95,16 @@ export function writeFileAtomic(filePath: string, content: string): void {
 }
 
 /**
- * Convert camelCase to snake_case
+ * Convert camelCase string to snake_case.
+ * @param str - The camelCase string to convert (e.g. "someField" → "some_field")
  */
 export function toSnakeCase(str: string): string {
   return str.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
 }
 
 /**
- * Convert snake_case to camelCase
+ * Convert snake_case string to camelCase.
+ * @param str - The snake_case string to convert (e.g. "some_field" → "someField")
  */
 export function toCamelCase(str: string): string {
   return str.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
@@ -111,6 +113,9 @@ export function toCamelCase(str: string): string {
 /**
  * Recursively normalize object keys from snake_case to camelCase.
  * Accepts both formats — keys already in camelCase pass through unchanged.
+ * Primitives and null values are returned as-is.
+ * @param input - The value to normalize (object, array, or primitive)
+ * @returns A deep copy with all object keys converted to camelCase
  */
 export function normalizeKeys(input: unknown): unknown {
   if (Array.isArray(input)) {
@@ -127,8 +132,15 @@ export function normalizeKeys(input: unknown): unknown {
 }
 
 /**
- * Get a property from an object, trying camelCase first then snake_case
- * Useful for handling API responses that may use either format
+ * Get a property from an object, trying camelCase first then snake_case.
+ *
+ * The UluOps API returns snake_case keys, but the SDK normalizes them to camelCase.
+ * Some responses (especially nested/dynamic objects) may arrive in either format
+ * depending on whether they've been normalized. This helper abstracts that away.
+ *
+ * @param obj - The object to read from
+ * @param camelCaseKey - The property name in camelCase (snake_case is derived automatically)
+ * @param defaultValue - Fallback if neither key exists or is undefined
  */
 export function getFlexibleProperty<T, O extends object = object>(
   obj: O,

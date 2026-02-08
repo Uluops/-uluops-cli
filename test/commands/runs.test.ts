@@ -190,6 +190,82 @@ describe('runs delete', () => {
   });
 });
 
+describe('runs list with numeric options', () => {
+  it('should pass limit option as number', async () => {
+    mockClient.runs.listByProject.mockResolvedValue([]);
+    const output = captureOutput();
+    await parse('runs', 'list', 'my-proj', '--limit', '5');
+    expect(mockClient.runs.listByProject).toHaveBeenCalledWith('my-proj', expect.objectContaining({
+      limit: 5,
+    }));
+    output.restore();
+  });
+
+  it('should use default limit when not specified', async () => {
+    mockClient.runs.listByProject.mockResolvedValue([]);
+    const output = captureOutput();
+    await parse('runs', 'list', 'my-proj');
+    expect(mockClient.runs.listByProject).toHaveBeenCalledWith('my-proj', expect.objectContaining({
+      limit: 20,
+    }));
+    output.restore();
+  });
+});
+
+describe('runs archive with boundary values', () => {
+  it('should pass keep-last as number', async () => {
+    mockClient.runs.archive.mockResolvedValue({ archivedCount: 0 });
+    const output = captureOutput();
+    await parse('runs', 'archive', 'my-proj', '--keep-last', '1');
+    expect(mockClient.runs.archive).toHaveBeenCalledWith(expect.objectContaining({
+      keepLast: 1,
+    }));
+    output.restore();
+  });
+
+  it('should pass before-run as number', async () => {
+    mockClient.runs.archive.mockResolvedValue({ archivedCount: 3 });
+    const output = captureOutput();
+    await parse('runs', 'archive', 'my-proj', '--before-run', '10');
+    expect(mockClient.runs.archive).toHaveBeenCalledWith(expect.objectContaining({
+      beforeRunNumber: 10,
+    }));
+    output.restore();
+  });
+});
+
+describe('runs update with numeric options', () => {
+  it('should parse score as float', async () => {
+    mockClient.runs.update.mockResolvedValue(createRun({ runNumber: 1, averageScore: 85.5 }));
+    const output = captureOutput();
+    await parse('runs', 'update', 'my-proj', '--number', '1', '--score', '85.5');
+    expect(mockClient.runs.update).toHaveBeenCalledWith(expect.objectContaining({
+      averageScore: 85.5,
+    }));
+    output.restore();
+  });
+
+  it('should handle score of 0', async () => {
+    mockClient.runs.update.mockResolvedValue(createRun({ runNumber: 1, averageScore: 0 }));
+    const output = captureOutput();
+    await parse('runs', 'update', 'my-proj', '--number', '1', '--score', '0');
+    expect(mockClient.runs.update).toHaveBeenCalledWith(expect.objectContaining({
+      averageScore: 0,
+    }));
+    output.restore();
+  });
+
+  it('should handle score of 100', async () => {
+    mockClient.runs.update.mockResolvedValue(createRun({ runNumber: 1, averageScore: 100 }));
+    const output = captureOutput();
+    await parse('runs', 'update', 'my-proj', '--number', '1', '--score', '100');
+    expect(mockClient.runs.update).toHaveBeenCalledWith(expect.objectContaining({
+      averageScore: 100,
+    }));
+    output.restore();
+  });
+});
+
 describe('error handling', () => {
   it('should delegate to handleOpsError on failure', async () => {
     const error = new Error('API fail');

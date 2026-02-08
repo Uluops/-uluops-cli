@@ -316,4 +316,59 @@ describe('handleRegistryError', () => {
     expect(output.stderr()).toContain('Network fail');
     output.restore();
   });
+
+  it('should show registry-specific auth hint for 401', () => {
+    const output = captureOutput();
+    const error = new RegistryApiError(401, 'Unauthorized', 'UNAUTHORIZED');
+
+    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('ULUOPS_API_KEY or session token');
+    output.restore();
+  });
+
+  it('should show registry-specific not found hint for 404', () => {
+    const output = captureOutput();
+    const error = new RegistryApiError(404, 'Not found', 'NOT_FOUND');
+
+    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('type, name, and version');
+    output.restore();
+  });
+
+  it('should show registry-specific validation hint for 400', () => {
+    const output = captureOutput();
+    const error = new RegistryApiError(400, 'Bad input', 'VALIDATION_ERROR');
+
+    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('YAML file');
+    output.restore();
+  });
+
+  it('should show rate limit hint for 429', () => {
+    const output = captureOutput();
+    const error = new RegistryApiError(429, 'Too many requests', 'RATE_LIMITED');
+
+    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Rate limited');
+    output.restore();
+  });
+
+  it('should show details in debug mode', () => {
+    const output = captureOutput();
+    const error = new RegistryApiError(400, 'Bad', 'VALIDATION_ERROR', { field: 'yaml' });
+
+    expect(() => handleRegistryError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Details:');
+    expect(output.stderr()).toContain('yaml');
+    output.restore();
+  });
+
+  it('should show requestId when present', () => {
+    const output = captureOutput();
+    const error = new RegistryApiError(500, 'Error', 'INTERNAL', undefined, 'req-xyz-789');
+
+    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Request ID: req-xyz-789');
+    output.restore();
+  });
 });
