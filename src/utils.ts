@@ -27,11 +27,11 @@ export interface WithSpinnerOptions {
  * Execute an async operation with spinner feedback
  */
 export async function withSpinner<T>(
-  ctx: { quiet: boolean },
+  ctx: { quiet: boolean; json?: boolean },
   options: WithSpinnerOptions,
   fn: () => Promise<T>
 ): Promise<T> {
-  const spinner = ctx.quiet ? null : createSpinner(options.start);
+  const spinner = (ctx.quiet || ctx.json) ? null : createSpinner(options.start);
 
   try {
     spinner?.start();

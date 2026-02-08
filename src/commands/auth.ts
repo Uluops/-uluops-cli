@@ -108,7 +108,7 @@ export function registerAuthCommands(program: Command): void {
           ctx,
           { start: 'Logging in...', success: 'Login successful', failure: 'Login failed' },
           async () => {
-            const client = new OpsClient({ baseUrl: ctx.baseUrl, debug: ctx.debug });
+            const client = new OpsClient({ baseUrl: ctx.baseUrl, debug: ctx.debug, email: options.email, password: options.password });
             return client.login(options.email, options.password);
           }
         );
@@ -140,6 +140,12 @@ export function registerAuthCommands(program: Command): void {
           console.log('You can now use other ulu commands.');
         }
       } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (message.includes('No credentials configured') || message.includes('credentials')) {
+          console.error('Error: Invalid email or password.');
+          console.error('\nHint: Check your email and password, then try again.');
+          process.exit(1);
+        }
         handleOpsError(error, ctx);
       }
     });

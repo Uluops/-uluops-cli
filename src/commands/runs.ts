@@ -11,6 +11,11 @@ import type { SaveFeaturesListInput, UpdateRunByNumberInput } from '@uluops/ops-
 /** Timeout for reading from stdin (30 seconds) */
 const STDIN_TIMEOUT_MS = 30_000;
 
+/** Strip UTF-8 BOM (byte order mark) that some editors prepend */
+function stripBom(content: string): string {
+  return content.charCodeAt(0) === 0xFEFF ? content.slice(1) : content;
+}
+
 async function readJsonInput(options: { file?: string; stdin?: boolean }): Promise<unknown> {
   if (options.stdin) {
     // Read from stdin with timeout to prevent indefinite hangs
@@ -31,7 +36,7 @@ async function readJsonInput(options: { file?: string; stdin?: boolean }): Promi
       }
       throw error;
     }
-    const content = Buffer.concat(chunks).toString('utf-8');
+    const content = stripBom(Buffer.concat(chunks).toString('utf-8'));
     try {
       return JSON.parse(content);
     } catch {
@@ -43,9 +48,18 @@ async function readJsonInput(options: { file?: string; stdin?: boolean }): Promi
     if (!existsSync(options.file)) {
       exitWithError(`File not found: ${options.file}`);
     }
-    const content = readFileSync(options.file, 'utf-8');
+    let content: string;
     try {
-      return JSON.parse(content);
+      content = readFileSync(options.file, 'utf-8');
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException).code;
+      if (code === 'EISDIR') {
+        exitWithError(`${options.file} is a directory, not a file`);
+      }
+      exitWithError(`Cannot read file: ${options.file}`);
+    }
+    try {
+      return JSON.parse(stripBom(content));
     } catch {
       exitWithError(`Invalid JSON in file: ${options.file}`);
     }
