@@ -276,3 +276,33 @@ describe('issues update-by-fingerprint', () => {
     output.restore();
   });
 });
+
+describe('error handling', () => {
+  it('should delegate to handleOpsError on list failure', async () => {
+    const error = new Error('API fail');
+    mockClient.issues.listByProject.mockRejectedValue(error);
+    await expect(parse('issues', 'list', 'my-proj')).rejects.toThrow('API fail');
+    expect(mockedHandleOpsError).toHaveBeenCalledWith(error, expect.any(Object));
+  });
+
+  it('should delegate to handleOpsError on get failure', async () => {
+    const error = new Error('Not found');
+    mockClient.issues.get.mockRejectedValue(error);
+    await expect(parse('issues', 'get', 'bad-id')).rejects.toThrow('Not found');
+    expect(mockedHandleOpsError).toHaveBeenCalledWith(error, expect.any(Object));
+  });
+
+  it('should delegate to handleOpsError on update failure', async () => {
+    const error = new Error('Invalid status');
+    mockClient.issues.updateStatus.mockRejectedValue(error);
+    await expect(parse('issues', 'update', 'abc-123', '--status', 'completed')).rejects.toThrow('Invalid status');
+    expect(mockedHandleOpsError).toHaveBeenCalledWith(error, expect.any(Object));
+  });
+
+  it('should delegate to handleOpsError on create failure', async () => {
+    const error = new Error('Validation failed');
+    mockClient.issues.create.mockRejectedValue(error);
+    await expect(parse('issues', 'create', '--project', 'p', '--title', 't', '--priority', 'critical')).rejects.toThrow('Validation failed');
+    expect(mockedHandleOpsError).toHaveBeenCalledWith(error, expect.any(Object));
+  });
+});

@@ -21,6 +21,7 @@ vi.mock('node:fs', async (importOriginal) => {
 
 import { createOpsContext, handleOpsError } from '../../src/context.js';
 import { registerRunCommands } from '../../src/commands/runs.js';
+import { existsSync, readFileSync } from 'node:fs';
 
 const mockedCreateOpsContext = vi.mocked(createOpsContext);
 const mockedHandleOpsError = vi.mocked(handleOpsError);
@@ -262,6 +263,33 @@ describe('runs update with numeric options', () => {
     expect(mockClient.runs.update).toHaveBeenCalledWith(expect.objectContaining({
       averageScore: 100,
     }));
+    output.restore();
+  });
+});
+
+describe('readJsonInput error paths', () => {
+  it('should exit when file does not exist', async () => {
+    vi.mocked(existsSync).mockReturnValueOnce(false);
+    const output = captureOutput();
+    await expect(parse('runs', 'save', '--file', '/tmp/missing.json')).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('File not found');
+    expect(output.stderr()).toContain('/tmp/missing.json');
+    output.restore();
+  });
+
+  it('should exit when file contains invalid JSON', async () => {
+    vi.mocked(existsSync).mockReturnValueOnce(true);
+    vi.mocked(readFileSync).mockReturnValueOnce('not valid json {{{');
+    const output = captureOutput();
+    await expect(parse('runs', 'save', '--file', '/tmp/bad.json')).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Invalid JSON in file');
+    output.restore();
+  });
+
+  it('should exit when neither --file nor --stdin is provided', async () => {
+    const output = captureOutput();
+    await expect(parse('runs', 'save')).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('--file or --stdin');
     output.restore();
   });
 });
