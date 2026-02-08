@@ -6,12 +6,15 @@ import { createPublicApiKey } from '../helpers/mock-factories.js';
 import type { OpsCliContext } from '../../src/context.js';
 
 vi.mock('../../src/context.js');
+const mockLogin = vi.fn();
+const mockLogout = vi.fn();
 vi.mock('@uluops/ops-sdk', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@uluops/ops-sdk')>();
   return {
     ...actual,
     OpsClient: vi.fn().mockImplementation(() => ({
-      logout: vi.fn().mockResolvedValue({ sessionsRevoked: 2 }),
+      login: mockLogin,
+      logout: mockLogout,
     })),
     loadConfig: vi.fn().mockReturnValue({ baseUrl: 'http://localhost:3100', debug: false, credentials: {} }),
   };
@@ -42,10 +45,6 @@ const mockedHandleOpsError = vi.mocked(handleOpsError);
 type MockClient = ReturnType<typeof createMockOpsClient>;
 let mockClient: MockClient;
 
-// Mock global fetch for login tests
-const mockFetch = vi.fn();
-vi.stubGlobal('fetch', mockFetch);
-
 beforeEach(() => {
   mockClient = createMockOpsClient();
   mockedCreateOpsContext.mockReturnValue(
@@ -58,7 +57,8 @@ beforeEach(() => {
     quiet: true,
   } as ReturnType<typeof createUnauthenticatedContext>);
   mockedHandleOpsError.mockImplementation((error) => { throw error; });
-  mockFetch.mockReset();
+  mockLogin.mockReset();
+  mockLogout.mockReset().mockResolvedValue({ sessionsRevoked: 2 });
 });
 
 function parse(...args: string[]) {
@@ -74,22 +74,14 @@ describe('auth login', () => {
   });
 
   it('should login and save credentials', async () => {
-    mockFetch.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve({
-        data: {
-          user: { email: 'test@example.com' },
-          sessionToken: 'test-token',
-          expiresAt: '2025-12-31T00:00:00Z',
-        },
-      }),
+    mockLogin.mockResolvedValue({
+      user: { email: 'test@example.com' },
+      sessionToken: 'test-token',
+      expiresAt: '2025-12-31T00:00:00Z',
     });
     const output = captureOutput();
     await parse('auth', 'login', '--email', 'test@example.com', '--password', 'secret');
-    expect(mockFetch).toHaveBeenCalledWith(
-      'http://localhost:3100/auth/login',
-      expect.objectContaining({ method: 'POST' })
-    );
+    expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'secret');
     expect(output.stdout()).toContain('Credentials saved');
     output.restore();
   });
