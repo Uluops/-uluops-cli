@@ -108,10 +108,28 @@ export function registerAuthCommands(program: Command): void {
           ctx,
           { start: 'Logging in...', success: 'Login successful', failure: 'Login failed' },
           async () => {
-            const client = new OpsClient({
-              baseUrl: ctx.baseUrl,
+            // Call the login endpoint directly — the SDK's auth strategy
+            // either intercepts 401s with a misleading "No credentials"
+            // error (when null) or sends an empty Bearer token (when set).
+            const response = await fetch(`${ctx.baseUrl}/auth/login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ email: options.email, password: options.password }),
             });
-            return client.login(options.email, options.password);
+
+            const body = await response.json() as Record<string, unknown>;
+
+            if (!response.ok) {
+              const err = body.error as Record<string, string> | undefined;
+              throw new Error(err?.message ?? `Login failed (HTTP ${response.status})`);
+            }
+
+            const data = body.data as {
+              user: Record<string, unknown>;
+              sessionToken: string;
+              expiresAt: string;
+            };
+            return data;
           }
         );
 

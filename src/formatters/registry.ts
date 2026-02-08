@@ -109,19 +109,14 @@ export function formatAliases(aliases: ModelAlias[]): string {
  * Format alias resolution result
  */
 export function formatAliasResolution(resolution: AliasResolution): string {
-  if (!resolution.resolved) {
+  if (!resolution.target) {
     return `Alias "${resolution.alias}" not found`;
   }
 
   const lines = [
     `Alias: ${resolution.alias}`,
-    `Provider: ${resolution.provider}`,
-    `Model ID: ${resolution.modelId}`,
+    `Target: ${resolution.target}`,
   ];
-
-  if (resolution.deprecated) {
-    lines.push('Status: DEPRECATED');
-  }
 
   if (resolution.model) {
     lines.push('', 'Model Details:', formatModel(resolution.model));

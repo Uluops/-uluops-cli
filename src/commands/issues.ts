@@ -119,7 +119,7 @@ export function registerIssueCommands(program: Command): void {
   issues
     .command('search')
     .description('Search issues across projects')
-    .requiredOption('-q, --query <text>', 'Search query')
+    .requiredOption('--query <text>', 'Search query')
     .option('-p, --projects <names>', 'Filter by project names (comma-separated)')
     .option('-s, --status <status>', 'Filter by status')
     .option('--priority <priority>', 'Filter by priority')
