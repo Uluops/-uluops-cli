@@ -1,5 +1,5 @@
 import ora, { type Ora } from 'ora';
-import { writeFileSync, renameSync } from 'node:fs';
+import { writeFileSync, renameSync, unlinkSync } from 'node:fs';
 
 /**
  * Create a spinner for long-running operations
@@ -90,8 +90,13 @@ export function redact(value: string, showLast = 4): string {
  */
 export function writeFileAtomic(filePath: string, content: string): void {
   const tmpPath = `${filePath}.tmp`;
-  writeFileSync(tmpPath, content, { mode: 0o600 });
-  renameSync(tmpPath, filePath);
+  try {
+    writeFileSync(tmpPath, content, { mode: 0o600 });
+    renameSync(tmpPath, filePath);
+  } catch (error) {
+    try { unlinkSync(tmpPath); } catch { /* tmp may not exist */ }
+    throw error;
+  }
 }
 
 /**

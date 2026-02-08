@@ -38,7 +38,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Login flow no longer passes email/password to OpsClient constructor, preventing "Session expired" errors on unauthenticated login POST
 
 ### Testing
-- 252 tests across command integration, context/error handling, formatters, and utilities
+- 253 tests across command integration, context/error handling, formatters, and utilities
 - Pure function coverage for utils (29 tests), table formatter (16), ops formatter (19), registry formatter (25)
 - Context creation and error handler tests (21 tests)
 - Command integration tests for all modules: projects, issues, runs, analytics, auth, admin, definitions, models (79 tests)
