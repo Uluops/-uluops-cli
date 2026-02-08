@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner } from '../utils.js';
+import { withSpinner, parseIntOption } from '../utils.js';
 import {
   formatProjects,
   formatProject,
@@ -202,7 +202,7 @@ export function registerProjectCommands(program: Command): void {
         const trends = await withSpinner(
           ctx,
           { start: 'Fetching trends...', failure: 'Failed to fetch trends' },
-          () => ctx.client.projects.getTrends(name, { days: parseInt(options.days, 10) })
+          () => ctx.client.projects.getTrends(name, { days: parseIntOption(options.days, '--days') })
         );
 
         if (ctx.json) {

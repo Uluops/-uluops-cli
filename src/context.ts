@@ -5,7 +5,7 @@ import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
-import { exitWithError } from './utils.js';
+import { exitWithError, parseIntOption } from './utils.js';
 
 /**
  * Global CLI options passed from commander
@@ -17,6 +17,7 @@ export interface GlobalOptions {
   json?: boolean;
   debug?: boolean;
   quiet?: boolean;
+  timeout?: string;
 }
 
 /**
@@ -96,6 +97,8 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
 
   requireCredentials(hasCredentials, options.profile ?? 'default');
 
+  const timeout = options.timeout ? parseIntOption(options.timeout, '--timeout') : undefined;
+
   let client: OpsClient;
   try {
     client = new OpsClient({
@@ -105,6 +108,7 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
       password: config.credentials.password,
       baseUrl: config.baseUrl,
       debug: config.debug,
+      timeout,
     });
   } catch (error) {
     exitWithError(error instanceof Error ? error.message : String(error));
@@ -144,6 +148,8 @@ export function createRegistryContext(options: GlobalOptions): RegistryCliContex
 
   requireCredentials(hasCredentials, options.profile ?? 'default');
 
+  const timeout = options.timeout ? parseIntOption(options.timeout, '--timeout') : undefined;
+
   let client: RegistryClient;
   try {
     client = new RegistryClient({
@@ -154,6 +160,7 @@ export function createRegistryContext(options: GlobalOptions): RegistryCliContex
       baseUrl: config.baseUrl,
       authBaseUrl: config.authBaseUrl,
       debug: config.debug,
+      timeout,
     });
   } catch (error) {
     exitWithError(error instanceof Error ? error.message : String(error));
@@ -217,6 +224,13 @@ function printApiErrorDetails(
       console.error(`\nHint: ${hints.validation ?? 'Invalid input. Check the command arguments.'}`);
     } else if (error.code === 'RATE_LIMITED' || error.statusCode === 429) {
       console.error('\nHint: Rate limited. Wait a moment and try again.');
+    } else if (error.code === 'SERVICE_UNAVAILABLE' || error.statusCode === 503) {
+      const retryAfter = (error.details as Record<string, unknown>)?.retryAfter;
+      if (retryAfter) {
+        console.error(`\nHint: Service unavailable. Try again in ${retryAfter} seconds.`);
+      } else {
+        console.error('\nHint: Service unavailable. Try again in a few moments.');
+      }
     }
 
     if (ctx.debug && error.details) {

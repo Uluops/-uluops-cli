@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner, formatDisplayDate, getFlexibleProperty } from '../utils.js';
+import { withSpinner, formatDisplayDate, getFlexibleProperty, parseIntOption } from '../utils.js';
 import { formatTable, formatKeyValue, type Column } from '../formatters/table.js';
 import type { UserRole, SubscriptionTier } from '@uluops/ops-sdk';
 
@@ -74,8 +74,8 @@ export function registerAdminCommands(program: Command): void {
             role: options.role as UserRole | undefined,
             subscriptionTier: options.tier as SubscriptionTier | undefined,
             isActive: options.inactive ? false : undefined,
-            limit: parseInt(options.limit, 10),
-            page: parseInt(options.page, 10),
+            limit: parseIntOption(options.limit, '--limit'),
+            page: parseIntOption(options.page, '--page'),
           })
         );
 
@@ -344,8 +344,8 @@ export function registerAdminCommands(program: Command): void {
           { start: 'Fetching sessions...', failure: 'Failed to fetch sessions' },
           () => ctx.client.admin.listSessions({
             userId: options.user,
-            limit: parseInt(options.limit, 10),
-            page: parseInt(options.page, 10),
+            limit: parseIntOption(options.limit, '--limit'),
+            page: parseIntOption(options.page, '--page'),
           })
         );
 
@@ -448,8 +448,8 @@ export function registerAdminCommands(program: Command): void {
           () => ctx.client.admin.listKeys({
             userId: options.user,
             search: options.search,
-            limit: parseInt(options.limit, 10),
-            page: parseInt(options.page, 10),
+            limit: parseIntOption(options.limit, '--limit'),
+            page: parseIntOption(options.page, '--page'),
           })
         );
 

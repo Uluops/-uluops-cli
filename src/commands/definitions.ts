@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { readFileSync } from 'node:fs';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
-import { withSpinner } from '../utils.js';
+import { withSpinner, parseIntOption } from '../utils.js';
 import { formatDefinitions, formatDefinition, formatValidationResult } from '../formatters/registry.js';
 import type { DefinitionType } from '@uluops/registry-sdk';
 
@@ -38,8 +38,8 @@ export function registerDefinitionCommands(program: Command): void {
             status: options.status,
             domain: options.domain,
             visibility: options.visibility,
-            limit: parseInt(options.limit, 10),
-            offset: parseInt(options.offset, 10),
+            limit: parseIntOption(options.limit, '--limit'),
+            offset: parseIntOption(options.offset, '--offset'),
             search: options.search,
           })
         );

@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import type { DefinitionType } from '@uluops/registry-sdk';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
-import { withSpinner } from '../utils.js';
+import { withSpinner, parseIntOption } from '../utils.js';
 
 /**
  * Register execution commands
@@ -56,7 +56,7 @@ export function registerExecutionCommands(program: Command): void {
         const stats = await withSpinner(
           ctx,
           { start: 'Fetching execution stats...', failure: 'Failed to fetch stats' },
-          () => ctx.client.executions.getStats(type as DefinitionType, name, version, parseInt(options.window, 10))
+          () => ctx.client.executions.getStats(type as DefinitionType, name, version, parseIntOption(options.window, '--window'))
         );
 
         if (ctx.json) {

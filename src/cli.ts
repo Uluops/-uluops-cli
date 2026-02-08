@@ -27,21 +27,40 @@ import { registerTranslationCommands } from './commands/translation.js';
 import { registerConfigCommands } from './commands/config.js';
 import { registerCompletionCommands } from './commands/completion.js';
 
+// Global unhandled rejection handler (defense-in-depth)
+process.on('unhandledRejection', (reason) => {
+  const debug = process.argv.includes('--debug');
+  console.error('Error: An unexpected error occurred.');
+  if (debug && reason instanceof Error && reason.stack) {
+    console.error('\nStack trace:', reason.stack);
+  } else if (!debug) {
+    console.error('Run with --debug for more details.');
+  }
+  process.exit(1);
+});
+
 // Get package.json for version
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const packageJsonPath = join(__dirname, '..', 'package.json');
-const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+let version = '0.0.0';
+try {
+  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
+  version = packageJson.version;
+} catch {
+  // Broken install — use fallback version
+}
 
 const program = new Command();
 
 program
   .name('ulu')
   .description('UluOps CLI - validation tracking and registry management')
-  .version(packageJson.version, '-V, --version', 'Output the version number')
+  .version(version, '-V, --version', 'Output the version number')
   .option('--api-key <key>', 'API key (overrides environment variable)')
   .option('--profile <name>', 'Config profile to use', 'default')
   .option('--base-url <url>', 'API base URL')
+  .option('--timeout <ms>', 'Request timeout in milliseconds (default: 30000)')
   .option('--json', 'Output in JSON format for scripting')
   .option('--debug', 'Enable debug output')
   .option('-q, --quiet', 'Suppress spinners and non-essential output');

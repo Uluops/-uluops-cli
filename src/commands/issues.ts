@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner } from '../utils.js';
+import { withSpinner, parseIntOption } from '../utils.js';
 import { formatIssues, formatIssue } from '../formatters/ops.js';
 import type { Status, Priority, Severity, FailureDomain, IssueType } from '@uluops/ops-sdk';
 
@@ -37,7 +37,7 @@ export function registerIssueCommands(program: Command): void {
             severity: options.severity as Severity | undefined,
             validator: options.validator,
             failureDomain: options.domain as FailureDomain | undefined,
-            limit: parseInt(options.limit, 10),
+            limit: parseIntOption(options.limit, '--limit'),
             includeResolved: options.includeResolved,
           })
         );
@@ -137,7 +137,7 @@ export function registerIssueCommands(program: Command): void {
             projects: options.projects?.split(','),
             status: options.status as Status | undefined,
             priority: options.priority as Priority | undefined,
-            limit: parseInt(options.limit, 10),
+            limit: parseIntOption(options.limit, '--limit'),
           })
         );
 
@@ -334,7 +334,7 @@ export function registerIssueCommands(program: Command): void {
             category: options.category,
             description: options.description,
             filePath: options.filePath,
-            lineNumber: options.line ? parseInt(options.line, 10) : undefined,
+            lineNumber: options.line ? parseIntOption(options.line, '--line') : undefined,
             failureCode: options.failureCode,
             failureDomain: options.domain as FailureDomain | undefined,
             type: options.type as IssueType | undefined,
@@ -374,7 +374,7 @@ export function registerIssueCommands(program: Command): void {
       if (options.priority !== undefined) input.priority = options.priority;
       if (options.category !== undefined) input.category = options.category;
       if (options.filePath !== undefined) input.filePath = options.filePath;
-      if (options.line !== undefined) input.lineNumber = parseInt(options.line, 10);
+      if (options.line !== undefined) input.lineNumber = parseIntOption(options.line, '--line');
       if (options.failureCode !== undefined) input.failureCode = options.failureCode;
       if (options.domain !== undefined) input.failureDomain = options.domain;
       if (options.type !== undefined) input.type = options.type;

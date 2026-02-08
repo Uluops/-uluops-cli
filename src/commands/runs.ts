@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { readFileSync, existsSync } from 'node:fs';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner, exitWithError, getFlexibleProperty, normalizeKeys } from '../utils.js';
+import { withSpinner, exitWithError, getFlexibleProperty, normalizeKeys, parseIntOption, parseFloatOption } from '../utils.js';
 import { formatRuns, formatRun } from '../formatters/ops.js';
 import type { SaveFeaturesListInput, UpdateRunByNumberInput } from '@uluops/ops-sdk';
 
@@ -20,9 +20,10 @@ async function readJsonInput(options: { file?: string; stdin?: boolean }): Promi
   if (options.stdin) {
     // Read from stdin with timeout to prevent indefinite hangs
     const chunks: Buffer[] = [];
-    const timeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error('stdin timeout')), STDIN_TIMEOUT_MS)
-    );
+    let timerId: ReturnType<typeof setTimeout>;
+    const timeout = new Promise<never>((_, reject) => {
+      timerId = setTimeout(() => reject(new Error('stdin timeout')), STDIN_TIMEOUT_MS);
+    });
     const read = async () => {
       for await (const chunk of process.stdin) {
         chunks.push(chunk as Buffer);
@@ -35,6 +36,8 @@ async function readJsonInput(options: { file?: string; stdin?: boolean }): Promi
         exitWithError(`No input received on stdin after ${STDIN_TIMEOUT_MS / 1000}s. Pipe data or use --file instead.`);
       }
       throw error;
+    } finally {
+      clearTimeout(timerId!);
     }
     const content = stripBom(Buffer.concat(chunks).toString('utf-8'));
     try {
@@ -92,7 +95,7 @@ export function registerRunCommands(program: Command): void {
           { start: 'Fetching runs...', failure: 'Failed to fetch runs' },
           () => ctx.client.runs.listByProject(project, {
             workflowType: options.workflow,
-            limit: parseInt(options.limit, 10),
+            limit: parseIntOption(options.limit, '--limit'),
           })
         );
 
@@ -169,7 +172,7 @@ export function registerRunCommands(program: Command): void {
       const ctx = createOpsContext(globalOpts);
 
       try {
-        const runNumber = options.number ? parseInt(options.number, 10) : undefined;
+        const runNumber = options.number ? parseIntOption(options.number, '--number') : undefined;
         const details = await withSpinner(
           ctx,
           { start: 'Fetching run details...', failure: 'Failed to fetch run details' },
@@ -350,8 +353,8 @@ export function registerRunCommands(program: Command): void {
           { start: 'Comparing runs...', failure: 'Failed to compare runs' },
           () => ctx.client.runs.diff({
             project,
-            baseRun: parseInt(options.base, 10),
-            compareRun: parseInt(options.compare, 10),
+            baseRun: parseIntOption(options.base, '--base'),
+            compareRun: parseIntOption(options.compare, '--compare'),
           })
         );
 
@@ -411,9 +414,9 @@ export function registerRunCommands(program: Command): void {
           { start: 'Archiving runs...', success: 'Runs archived', failure: 'Failed to archive runs' },
           () => ctx.client.runs.archive({
             project,
-            beforeRunNumber: options.beforeRun ? parseInt(options.beforeRun, 10) : undefined,
+            beforeRunNumber: options.beforeRun ? parseIntOption(options.beforeRun, '--before-run') : undefined,
             beforeDate: options.beforeDate,
-            keepLast: options.keepLast ? parseInt(options.keepLast, 10) : undefined,
+            keepLast: options.keepLast ? parseIntOption(options.keepLast, '--keep-last') : undefined,
             reason: options.reason,
           })
         );
@@ -444,10 +447,10 @@ export function registerRunCommands(program: Command): void {
       try {
         const input: UpdateRunByNumberInput = {
           project,
-          runNumber: parseInt(options.number, 10),
+          runNumber: parseIntOption(options.number, '--number'),
         };
 
-        if (options.score !== undefined) input.averageScore = parseFloat(options.score);
+        if (options.score !== undefined) input.averageScore = parseFloatOption(options.score, '--score');
         if (options.passed !== undefined) input.allGatesPassed = options.passed === 'true';
 
         // Read validator updates from file/stdin if provided

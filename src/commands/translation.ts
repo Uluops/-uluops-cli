@@ -77,9 +77,20 @@ export function registerTranslationCommands(program: Command): void {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);
 
-      const yaml = readFileSync(options.file, 'utf-8');
-
       try {
+        let yaml: string;
+        try {
+          yaml = readFileSync(options.file, 'utf-8');
+        } catch (error) {
+          const code = (error as NodeJS.ErrnoException).code;
+          if (code === 'ENOENT') {
+            handleRegistryError(new Error(`File not found: ${options.file}`), ctx);
+          }
+          if (code === 'EISDIR') {
+            handleRegistryError(new Error(`${options.file} is a directory, not a file`), ctx);
+          }
+          handleRegistryError(new Error(`Cannot read file: ${options.file}`), ctx);
+        }
         const result = await withSpinner(
           ctx,
           { start: 'Upgrading definition...', success: 'Upgrade complete', failure: 'Failed to upgrade' },

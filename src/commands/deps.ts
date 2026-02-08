@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
-import { withSpinner } from '../utils.js';
+import { withSpinner, parseIntOption } from '../utils.js';
 import type { DefinitionType } from '@uluops/registry-sdk';
 
 /**
@@ -28,7 +28,7 @@ export function registerDepsCommands(program: Command): void {
             type as DefinitionType,
             name,
             version,
-            options.maxDepth ? { maxDepth: parseInt(options.maxDepth, 10) } : undefined
+            options.maxDepth ? { maxDepth: parseIntOption(options.maxDepth, '--max-depth') } : undefined
           )
         );
 

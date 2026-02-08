@@ -100,6 +100,30 @@ export function writeFileAtomic(filePath: string, content: string): void {
 }
 
 /**
+ * Parse a string as an integer, exiting with a clear error if it's not a valid number.
+ * Use this instead of raw parseInt() for CLI option values.
+ */
+export function parseIntOption(value: string, name: string): number {
+  const parsed = parseInt(value, 10);
+  if (Number.isNaN(parsed)) {
+    exitWithError(`Invalid number for ${name}: "${value}"`);
+  }
+  return parsed;
+}
+
+/**
+ * Parse a string as a float, exiting with a clear error if it's not a valid number.
+ * Use this instead of raw parseFloat() for CLI option values.
+ */
+export function parseFloatOption(value: string, name: string): number {
+  const parsed = parseFloat(value);
+  if (Number.isNaN(parsed)) {
+    exitWithError(`Invalid number for ${name}: "${value}"`);
+  }
+  return parsed;
+}
+
+/**
  * Convert camelCase string to snake_case.
  * @param str - The camelCase string to convert (e.g. "someField" → "some_field")
  */

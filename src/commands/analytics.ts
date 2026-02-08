@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner, getFlexibleProperty } from '../utils.js';
+import { withSpinner, getFlexibleProperty, parseIntOption, parseFloatOption } from '../utils.js';
 import { formatTable, type Column } from '../formatters/table.js';
 
 /**
@@ -28,8 +28,8 @@ export function registerAnalyticsCommands(program: Command): void {
           { start: 'Fetching validator performance...', failure: 'Failed to fetch validator performance' },
           () => ctx.client.analytics.getValidatorPerformance({
             project: options.project,
-            days: parseInt(options.days, 10),
-            limit: parseInt(options.limit, 10),
+            days: parseIntOption(options.days, '--days'),
+            limit: parseIntOption(options.limit, '--limit'),
           })
         );
 
@@ -72,7 +72,7 @@ export function registerAnalyticsCommands(program: Command): void {
           () => ctx.client.analytics.getValidatorReliability({
             validator: options.validator,
             project: options.project,
-            days: parseInt(options.days, 10),
+            days: parseIntOption(options.days, '--days'),
           })
         );
 
@@ -120,8 +120,8 @@ export function registerAnalyticsCommands(program: Command): void {
           { start: 'Fetching file hotspots...', failure: 'Failed to fetch hotspots' },
           () => ctx.client.analytics.getFileHotspots({
             project: options.project,
-            days: parseInt(options.days, 10),
-            limit: parseInt(options.limit, 10),
+            days: parseIntOption(options.days, '--days'),
+            limit: parseIntOption(options.limit, '--limit'),
           })
         );
 
@@ -161,7 +161,7 @@ export function registerAnalyticsCommands(program: Command): void {
           { start: 'Fetching burndown data...', failure: 'Failed to fetch burndown' },
           () => ctx.client.analytics.getBurndown({
             project: options.project,
-            days: parseInt(options.days, 10),
+            days: parseIntOption(options.days, '--days'),
             granularity: options.granularity as 'daily' | 'weekly',
           })
         );
@@ -207,8 +207,8 @@ export function registerAnalyticsCommands(program: Command): void {
           { start: 'Fetching velocity metrics...', failure: 'Failed to fetch velocity' },
           () => ctx.client.analytics.getVelocity({
             project: options.project,
-            days: parseInt(options.days, 10),
-            alertThreshold: parseFloat(options.threshold),
+            days: parseIntOption(options.days, '--days'),
+            alertThreshold: parseFloatOption(options.threshold, '--threshold'),
           })
         );
 
@@ -257,7 +257,7 @@ export function registerAnalyticsCommands(program: Command): void {
           { start: 'Fetching discovery timeline...', failure: 'Failed to fetch discovery data' },
           () => ctx.client.analytics.getDiscovery({
             project: options.project,
-            days: parseInt(options.days, 10),
+            days: parseIntOption(options.days, '--days'),
             groupBy: options.groupBy as 'day' | 'week' | 'month',
           })
         );
@@ -301,8 +301,8 @@ export function registerAnalyticsCommands(program: Command): void {
           { start: 'Fetching validator matrix...', failure: 'Failed to fetch validator matrix' },
           () => ctx.client.analytics.getValidatorMatrix({
             project: options.project,
-            days: parseInt(options.days, 10),
-            minIssues: parseInt(options.minIssues, 10),
+            days: parseIntOption(options.days, '--days'),
+            minIssues: parseIntOption(options.minIssues, '--min-issues'),
           })
         );
 
@@ -349,8 +349,8 @@ export function registerAnalyticsCommands(program: Command): void {
           ctx,
           { start: 'Fetching resolution rates...', failure: 'Failed to fetch resolution rates' },
           () => ctx.client.analytics.getResolutionRates({
-            days: parseInt(options.days, 10),
-            limit: parseInt(options.limit, 10),
+            days: parseIntOption(options.days, '--days'),
+            limit: parseIntOption(options.limit, '--limit'),
           })
         );
 
@@ -388,8 +388,8 @@ export function registerAnalyticsCommands(program: Command): void {
           { start: 'Fetching taxonomy distribution...', failure: 'Failed to fetch taxonomy distribution' },
           () => ctx.client.analytics.getTaxonomyDistribution({
             project: options.project,
-            days: parseInt(options.days, 10),
-            limit: parseInt(options.limit, 10),
+            days: parseIntOption(options.days, '--days'),
+            limit: parseIntOption(options.limit, '--limit'),
           })
         );
 
@@ -428,8 +428,8 @@ export function registerAnalyticsCommands(program: Command): void {
           { start: 'Fetching full taxonomy...', failure: 'Failed to fetch full taxonomy' },
           () => ctx.client.analytics.getFullTaxonomy({
             project: options.project,
-            days: parseInt(options.days, 10),
-            limit: parseInt(options.limit, 10),
+            days: parseIntOption(options.days, '--days'),
+            limit: parseIntOption(options.limit, '--limit'),
           })
         );
 
@@ -475,8 +475,8 @@ export function registerAnalyticsCommands(program: Command): void {
           { start: 'Fetching trend summary...', failure: 'Failed to fetch trend summary' },
           () => ctx.client.analytics.getTrendSummary({
             project: options.project,
-            days: parseInt(options.days, 10),
-            limit: parseInt(options.limit, 10),
+            days: parseIntOption(options.days, '--days'),
+            limit: parseIntOption(options.limit, '--limit'),
           })
         );
 
