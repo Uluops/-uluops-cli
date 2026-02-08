@@ -1,5 +1,5 @@
 import ora, { type Ora } from 'ora';
-import { writeFileSync, renameSync, unlinkSync } from 'node:fs';
+import { readFileSync, existsSync, writeFileSync, renameSync, unlinkSync } from 'node:fs';
 
 /**
  * Create a spinner for long-running operations
@@ -82,6 +82,28 @@ export function exitWithError(message: string, code = 1): never {
 export function redact(value: string, showLast = 4): string {
   if (value.length <= showLast) return '[REDACTED]';
   return `${'*'.repeat(value.length - showLast)}${value.slice(-showLast)}`;
+}
+
+/**
+ * Read a file with user-friendly error messages for common failures.
+ * Use this for CLI --file options instead of raw readFileSync.
+ */
+export function readFileOption(filePath: string): string {
+  if (!existsSync(filePath)) {
+    exitWithError(`File not found: ${filePath}`);
+  }
+  try {
+    return readFileSync(filePath, 'utf-8');
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'EISDIR') {
+      exitWithError(`${filePath} is a directory, not a file`);
+    }
+    if (code === 'EACCES') {
+      exitWithError(`Permission denied: ${filePath}`);
+    }
+    exitWithError(`Cannot read file: ${filePath}`);
+  }
 }
 
 /**

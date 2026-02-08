@@ -1,8 +1,7 @@
 import { Command } from 'commander';
-import { readFileSync } from 'node:fs';
 import type { DefinitionType } from '@uluops/registry-sdk';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
-import { withSpinner } from '../utils.js';
+import { withSpinner, readFileOption } from '../utils.js';
 
 /**
  * Register translation commands
@@ -78,19 +77,7 @@ export function registerTranslationCommands(program: Command): void {
       const ctx = createRegistryContext(globalOpts);
 
       try {
-        let yaml: string;
-        try {
-          yaml = readFileSync(options.file, 'utf-8');
-        } catch (error) {
-          const code = (error as NodeJS.ErrnoException).code;
-          if (code === 'ENOENT') {
-            handleRegistryError(new Error(`File not found: ${options.file}`), ctx);
-          }
-          if (code === 'EISDIR') {
-            handleRegistryError(new Error(`${options.file} is a directory, not a file`), ctx);
-          }
-          handleRegistryError(new Error(`Cannot read file: ${options.file}`), ctx);
-        }
+        const yaml = readFileOption(options.file);
         const result = await withSpinner(
           ctx,
           { start: 'Upgrading definition...', success: 'Upgrade complete', failure: 'Failed to upgrade' },

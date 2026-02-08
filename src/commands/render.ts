@@ -1,7 +1,6 @@
 import { Command } from 'commander';
-import { readFileSync } from 'node:fs';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
-import { withSpinner } from '../utils.js';
+import { withSpinner, readFileOption } from '../utils.js';
 import type { DefinitionType } from '@uluops/registry-sdk';
 
 /**
@@ -47,7 +46,7 @@ export function registerRenderCommands(program: Command): void {
       const ctx = createRegistryContext(globalOpts);
 
       try {
-        const yaml = readFileSync(options.file, 'utf-8');
+        const yaml = readFileOption(options.file);
 
         const result = await withSpinner(
           ctx,

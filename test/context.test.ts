@@ -139,6 +139,32 @@ describe('createOpsContext', () => {
       expect.objectContaining({ email: 'test@example.com', password: 'secret' })
     );
   });
+
+  it('should pass timeout to client when provided', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { apiKey: 'ulr_test-key' },
+    } as ReturnType<typeof loadOpsConfig>);
+
+    createOpsContext({ timeout: '60000' });
+    expect(mockedOpsClient).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: 60000 })
+    );
+  });
+
+  it('should not pass timeout when not provided', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { apiKey: 'ulr_test-key' },
+    } as ReturnType<typeof loadOpsConfig>);
+
+    createOpsContext({});
+    expect(mockedOpsClient).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: undefined })
+    );
+  });
 });
 
 describe('createRegistryContext', () => {
@@ -238,6 +264,25 @@ describe('handleOpsError', () => {
 
     expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Rate limited');
+    output.restore();
+  });
+
+  it('should show service unavailable hint for 503', () => {
+    const output = captureOutput();
+    const error = new OpsApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE');
+
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Service unavailable');
+    expect(output.stderr()).toContain('Try again');
+    output.restore();
+  });
+
+  it('should show retry-after value for 503 when available', () => {
+    const output = captureOutput();
+    const error = new OpsApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE', { retryAfter: 30 });
+
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Try again in 30 seconds');
     output.restore();
   });
 

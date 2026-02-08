@@ -11,6 +11,7 @@ vi.mock('node:fs', async (importOriginal) => {
   return {
     ...actual,
     readFileSync: vi.fn(() => 'name: test-agent\nversion: 1.0.0\n'),
+    existsSync: vi.fn(() => true),
   };
 });
 

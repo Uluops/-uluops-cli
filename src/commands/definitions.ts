@@ -1,7 +1,6 @@
 import { Command } from 'commander';
-import { readFileSync } from 'node:fs';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
-import { withSpinner, parseIntOption } from '../utils.js';
+import { withSpinner, parseIntOption, readFileOption } from '../utils.js';
 import { formatDefinitions, formatDefinition, formatValidationResult } from '../formatters/registry.js';
 import type { DefinitionType } from '@uluops/registry-sdk';
 
@@ -102,7 +101,7 @@ export function registerDefinitionCommands(program: Command): void {
       const ctx = createRegistryContext(globalOpts);
 
       try {
-        const yaml = readFileSync(options.file, 'utf-8');
+        const yaml = readFileOption(options.file);
 
         const def = await withSpinner(
           ctx,
@@ -136,7 +135,7 @@ export function registerDefinitionCommands(program: Command): void {
       const ctx = createRegistryContext(globalOpts);
 
       try {
-        const yaml = options.file ? readFileSync(options.file, 'utf-8') : undefined;
+        const yaml = options.file ? readFileOption(options.file) : undefined;
 
         const def = await withSpinner(
           ctx,
@@ -224,7 +223,7 @@ export function registerDefinitionCommands(program: Command): void {
       const ctx = createRegistryContext(globalOpts);
 
       try {
-        const yaml = readFileSync(options.file, 'utf-8');
+        const yaml = readFileOption(options.file);
 
         const result = await withSpinner(
           ctx,

@@ -3,7 +3,7 @@ import { readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { GlobalOptions } from '../context.js';
-import { writeFileAtomic } from '../utils.js';
+import { writeFileAtomic, exitWithError } from '../utils.js';
 
 /**
  * Config file paths
@@ -50,10 +50,18 @@ function loadProfiles(): ProfilesFile {
  * Save profiles file
  */
 function saveProfiles(profiles: ProfilesFile): void {
-  if (!existsSync(CONFIG_DIR)) {
-    mkdirSync(CONFIG_DIR, { recursive: true });
+  try {
+    if (!existsSync(CONFIG_DIR)) {
+      mkdirSync(CONFIG_DIR, { recursive: true });
+    }
+    writeFileAtomic(PROFILES_PATH, JSON.stringify(profiles, null, 2) + '\n');
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === 'EACCES') {
+      exitWithError(`Permission denied writing to ${PROFILES_PATH}. Check file permissions.`);
+    }
+    exitWithError(`Failed to save config: ${(error as Error).message}`);
   }
-  writeFileAtomic(PROFILES_PATH, JSON.stringify(profiles, null, 2) + '\n');
 }
 
 /**
