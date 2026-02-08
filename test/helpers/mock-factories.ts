@@ -220,11 +220,10 @@ export function createVersionListItem(overrides: Partial<VersionListItem> = {}):
 
 export function createVersionDiff(overrides: Partial<VersionDiff> = {}): VersionDiff {
   return {
-    from: createVersionListItem({ version: '1.0.0' }),
-    to: createVersionListItem({ version: '1.1.0' }),
-    changes: {
-      yaml: { added: 5, removed: 2, modified: 3 },
-    },
+    fromVersion: '1.0.0',
+    toVersion: '1.1.0',
+    fromYaml: 'name: my-agent\nversion: "1.0.0"\ndescription: original',
+    toYaml: 'name: my-agent\nversion: "1.1.0"\ndescription: updated\ntags:\n  - new',
     ...overrides,
   };
 }

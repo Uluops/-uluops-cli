@@ -176,39 +176,38 @@ describe('formatVersions', () => {
 describe('formatVersionDiff', () => {
   it('formats a diff with yaml changes', () => {
     const diff = {
-      from: { version: '1.0.0' },
-      to: { version: '1.1.0' },
-      changes: {
-        yaml: { added: 5, removed: 2, modified: 3 },
-      },
+      fromVersion: '1.0.0',
+      toVersion: '1.1.0',
+      fromYaml: 'name: foo\nversion: "1.0.0"\ndescription: old',
+      toYaml: 'name: foo\nversion: "1.1.0"\ndescription: new\ntags:\n  - test',
     };
-    const result = formatVersionDiff(diff as Parameters<typeof formatVersionDiff>[0]);
+    const result = formatVersionDiff(diff);
     expect(result).toContain('1.0.0');
     expect(result).toContain('1.1.0');
-    expect(result).toContain('+ 5 added');
-    expect(result).toContain('- 2 removed');
-    expect(result).toContain('~ 3 modified');
+    expect(result).toContain('lines added');
+    expect(result).toContain('lines removed');
   });
 
-  it('formats a diff with metadata changes', () => {
+  it('formats a diff with only additions', () => {
     const diff = {
-      from: { version: '1.0.0' },
-      to: { version: '1.1.0' },
-      changes: {
-        metadata: { status: { from: 'draft', to: 'published' } },
-      },
+      fromVersion: '1.0.0',
+      toVersion: '1.1.0',
+      fromYaml: 'name: foo',
+      toYaml: 'name: foo\nextra: line',
     };
-    const result = formatVersionDiff(diff as Parameters<typeof formatVersionDiff>[0]);
-    expect(result).toContain('status: draft -> published');
+    const result = formatVersionDiff(diff);
+    expect(result).toContain('+ 1 lines added');
   });
 
-  it('shows "No changes" when empty', () => {
+  it('shows "No changes" when yaml is identical', () => {
+    const yaml = 'name: foo\nversion: "1.0.0"';
     const diff = {
-      from: { version: '1.0.0' },
-      to: { version: '1.0.0' },
-      changes: {},
+      fromVersion: '1.0.0',
+      toVersion: '1.0.0',
+      fromYaml: yaml,
+      toYaml: yaml,
     };
-    const result = formatVersionDiff(diff as Parameters<typeof formatVersionDiff>[0]);
+    const result = formatVersionDiff(diff);
     expect(result).toContain('No changes');
   });
 });

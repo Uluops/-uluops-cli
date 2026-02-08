@@ -145,25 +145,22 @@ export function formatVersions(versions: VersionListItem[]): string {
  */
 export function formatVersionDiff(diff: VersionDiff): string {
   const lines = [
-    `From: ${diff.from.version} -> To: ${diff.to.version}`,
+    `From: ${diff.fromVersion} -> To: ${diff.toVersion}`,
     '',
   ];
 
-  if (diff.changes.yaml) {
+  // Compute a simple line-level diff between the two YAML strings
+  const fromLines = diff.fromYaml.split('\n');
+  const toLines = diff.toYaml.split('\n');
+
+  const added = toLines.filter(l => !fromLines.includes(l)).length;
+  const removed = fromLines.filter(l => !toLines.includes(l)).length;
+
+  if (added > 0 || removed > 0) {
     lines.push('YAML changes:');
-    lines.push(`  + ${diff.changes.yaml.added} added`);
-    lines.push(`  - ${diff.changes.yaml.removed} removed`);
-    lines.push(`  ~ ${diff.changes.yaml.modified} modified`);
-  }
-
-  if (diff.changes.metadata) {
-    lines.push('', 'Metadata changes:');
-    for (const [key, change] of Object.entries(diff.changes.metadata)) {
-      lines.push(`  ${key}: ${String(change.from)} -> ${String(change.to)}`);
-    }
-  }
-
-  if (!diff.changes.yaml && !diff.changes.metadata) {
+    lines.push(`  + ${added} lines added`);
+    lines.push(`  - ${removed} lines removed`);
+  } else {
     lines.push('No changes');
   }
 
