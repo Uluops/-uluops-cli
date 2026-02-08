@@ -130,8 +130,8 @@ export function normalizeKeys(input: unknown): unknown {
  * Get a property from an object, trying camelCase first then snake_case
  * Useful for handling API responses that may use either format
  */
-export function getFlexibleProperty<T>(
-  obj: object,
+export function getFlexibleProperty<T, O extends object = object>(
+  obj: O,
   camelCaseKey: string,
   defaultValue: T
 ): T {

@@ -59,6 +59,26 @@ function isSessionExpired(profile: string): boolean {
 }
 
 /**
+ * Validate that credentials exist, exiting with a helpful message if not.
+ * Checks for expired sessions and provides appropriate guidance.
+ */
+function requireCredentials(hasCredentials: unknown, profile: string): void {
+  if (hasCredentials) return;
+
+  if (isSessionExpired(profile)) {
+    exitWithError(
+      `Session expired for profile "${profile}".\n` +
+        'Run "ulu auth login" to re-authenticate.'
+    );
+  }
+  exitWithError(
+    'No credentials found.\n' +
+      'Set ULUOPS_API_KEY environment variable, use --api-key flag,\n' +
+      'or run "ulu auth login" to authenticate.'
+  );
+}
+
+/**
  * Create CLI context for ops commands
  */
 export function createOpsContext(options: GlobalOptions): OpsCliContext {
@@ -74,20 +94,7 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
     config.credentials.sessionToken ||
     (config.credentials.email && config.credentials.password);
 
-  if (!hasCredentials) {
-    const profile = options.profile ?? 'default';
-    if (isSessionExpired(profile)) {
-      exitWithError(
-        `Session expired for profile "${profile}".\n` +
-          'Run "ulu auth login" to re-authenticate.'
-      );
-    }
-    exitWithError(
-      'No credentials found.\n' +
-        'Set ULUOPS_API_KEY environment variable, use --api-key flag,\n' +
-        'or run "ulu auth login" to authenticate.'
-    );
-  }
+  requireCredentials(hasCredentials, options.profile ?? 'default');
 
   let client: OpsClient;
   try {
@@ -135,20 +142,7 @@ export function createRegistryContext(options: GlobalOptions): RegistryCliContex
     config.credentials.sessionToken ||
     (config.credentials.email && config.credentials.password);
 
-  if (!hasCredentials) {
-    const profile = options.profile ?? 'default';
-    if (isSessionExpired(profile)) {
-      exitWithError(
-        `Session expired for profile "${profile}".\n` +
-          'Run "ulu auth login" to re-authenticate.'
-      );
-    }
-    exitWithError(
-      'No credentials found.\n' +
-        'Set ULUOPS_API_KEY environment variable, use --api-key flag,\n' +
-        'or run "ulu auth login" to authenticate.'
-    );
-  }
+  requireCredentials(hasCredentials, options.profile ?? 'default');
 
   let client: RegistryClient;
   try {
@@ -192,35 +186,55 @@ export function createUnauthenticatedContext(options: GlobalOptions): { baseUrl:
 }
 
 /**
+ * Hint overrides for domain-specific error messages
+ */
+interface ErrorHintOverrides {
+  unauthorized?: string;
+  notFound?: string;
+  validation?: string;
+}
+
+/**
+ * Print error details with contextual hints based on status code/error code.
+ * Shared logic for both ops and registry error handlers.
+ */
+function printApiErrorDetails(
+  error: { message: string; code?: string; statusCode?: number; details?: unknown; requestId?: string; toJSON(): unknown },
+  ctx: { json: boolean; debug: boolean },
+  hints: ErrorHintOverrides = {}
+): void {
+  if (ctx.json) {
+    console.error(JSON.stringify(error.toJSON(), null, 2));
+  } else {
+    console.error(`Error: ${error.message}`);
+
+    if (error.code === 'UNAUTHORIZED' || error.statusCode === 401) {
+      console.error('\nHint: Your credentials may be invalid or expired.');
+      console.error(hints.unauthorized ?? 'Run "ulu auth login" or check your ULUOPS_API_KEY.');
+    } else if (error.code === 'NOT_FOUND' || error.statusCode === 404) {
+      console.error(`\nHint: ${hints.notFound ?? 'The resource was not found. Check the name or ID.'}`);
+    } else if (error.code === 'VALIDATION_ERROR' || error.statusCode === 400) {
+      console.error(`\nHint: ${hints.validation ?? 'Invalid input. Check the command arguments.'}`);
+    } else if (error.code === 'RATE_LIMITED' || error.statusCode === 429) {
+      console.error('\nHint: Rate limited. Wait a moment and try again.');
+    }
+
+    if (ctx.debug && error.details) {
+      console.error('\nDetails:', JSON.stringify(error.details, null, 2));
+    }
+
+    if (error.requestId) {
+      console.error(`\nRequest ID: ${error.requestId}`);
+    }
+  }
+}
+
+/**
  * Handle ops errors consistently
  */
 export function handleOpsError(error: unknown, ctx: Pick<OpsCliContext, 'json' | 'debug'>): never {
   if (error instanceof OpsApiError) {
-    if (ctx.json) {
-      console.error(JSON.stringify(error.toJSON(), null, 2));
-    } else {
-      console.error(`Error: ${error.message}`);
-
-      // Provide helpful hints based on error code
-      if (error.code === 'UNAUTHORIZED' || error.statusCode === 401) {
-        console.error('\nHint: Your credentials may be invalid or expired.');
-        console.error('Run "ulu auth login" or check your ULUOPS_API_KEY.');
-      } else if (error.code === 'NOT_FOUND' || error.statusCode === 404) {
-        console.error('\nHint: The resource was not found. Check the name or ID.');
-      } else if (error.code === 'VALIDATION_ERROR' || error.statusCode === 400) {
-        console.error('\nHint: Invalid input. Check the command arguments.');
-      } else if (error.code === 'RATE_LIMITED' || error.statusCode === 429) {
-        console.error('\nHint: Rate limited. Wait a moment and try again.');
-      }
-
-      if (ctx.debug && error.details) {
-        console.error('\nDetails:', JSON.stringify(error.details, null, 2));
-      }
-
-      if (error.requestId) {
-        console.error(`\nRequest ID: ${error.requestId}`);
-      }
-    }
+    printApiErrorDetails(error, ctx);
     process.exit(1);
   }
 
@@ -232,31 +246,11 @@ export function handleOpsError(error: unknown, ctx: Pick<OpsCliContext, 'json' |
  */
 export function handleRegistryError(error: unknown, ctx: Pick<RegistryCliContext, 'json' | 'debug'>): never {
   if (error instanceof RegistryApiError) {
-    if (ctx.json) {
-      console.error(JSON.stringify(error.toJSON(), null, 2));
-    } else {
-      console.error(`Error: ${error.message}`);
-
-      // Provide helpful hints based on error code
-      if (error.code === 'UNAUTHORIZED' || error.statusCode === 401) {
-        console.error('\nHint: Your credentials may be invalid or expired.');
-        console.error('Check your ULUOPS_API_KEY or session token.');
-      } else if (error.code === 'NOT_FOUND' || error.statusCode === 404) {
-        console.error('\nHint: The resource was not found. Check the type, name, and version.');
-      } else if (error.code === 'VALIDATION_ERROR' || error.statusCode === 400) {
-        console.error('\nHint: Invalid input. Check the command arguments or YAML file.');
-      } else if (error.code === 'RATE_LIMITED' || error.statusCode === 429) {
-        console.error('\nHint: Rate limited. Wait a moment and try again.');
-      }
-
-      if (ctx.debug && error.details) {
-        console.error('\nDetails:', JSON.stringify(error.details, null, 2));
-      }
-
-      if (error.requestId) {
-        console.error(`\nRequest ID: ${error.requestId}`);
-      }
-    }
+    printApiErrorDetails(error, ctx, {
+      unauthorized: 'Check your ULUOPS_API_KEY or session token.',
+      notFound: 'The resource was not found. Check the type, name, and version.',
+      validation: 'Invalid input. Check the command arguments or YAML file.',
+    });
     process.exit(1);
   }
 

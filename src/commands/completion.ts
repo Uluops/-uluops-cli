@@ -84,7 +84,7 @@ function generateZshCompletion(program: Command): string {
         return t.path.startsWith(parent + ' ') && !t.path.slice(parent.length + 1).includes(' ');
       });
       const subArgs = subTree.map((s) => {
-        const name = s.path.split(' ').pop()!;
+        const name = s.path.split(' ').pop() ?? s.path;
         return `'${name}:${s.description.replace(/'/g, "''")}'`;
       }).join('\n      ');
 
