@@ -59,6 +59,27 @@ function saveCredentials(
 }
 
 /**
+ * Remove credentials for a profile from the credentials file
+ */
+function removeCredentials(profile: string): void {
+  const credPath = join(homedir(), CONFIG_PATHS.CREDENTIALS);
+
+  if (!existsSync(credPath)) {
+    return;
+  }
+
+  let stored: Record<string, unknown> = {};
+  try {
+    stored = JSON.parse(readFileSync(credPath, 'utf-8'));
+  } catch {
+    return;
+  }
+
+  delete stored[profile];
+  writeFileAtomic(credPath, JSON.stringify(stored, null, 2));
+}
+
+/**
  * Register auth commands
  */
 export function registerAuthCommands(program: Command): void {
@@ -131,22 +152,50 @@ export function registerAuthCommands(program: Command): void {
     .description('Logout and revoke all sessions')
     .action(async (_, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const ctx = createOpsContext(globalOpts);
+      const profile = globalOpts.profile ?? 'default';
+      const json = globalOpts.json ?? false;
+      const debug = globalOpts.debug ?? false;
 
+      // Try to revoke server-side sessions using raw client (avoid createOpsContext
+      // which calls process.exit on expired sessions)
+      let sessionsRevoked = 0;
       try {
-        const result = await withSpinner(
-          ctx,
-          { start: 'Logging out...', success: 'Logged out', failure: 'Logout failed' },
-          () => ctx.client.logout()
-        );
-
-        if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
-        } else {
-          console.log(`Revoked ${result.sessionsRevoked} session(s)`);
+        const credPath = join(homedir(), CONFIG_PATHS.CREDENTIALS);
+        if (existsSync(credPath)) {
+          const stored = JSON.parse(readFileSync(credPath, 'utf-8'));
+          const creds = stored[profile];
+          if (creds) {
+            const { loadConfig: loadOpsConfig } = await import('@uluops/ops-sdk');
+            const config = loadOpsConfig({ baseUrl: globalOpts.baseUrl, profile, debug: globalOpts.debug });
+            const client = new OpsClient({
+              apiKey: creds.type === 'api_key' ? creds.apiKey : undefined,
+              sessionToken: creds.type === 'session' ? creds.sessionToken : undefined,
+              baseUrl: config.baseUrl,
+              debug,
+            });
+            const spinnerCtx = { json, debug, quiet: false };
+            const result = await withSpinner(
+              spinnerCtx,
+              { start: 'Logging out...', success: 'Logged out', failure: 'Logout failed' },
+              () => client.logout()
+            );
+            sessionsRevoked = result.sessionsRevoked;
+          }
         }
-      } catch (error) {
-        handleOpsError(error, ctx);
+      } catch {
+        // If credentials are expired/invalid, that's fine — we still remove local creds
+      }
+
+      // Always remove local credentials for this profile
+      removeCredentials(profile);
+
+      if (json) {
+        console.log(JSON.stringify({ success: true, profile, sessionsRevoked }, null, 2));
+      } else {
+        if (sessionsRevoked > 0) {
+          console.log(`Revoked ${sessionsRevoked} server session(s)`);
+        }
+        console.log(`Removed local credentials for profile "${profile}"`);
       }
     });
 

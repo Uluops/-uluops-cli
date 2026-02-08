@@ -29,10 +29,11 @@ export function registerVersionCommands(program: Command): void {
 
         if (ctx.json) {
           console.log(JSON.stringify(data, null, 2));
-        } else if (data.length === 0) {
+        } else if (!data.versions || data.versions.length === 0) {
           console.log('No versions found');
         } else {
-          console.log(formatVersions(data));
+          console.log(formatVersions(data.versions));
+          console.log(`\n${data.versions.length} of ${data.totalVersions} versions`);
         }
       } catch (error) {
         handleRegistryError(error, ctx);

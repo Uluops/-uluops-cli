@@ -30,7 +30,7 @@ export function registerTranslationCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(info, null, 2));
         } else {
-          console.log(`Translator version: ${info.version}`);
+          console.log(`Translator version: ${info.translatorVersion}`);
           if (info.releaseDate) console.log(`Released: ${info.releaseDate}`);
           if (info.schema) console.log(`Schema: ${info.schema}`);
         }

@@ -95,7 +95,7 @@ export function registerModelCommands(program: Command): void {
           console.log('No providers found');
         } else {
           for (const provider of result.providers) {
-            console.log(`${provider.id}: ${provider.displayName} (${provider.status})`);
+            console.log(`${provider.id}: ${provider.name} (${provider.status})`);
           }
         }
       } catch (error) {
@@ -173,10 +173,9 @@ export function registerModelCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
-          console.log(`Synced: ${result.synced} models`);
-          console.log(`  Created: ${result.created}`);
-          console.log(`  Updated: ${result.updated}`);
-          console.log(`  Deleted: ${result.deleted}`);
+          console.log(`Providers: +${result.providersAdded} added, ~${result.providersUpdated} updated`);
+          console.log(`Models:    +${result.modelsAdded} added, ~${result.modelsUpdated} updated`);
+          if (result.duration) console.log(`Duration: ${result.duration}`);
         }
       } catch (error) {
         handleRegistryError(error, ctx);

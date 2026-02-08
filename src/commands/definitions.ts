@@ -46,11 +46,11 @@ export function registerDefinitionCommands(program: Command): void {
 
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
-        } else if (result.items.length === 0) {
+        } else if (!result.definitions || result.definitions.length === 0) {
           console.log('No definitions found');
         } else {
-          console.log(formatDefinitions(result.items));
-          console.log(`\nShowing ${result.items.length} of ${result.total} definitions`);
+          console.log(formatDefinitions(result.definitions));
+          console.log(`\nShowing ${result.definitions.length} of ${result.total} definitions`);
         }
       } catch (error) {
         handleRegistryError(error, ctx);

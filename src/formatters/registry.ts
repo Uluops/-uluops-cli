@@ -97,8 +97,8 @@ export function formatModel(model: Model): string {
 export function formatAliases(aliases: ModelAlias[]): string {
   const columns: Column<ModelAlias>[] = [
     { header: 'ALIAS', accessor: 'alias', width: 20 },
-    { header: 'PROVIDER', accessor: 'targetProvider', width: 12 },
-    { header: 'MODEL', accessor: 'targetModelId', width: 25 },
+    { header: 'PROVIDER', accessor: 'provider', width: 12 },
+    { header: 'MODEL', accessor: 'modelId', width: 25 },
     { header: 'SCOPE', accessor: 'scope', width: 8 },
     { header: 'DEPRECATED', accessor: (a: ModelAlias) => a.deprecated ? 'Yes' : 'No', width: 10 },
   ];
