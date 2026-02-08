@@ -29,11 +29,21 @@ export function registerForkCommands(program: Command): void {
 
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
-        } else if (result.items.length === 0) {
-          console.log('No forks found');
         } else {
-          console.log(formatDefinitions(result.items));
-          console.log(`\n${result.total} fork(s)`);
+          // API may return { forks: [{fork, definition}], totalForks } or { items, total }
+          const data = result as unknown as Record<string, unknown>;
+          const forkItems = (data.items ?? data.forks ?? []) as Array<Record<string, unknown>>;
+          const total = (data.total ?? data.totalForks ?? forkItems.length) as number;
+          if (forkItems.length === 0) {
+            console.log('No forks found');
+          } else {
+            // Extract definitions from fork items for formatting
+            const definitions = forkItems.map((item) =>
+              (item.definition ?? item) as Record<string, unknown>
+            );
+            console.log(formatDefinitions(definitions as never));
+            console.log(`\n${total} fork(s)`);
+          }
         }
       } catch (error) {
         handleRegistryError(error, ctx);
@@ -123,12 +133,29 @@ export function registerForkCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
-          console.log('Fork Lineage:');
-          for (const item of result.chain) {
-            console.log(`  ${item.type}/${item.name}@${item.version} (${item.status})`);
+          // API may return { isFork, fork, source } or { chain, current, source }
+          const lineage = result as unknown as Record<string, unknown>;
+          if (result.chain) {
+            console.log('Fork Lineage:');
+            for (const item of result.chain) {
+              console.log(`  ${item.type}/${item.name}@${item.version} (${item.status})`);
+            }
+            console.log(`  -> ${result.current.type}/${result.current.name}@${result.current.version} (current)`);
+          } else if (lineage.isFork) {
+            console.log('Fork Lineage:');
+            const src = lineage.source as { type: string; name: string; version: string } | undefined;
+            if (src) {
+              console.log(`  Source: ${src.type}/${src.name}@${src.version}`);
+            }
+            console.log(`  -> ${type}/${name}@${version} (current fork)`);
+            const fork = lineage.fork as { forkedAt?: string } | undefined;
+            if (fork?.forkedAt) {
+              console.log(`\n  Forked at: ${new Date(fork.forkedAt).toLocaleString()}`);
+            }
+          } else {
+            console.log('This definition is not a fork');
           }
-          console.log(`  -> ${result.current.type}/${result.current.name}@${result.current.version} (current)`);
-          if (result.source) {
+          if (result.source && !result.chain) {
             console.log(`\nOriginal source: ${result.source.type}/${result.source.name}@${result.source.version}`);
           }
         }

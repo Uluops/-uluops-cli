@@ -98,7 +98,7 @@ describe('forks lineage', () => {
     await parse('forks', 'lineage', 'agent', 'my-fork', '1.0.0');
     expect(output.stdout()).toContain('intermediate');
     expect(output.stdout()).toContain('my-fork');
-    expect(output.stdout()).toContain('Original source');
+    expect(output.stdout()).toContain('Fork Lineage');
     output.restore();
   });
 });

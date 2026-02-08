@@ -43,7 +43,7 @@ describe('deps get', () => {
     await parse('deps', 'get', 'workflow', 'my-wf', '1.0.0');
     expect(mockClient.dependencies.get).toHaveBeenCalledWith('workflow', 'my-wf', '1.0.0', undefined);
     expect(output.stdout()).toContain('dep-agent');
-    expect(output.stdout()).toContain('Nodes: 1');
+    expect(output.stdout()).toContain('Dependencies: 1');
     output.restore();
   });
 

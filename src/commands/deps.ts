@@ -35,9 +35,15 @@ export function registerDepsCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(graph, null, 2));
         } else {
+          // API may return { graph, flat, totalCount } or { nodes, edges }
+          const data = graph as unknown as Record<string, unknown>;
+          const nodes = (data.nodes ?? data.flat ?? []) as Array<{ type: string; name: string; version: string; status: string }>;
+          const edges = (data.edges ?? []) as unknown[];
           console.log(`Dependencies for ${type}/${name}@${version}:`);
-          console.log(`  Nodes: ${graph.nodes.length}`);
-          console.log(`  Edges: ${graph.edges.length}`);
+          console.log(`  Dependencies: ${(data.totalCount as number) ?? nodes.length}`);
+          if (edges.length > 0) {
+            console.log(`  Edges: ${edges.length}`);
+          }
           if (graph.cycleDetected) {
             console.log('  WARNING: Circular dependency detected!');
             if (graph.cycles) {
@@ -46,9 +52,13 @@ export function registerDepsCommands(program: Command): void {
               }
             }
           }
-          console.log('');
-          for (const node of graph.nodes) {
-            console.log(`  ${node.type}/${node.name}@${node.version} (${node.status})`);
+          if (nodes.length === 0) {
+            console.log('\n  No dependencies');
+          } else {
+            console.log('');
+            for (const node of nodes) {
+              console.log(`  ${node.type}/${node.name}@${node.version} (${node.status})`);
+            }
           }
         }
       } catch (error) {
@@ -73,12 +83,16 @@ export function registerDepsCommands(program: Command): void {
 
         if (ctx.json) {
           console.log(JSON.stringify(graph, null, 2));
-        } else if (graph.nodes.length === 0) {
-          console.log('No dependents found');
         } else {
-          console.log(`Dependents of ${type}/${name}@${version}:`);
-          for (const node of graph.nodes) {
-            console.log(`  ${node.type}/${node.name}@${node.version} (${node.status})`);
+          const depData = graph as unknown as Record<string, unknown>;
+          const nodes = (depData.nodes ?? depData.flat ?? []) as Array<{ type: string; name: string; version: string; status: string }>;
+          if (nodes.length === 0) {
+            console.log('No dependents found');
+          } else {
+            console.log(`Dependents of ${type}/${name}@${version}:`);
+            for (const node of nodes) {
+              console.log(`  ${node.type}/${node.name}@${node.version} (${node.status})`);
+            }
           }
         }
       } catch (error) {
