@@ -190,8 +190,8 @@ export function createModel(overrides: Partial<Model> = {}): Model {
 export function createModelAlias(overrides: Partial<ModelAlias> = {}): ModelAlias {
   return {
     alias: 'sonnet',
-    targetProvider: 'anthropic',
-    targetModelId: 'claude-sonnet-4-5',
+    provider: 'anthropic',
+    modelId: 'claude-sonnet-4-5',
     scope: 'global',
     deprecated: false,
     createdAt: isoDate(30),
@@ -203,10 +203,7 @@ export function createModelAlias(overrides: Partial<ModelAlias> = {}): ModelAlia
 export function createAliasResolution(overrides: Partial<AliasResolution> = {}): AliasResolution {
   return {
     alias: 'sonnet',
-    resolved: true,
-    provider: 'anthropic',
-    modelId: 'claude-sonnet-4-5',
-    deprecated: false,
+    target: 'anthropic/claude-sonnet-4-5',
     model: null,
     ...overrides,
   };

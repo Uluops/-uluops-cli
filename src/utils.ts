@@ -102,6 +102,31 @@ export function toSnakeCase(str: string): string {
 }
 
 /**
+ * Convert snake_case to camelCase
+ */
+export function toCamelCase(str: string): string {
+  return str.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase());
+}
+
+/**
+ * Recursively normalize object keys from snake_case to camelCase.
+ * Accepts both formats — keys already in camelCase pass through unchanged.
+ */
+export function normalizeKeys(input: unknown): unknown {
+  if (Array.isArray(input)) {
+    return input.map(normalizeKeys);
+  }
+  if (input !== null && typeof input === 'object') {
+    const result: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+      result[toCamelCase(key)] = normalizeKeys(value);
+    }
+    return result;
+  }
+  return input;
+}
+
+/**
  * Get a property from an object, trying camelCase first then snake_case
  * Useful for handling API responses that may use either format
  */

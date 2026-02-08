@@ -41,7 +41,7 @@ function parse(...args: string[]) {
 describe('translation version', () => {
   it('should display translator version', async () => {
     mockClient.translation.getVersion.mockResolvedValue({
-      version: '2.1.0',
+      translatorVersion: '2.1.0',
       releaseDate: '2025-06-01',
       schema: 'v1.2.0',
     });

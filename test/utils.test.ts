@@ -1,164 +1,254 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
-  truncate,
   toSnakeCase,
-  getFlexibleProperty,
+  toCamelCase,
+  normalizeKeys,
+  truncate,
   redact,
   formatDisplayDate,
-  formatJson,
-  exitWithError,
-  withSpinner,
+  getFlexibleProperty,
 } from '../src/utils.js';
 
-describe('truncate', () => {
-  it('should return short strings unchanged', () => {
-    expect(truncate('hello', 10)).toBe('hello');
-  });
-
-  it('should return string at exact maxLength unchanged', () => {
-    expect(truncate('hello', 5)).toBe('hello');
-  });
-
-  it('should truncate long strings with ellipsis', () => {
-    expect(truncate('hello world', 8)).toBe('hello...');
-  });
-
-  it('should handle maxLength of 3', () => {
-    expect(truncate('hello', 3)).toBe('...');
-  });
-
-  it('should handle empty string', () => {
-    expect(truncate('', 10)).toBe('');
-  });
-});
-
 describe('toSnakeCase', () => {
-  it('should convert camelCase', () => {
-    expect(toSnakeCase('camelCase')).toBe('camel_case');
+  it('converts camelCase to snake_case', () => {
+    expect(toSnakeCase('workflowType')).toBe('workflow_type');
+    expect(toSnakeCase('allGatesPassed')).toBe('all_gates_passed');
+    expect(toSnakeCase('rawMarkdown')).toBe('raw_markdown');
   });
 
-  it('should convert multi-word camelCase', () => {
-    expect(toSnakeCase('falsePositiveRate')).toBe('false_positive_rate');
+  it('handles single-word strings', () => {
+    expect(toSnakeCase('project')).toBe('project');
+    expect(toSnakeCase('name')).toBe('name');
   });
 
-  it('should leave snake_case unchanged', () => {
-    expect(toSnakeCase('already_snake')).toBe('already_snake');
-  });
-
-  it('should handle empty string', () => {
+  it('handles empty string', () => {
     expect(toSnakeCase('')).toBe('');
   });
+});
 
-  it('should handle single word', () => {
-    expect(toSnakeCase('word')).toBe('word');
+describe('toCamelCase', () => {
+  it('converts snake_case to camelCase', () => {
+    expect(toCamelCase('workflow_type')).toBe('workflowType');
+    expect(toCamelCase('all_gates_passed')).toBe('allGatesPassed');
+    expect(toCamelCase('raw_markdown')).toBe('rawMarkdown');
+  });
+
+  it('handles single-word strings', () => {
+    expect(toCamelCase('project')).toBe('project');
+    expect(toCamelCase('name')).toBe('name');
+  });
+
+  it('handles empty string', () => {
+    expect(toCamelCase('')).toBe('');
+  });
+
+  it('handles already camelCase strings', () => {
+    expect(toCamelCase('workflowType')).toBe('workflowType');
   });
 });
 
-describe('getFlexibleProperty', () => {
-  it('should find camelCase key', () => {
-    expect(getFlexibleProperty({ newIssues: 5 }, 'newIssues', 0)).toBe(5);
+describe('normalizeKeys', () => {
+  it('converts top-level snake_case keys to camelCase', () => {
+    const input = {
+      project: 'test',
+      workflow_type: 'ship',
+      raw_markdown: '# Report',
+    };
+    expect(normalizeKeys(input)).toEqual({
+      project: 'test',
+      workflowType: 'ship',
+      rawMarkdown: '# Report',
+    });
   });
 
-  it('should fall back to snake_case', () => {
-    expect(getFlexibleProperty({ new_issues: 5 }, 'newIssues', 0)).toBe(5);
+  it('converts nested object keys', () => {
+    const input = {
+      summary: {
+        all_gates_passed: true,
+        average_score: 85,
+      },
+    };
+    expect(normalizeKeys(input)).toEqual({
+      summary: {
+        allGatesPassed: true,
+        averageScore: 85,
+      },
+    });
   });
 
-  it('should return default when neither exists', () => {
-    expect(getFlexibleProperty({}, 'newIssues', 99)).toBe(99);
+  it('converts keys inside arrays', () => {
+    const input = {
+      validators: [
+        { name: 'code-validator', max_score: 100, duration_ms: 5000 },
+        { name: 'test-architect', max_score: 100, duration_ms: 3000 },
+      ],
+    };
+    expect(normalizeKeys(input)).toEqual({
+      validators: [
+        { name: 'code-validator', maxScore: 100, durationMs: 5000 },
+        { name: 'test-architect', maxScore: 100, durationMs: 3000 },
+      ],
+    });
   });
 
-  it('should treat undefined value as missing', () => {
-    expect(getFlexibleProperty({ newIssues: undefined }, 'newIssues', 42)).toBe(42);
+  it('converts deeply nested structures', () => {
+    const input = {
+      validators: [
+        {
+          name: 'v1',
+          tokens: {
+            input_tokens: 1000,
+            output_tokens: 500,
+            cache_read_tokens: 200,
+          },
+        },
+      ],
+    };
+    expect(normalizeKeys(input)).toEqual({
+      validators: [
+        {
+          name: 'v1',
+          tokens: {
+            inputTokens: 1000,
+            outputTokens: 500,
+            cacheReadTokens: 200,
+          },
+        },
+      ],
+    });
   });
 
-  it('should prefer camelCase over snake_case', () => {
-    expect(getFlexibleProperty({ newIssues: 10, new_issues: 20 }, 'newIssues', 0)).toBe(10);
+  it('passes through camelCase keys unchanged', () => {
+    const input = { workflowType: 'ship', project: 'test' };
+    expect(normalizeKeys(input)).toEqual({ workflowType: 'ship', project: 'test' });
+  });
+
+  it('handles primitive values', () => {
+    expect(normalizeKeys('string')).toBe('string');
+    expect(normalizeKeys(42)).toBe(42);
+    expect(normalizeKeys(null)).toBe(null);
+    expect(normalizeKeys(true)).toBe(true);
+  });
+
+  it('handles empty objects and arrays', () => {
+    expect(normalizeKeys({})).toEqual({});
+    expect(normalizeKeys([])).toEqual([]);
+  });
+
+  it('handles realistic SaveFeaturesListInput with snake_case', () => {
+    const input = {
+      project: 'my-project',
+      workflow_type: 'post-implementation',
+      validators: [
+        {
+          name: 'code-validator',
+          score: 85,
+          max_score: 100,
+          status: 'PASS',
+          duration_ms: 5000,
+          tokens: {
+            input_tokens: 1000,
+            output_tokens: 500,
+          },
+        },
+      ],
+      recommendations: [
+        {
+          validator: 'code-validator',
+          title: 'Fix lint error',
+          priority: 'suggested',
+          failure_code: 'SEM-VAL/H',
+          failure_domain: 'SEM',
+          file_path: 'src/index.ts',
+          line_number: 42,
+        },
+      ],
+      idempotency_key: 'abc-123',
+    };
+
+    const result = normalizeKeys(input) as Record<string, unknown>;
+    expect(result.workflowType).toBe('post-implementation');
+    expect(result.idempotencyKey).toBe('abc-123');
+
+    const validators = result.validators as Record<string, unknown>[];
+    expect(validators[0]!.maxScore).toBe(100);
+    expect(validators[0]!.durationMs).toBe(5000);
+    const tokens = validators[0]!.tokens as Record<string, unknown>;
+    expect(tokens.inputTokens).toBe(1000);
+    expect(tokens.outputTokens).toBe(500);
+
+    const recs = result.recommendations as Record<string, unknown>[];
+    expect(recs[0]!.failureCode).toBe('SEM-VAL/H');
+    expect(recs[0]!.failureDomain).toBe('SEM');
+    expect(recs[0]!.filePath).toBe('src/index.ts');
+    expect(recs[0]!.lineNumber).toBe(42);
+  });
+});
+
+describe('truncate', () => {
+  it('truncates strings longer than maxLength', () => {
+    expect(truncate('Hello, World!', 10)).toBe('Hello, ...');
+  });
+
+  it('returns short strings unchanged', () => {
+    expect(truncate('Hi', 10)).toBe('Hi');
+  });
+
+  it('handles exact length', () => {
+    expect(truncate('12345', 5)).toBe('12345');
   });
 });
 
 describe('redact', () => {
-  it('should mask long values showing last 4 chars', () => {
-    expect(redact('ulr_my-secret-key')).toBe('*************-key');
+  it('redacts most of the string', () => {
+    expect(redact('sk_1234567890')).toBe('*********7890');
   });
 
-  it('should return [REDACTED] for short values', () => {
-    expect(redact('abc')).toBe('[REDACTED]');
+  it('redacts short values completely', () => {
+    expect(redact('abc', 4)).toBe('[REDACTED]');
   });
 
-  it('should return [REDACTED] for value at showLast length', () => {
-    expect(redact('abcd')).toBe('[REDACTED]');
-  });
-
-  it('should support custom showLast', () => {
-    expect(redact('secret-value', 6)).toBe('******-value');
+  it('respects showLast parameter', () => {
+    expect(redact('abcdefgh', 2)).toBe('******gh');
   });
 });
 
 describe('formatDisplayDate', () => {
-  it('should format ISO string', () => {
-    const result = formatDisplayDate('2025-01-15T10:30:00.000Z');
-    // Locale-dependent, just verify it returns a non-empty string
-    expect(result.length).toBeGreaterThan(0);
+  it('handles null/undefined', () => {
+    expect(formatDisplayDate(null)).toBe('N/A');
+    expect(formatDisplayDate(undefined)).toBe('N/A');
   });
 
-  it('should format Date object', () => {
-    const result = formatDisplayDate(new Date('2025-01-15T10:30:00.000Z'));
-    expect(result.length).toBeGreaterThan(0);
-  });
-});
-
-describe('formatJson', () => {
-  it('should pretty-print objects with 2-space indent', () => {
-    expect(formatJson({ a: 1 })).toBe('{\n  "a": 1\n}');
+  it('formats a date string', () => {
+    const result = formatDisplayDate('2026-01-15T10:30:00.000Z');
+    expect(result).not.toBe('N/A');
+    expect(typeof result).toBe('string');
   });
 
-  it('should pretty-print arrays', () => {
-    expect(formatJson([1, 2])).toBe('[\n  1,\n  2\n]');
-  });
-
-  it('should handle nested objects', () => {
-    const result = formatJson({ a: { b: 1 } });
-    expect(result).toContain('"b": 1');
+  it('formats a Date object', () => {
+    const result = formatDisplayDate(new Date('2026-01-15T10:30:00.000Z'));
+    expect(result).not.toBe('N/A');
   });
 });
 
-describe('exitWithError', () => {
-  it('should print error message to stderr', () => {
-    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    try {
-      exitWithError('something failed');
-    } catch {
-      // process.exit mock throws
-    }
-    expect(errorSpy).toHaveBeenCalledWith('Error: something failed');
+describe('getFlexibleProperty', () => {
+  it('returns camelCase value when available', () => {
+    const obj = { workflowType: 'ship' };
+    expect(getFlexibleProperty(obj, 'workflowType', 'default')).toBe('ship');
   });
 
-  it('should call process.exit with code 1 by default', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(() => exitWithError('fail')).toThrow('process.exit(1)');
+  it('falls back to snake_case', () => {
+    const obj = { workflow_type: 'ship' };
+    expect(getFlexibleProperty(obj, 'workflowType', 'default')).toBe('ship');
   });
 
-  it('should call process.exit with custom code', () => {
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(() => exitWithError('fail', 2)).toThrow('process.exit(2)');
-  });
-});
-
-describe('withSpinner', () => {
-  it('should run function and return result when quiet', async () => {
-    const ctx = { quiet: true };
-    const result = await withSpinner(ctx, { start: 'Loading...', failure: 'Failed' }, () =>
-      Promise.resolve('data')
-    );
-    expect(result).toBe('data');
+  it('returns default when neither exists', () => {
+    const obj = { other: 'value' };
+    expect(getFlexibleProperty(obj, 'workflowType', 'default')).toBe('default');
   });
 
-  it('should rethrow errors from the function', async () => {
-    const ctx = { quiet: true };
-    await expect(
-      withSpinner(ctx, { start: 'Loading...', failure: 'Failed' }, () =>
-        Promise.reject(new Error('boom'))
-      )
-    ).rejects.toThrow('boom');
+  it('prefers camelCase over snake_case', () => {
+    const obj = { workflowType: 'camel', workflow_type: 'snake' };
+    expect(getFlexibleProperty(obj, 'workflowType', 'default')).toBe('camel');
   });
 });

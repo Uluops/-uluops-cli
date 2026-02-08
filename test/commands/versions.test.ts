@@ -33,10 +33,13 @@ function parse(...args: string[]) {
 
 describe('versions list', () => {
   it('should list versions for a definition', async () => {
-    mockClient.versions.list.mockResolvedValue([
-      createVersionListItem({ version: '1.0.0', status: 'published' }),
-      createVersionListItem({ version: '1.1.0', status: 'draft' }),
-    ]);
+    mockClient.versions.list.mockResolvedValue({
+      versions: [
+        createVersionListItem({ version: '1.0.0', status: 'published' }),
+        createVersionListItem({ version: '1.1.0', status: 'draft' }),
+      ],
+      totalVersions: 2,
+    });
     const output = captureOutput();
     await parse('versions', 'list', 'agent', 'my-agent');
     expect(mockClient.versions.list).toHaveBeenCalledWith('agent', 'my-agent');
@@ -46,7 +49,7 @@ describe('versions list', () => {
   });
 
   it('should show empty message', async () => {
-    mockClient.versions.list.mockResolvedValue([]);
+    mockClient.versions.list.mockResolvedValue({ versions: [], totalVersions: 0 });
     const output = captureOutput();
     await parse('versions', 'list', 'agent', 'my-agent');
     expect(output.stdout()).toContain('No versions found');

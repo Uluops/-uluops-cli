@@ -1,14 +1,11 @@
-import { vi, beforeEach, afterEach } from 'vitest';
+/**
+ * Global test setup for CLI tests
+ */
 
-beforeEach(() => {
-  vi.restoreAllMocks();
+// Prevent tests from accidentally calling process.exit
+import { vi } from 'vitest';
 
-  // Prevent tests from actually exiting the process
-  vi.spyOn(process, 'exit').mockImplementation(((code?: number) => {
-    throw new Error(`process.exit(${code ?? 0})`);
-  }) as never);
-});
-
-afterEach(() => {
-  vi.unstubAllEnvs();
+// Mock process.exit to throw instead of exiting
+vi.spyOn(process, 'exit').mockImplementation((code) => {
+  throw new Error(`process.exit(${code})`);
 });

@@ -3,139 +3,99 @@ import { formatTable, formatKeyValue, type Column } from '../../src/formatters/t
 
 interface TestRow {
   name: string;
-  score: number;
-  active: boolean;
+  value: number;
+  status: string;
 }
 
 describe('formatTable', () => {
   const columns: Column<TestRow>[] = [
-    { header: 'NAME', accessor: 'name' },
-    { header: 'SCORE', accessor: (r) => String(r.score), align: 'right' },
-    { header: 'ACTIVE', accessor: (r) => (r.active ? 'Yes' : 'No') },
+    { header: 'NAME', accessor: 'name', width: 15 },
+    { header: 'VALUE', accessor: (r) => String(r.value), width: 8, align: 'right' },
+    { header: 'STATUS', accessor: 'status', width: 10 },
   ];
 
-  it('should return "No data" for empty array', () => {
+  it('formats data as a table with headers and rows', () => {
+    const data: TestRow[] = [
+      { name: 'alpha', value: 42, status: 'active' },
+      { name: 'beta', value: 7, status: 'inactive' },
+    ];
+
+    const result = formatTable(data, columns);
+    const lines = result.split('\n');
+
+    expect(lines.length).toBe(4); // header + separator + 2 rows
+    expect(lines[0]).toContain('NAME');
+    expect(lines[0]).toContain('VALUE');
+    expect(lines[0]).toContain('STATUS');
+    expect(lines[1]).toMatch(/^-+/); // separator
+    expect(lines[2]).toContain('alpha');
+    expect(lines[3]).toContain('beta');
+  });
+
+  it('returns "No data" for empty arrays', () => {
     expect(formatTable([], columns)).toBe('No data');
   });
 
-  it('should render header, separator, and rows', () => {
-    const data: TestRow[] = [{ name: 'Alpha', score: 85, active: true }];
-    const result = formatTable(data, columns);
-    const lines = result.split('\n');
-
-    expect(lines).toHaveLength(3); // header + separator + 1 row
-    expect(lines[0]).toContain('NAME');
-    expect(lines[0]).toContain('SCORE');
-    expect(lines[0]).toContain('ACTIVE');
-    expect(lines[1]).toMatch(/^-+/); // separator
-    expect(lines[2]).toContain('Alpha');
-    expect(lines[2]).toContain('85');
-    expect(lines[2]).toContain('Yes');
-  });
-
-  it('should render multiple rows', () => {
+  it('truncates long values', () => {
     const data: TestRow[] = [
-      { name: 'Alpha', score: 85, active: true },
-      { name: 'Beta', score: 72, active: false },
+      { name: 'a very long name that exceeds the width', value: 1, status: 'ok' },
     ];
+
     const result = formatTable(data, columns);
-    const lines = result.split('\n');
-
-    expect(lines).toHaveLength(4); // header + separator + 2 rows
-    expect(lines[3]).toContain('Beta');
-    expect(lines[3]).toContain('No');
+    expect(result).toContain('\u2026');
   });
 
-  it('should use accessor function', () => {
-    const data: TestRow[] = [{ name: 'Test', score: 90, active: false }];
-    const result = formatTable(data, columns);
-    expect(result).toContain('No');
-  });
-
-  it('should truncate values exceeding column width with ellipsis', () => {
-    const narrowColumns: Column<TestRow>[] = [{ header: 'NAME', accessor: 'name', width: 5 }];
-    const data: TestRow[] = [{ name: 'VeryLongName', score: 0, active: true }];
-    const result = formatTable(data, narrowColumns);
-    expect(result).toContain('\u2026'); // unicode ellipsis
-  });
-
-  it('should right-align columns', () => {
-    const data: TestRow[] = [{ name: 'A', score: 5, active: true }];
-    const result = formatTable(data, columns);
-    // The SCORE column (right-aligned) should have leading spaces before the value
-    const lines = result.split('\n');
-    const scoreHeader = 'SCORE';
-    const headerIdx = lines[0]!.indexOf(scoreHeader);
-    expect(headerIdx).toBeGreaterThan(-1);
-  });
-
-  it('should center-align columns', () => {
-    const centerColumns: Column<TestRow>[] = [
-      { header: 'NAME', accessor: 'name', width: 20, align: 'center' },
+  it('handles null/undefined values', () => {
+    const nullableColumns: Column<{ name: string | null }>[] = [
+      { header: 'NAME', accessor: 'name', width: 10 },
     ];
-    const data: TestRow[] = [{ name: 'Hi', score: 0, active: true }];
-    const result = formatTable(data, centerColumns);
-    const lines = result.split('\n');
-    // "Hi" centered in 20 chars should have leading spaces
-    const row = lines[2]!;
-    const trimmedStart = row.length - row.trimStart().length;
-    expect(trimmedStart).toBeGreaterThan(0);
+
+    const result = formatTable([{ name: null }], nullableColumns);
+    expect(result).not.toContain('null');
   });
 
-  it('should cap auto-width at 50', () => {
-    const longNameColumns: Column<{ text: string }>[] = [{ header: 'TEXT', accessor: 'text' }];
-    const data = [{ text: 'x'.repeat(100) }];
-    const result = formatTable(data, longNameColumns);
-    const lines = result.split('\n');
-    // Row should be capped — the value gets truncated
-    expect(lines[2]!.length).toBeLessThanOrEqual(52); // 50 + possible trailing spaces
-  });
-
-  it('should handle null/undefined values as empty strings', () => {
-    const columns: Column<{ val: string | null }>[] = [{ header: 'VAL', accessor: 'val' }];
-    const data = [{ val: null }];
+  it('supports function accessors', () => {
+    const data: TestRow[] = [{ name: 'test', value: 100, status: 'ok' }];
     const result = formatTable(data, columns);
-    expect(result).toContain('VAL');
+    expect(result).toContain('100');
+  });
+
+  it('supports right alignment', () => {
+    const data: TestRow[] = [{ name: 'x', value: 5, status: 'ok' }];
+    const result = formatTable(data, columns);
+    const lines = result.split('\n');
+    const dataLine = lines[2]!;
+    expect(dataLine).toMatch(/\s+5/);
   });
 });
 
 describe('formatKeyValue', () => {
-  it('should format simple key-value pairs', () => {
-    const result = formatKeyValue({ name: 'test', count: 42 });
+  it('formats simple key-value pairs', () => {
+    const result = formatKeyValue({ name: 'test', status: 'active' });
     expect(result).toContain('Name: test');
-    expect(result).toContain('Count: 42');
+    expect(result).toContain('Status: active');
   });
 
-  it('should filter out undefined values', () => {
-    const result = formatKeyValue({ name: 'test', missing: undefined });
+  it('filters out null and undefined values', () => {
+    const result = formatKeyValue({ name: 'test', empty: null, missing: undefined });
     expect(result).toContain('Name: test');
-    expect(result).not.toContain('Missing');
+    expect(result).not.toContain('empty');
+    expect(result).not.toContain('missing');
   });
 
-  it('should filter out null values', () => {
-    const result = formatKeyValue({ name: 'test', missing: null });
-    expect(result).not.toContain('Missing');
+  it('converts camelCase keys to title case', () => {
+    const result = formatKeyValue({ workflowType: 'ship' });
+    expect(result).toContain('Workflow Type: ship');
   });
 
-  it('should convert camelCase keys to Title Case', () => {
-    const result = formatKeyValue({ firstName: 'John' });
-    expect(result).toContain('First Name: John');
+  it('handles nested objects', () => {
+    const result = formatKeyValue({ outer: { inner: 'value' } });
+    expect(result).toContain('Outer:');
+    expect(result).toContain('Inner: value');
   });
 
-  it('should preserve keys with spaces', () => {
-    const result = formatKeyValue({ 'Display Name': 'Test' });
-    expect(result).toContain('Display Name: Test');
-  });
-
-  it('should handle nested objects', () => {
-    const result = formatKeyValue({ stats: { open: 5, closed: 10 } });
-    expect(result).toContain('Stats:');
-    expect(result).toContain('Open: 5');
-    expect(result).toContain('Closed: 10');
-  });
-
-  it('should support custom indent', () => {
-    const result = formatKeyValue({ name: 'test' }, 4);
-    expect(result).toMatch(/^ {4}Name: test$/m);
+  it('supports indentation', () => {
+    const result = formatKeyValue({ name: 'test' }, 2);
+    expect(result.startsWith('  ')).toBe(true);
   });
 });

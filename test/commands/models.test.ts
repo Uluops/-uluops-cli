@@ -66,7 +66,7 @@ describe('models get', () => {
 describe('models providers', () => {
   it('should list providers', async () => {
     mockClient.models.listProviders.mockResolvedValue({
-      providers: [{ id: 'anthropic', displayName: 'Anthropic', status: 'active' }],
+      providers: [{ id: 'anthropic', name: 'Anthropic', status: 'active' }],
     });
     const output = captureOutput();
     await parse('models', 'providers');
@@ -98,26 +98,25 @@ describe('models aliases', () => {
 describe('models resolve', () => {
   it('should resolve alias', async () => {
     mockClient.models.resolveAlias.mockResolvedValue(
-      createAliasResolution({ alias: 'sonnet', resolved: true, provider: 'anthropic', modelId: 'claude-sonnet-4-5' })
+      createAliasResolution({ alias: 'sonnet', target: 'anthropic/claude-sonnet-4-5' })
     );
     const output = captureOutput();
     await parse('models', 'resolve', 'sonnet');
     expect(mockClient.models.resolveAlias).toHaveBeenCalledWith('sonnet');
     expect(output.stdout()).toContain('Alias: sonnet');
-    expect(output.stdout()).toContain('claude-sonnet-4-5');
+    expect(output.stdout()).toContain('anthropic/claude-sonnet-4-5');
     output.restore();
   });
 });
 
 describe('models sync', () => {
   it('should sync models', async () => {
-    mockClient.models.sync.mockResolvedValue({ synced: 10, created: 3, updated: 5, deleted: 2 });
+    mockClient.models.sync.mockResolvedValue({ providersAdded: 3, providersUpdated: 2, modelsAdded: 10, modelsUpdated: 5, duration: '1.2s' });
     const output = captureOutput();
     await parse('models', 'sync');
-    expect(output.stdout()).toContain('Synced: 10');
-    expect(output.stdout()).toContain('Created: 3');
-    expect(output.stdout()).toContain('Updated: 5');
-    expect(output.stdout()).toContain('Deleted: 2');
+    expect(output.stdout()).toContain('Providers: +3 added, ~2 updated');
+    expect(output.stdout()).toContain('Models:    +10 added, ~5 updated');
+    expect(output.stdout()).toContain('Duration: 1.2s');
     output.restore();
   });
 });

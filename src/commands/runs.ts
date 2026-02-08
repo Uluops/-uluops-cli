@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { readFileSync, existsSync } from 'node:fs';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner, exitWithError, getFlexibleProperty } from '../utils.js';
+import { withSpinner, exitWithError, getFlexibleProperty, normalizeKeys } from '../utils.js';
 import { formatRuns, formatRun } from '../formatters/ops.js';
 import type { SaveFeaturesListInput, UpdateRunByNumberInput } from '@uluops/ops-sdk';
 
@@ -212,8 +212,8 @@ export function registerRunCommands(program: Command): void {
       }
 
       try {
-        // Read and parse input
-        const input = (await readJsonInput(options)) as SaveFeaturesListInput;
+        // Read, normalize (snake_case → camelCase), and parse input
+        const input = normalizeKeys(await readJsonInput(options)) as SaveFeaturesListInput;
 
         // Apply overrides
         if (options.project) input.project = options.project;
@@ -221,10 +221,10 @@ export function registerRunCommands(program: Command): void {
 
         // Validate required fields
         if (!input.project) {
-          exitWithError('Missing required field: project');
+          exitWithError('Missing required field: project (or snake_case: project)');
         }
         if (!input.workflowType) {
-          exitWithError('Missing required field: workflowType');
+          exitWithError('Missing required field: workflowType (or snake_case: workflow_type)');
         }
         if (!Array.isArray(input.validators)) {
           exitWithError('Missing required field: validators (must be an array)');
@@ -271,8 +271,8 @@ export function registerRunCommands(program: Command): void {
       }
 
       try {
-        // Read and parse input
-        const input = (await readJsonInput(options)) as SaveFeaturesListInput;
+        // Read, normalize (snake_case → camelCase), and parse input
+        const input = normalizeKeys(await readJsonInput(options)) as SaveFeaturesListInput;
 
         // Apply overrides
         if (options.project) input.project = options.project;

@@ -41,7 +41,7 @@ function parse(...args: string[]) {
 describe('definitions list', () => {
   it('should display definitions table', async () => {
     mockClient.definitions.list.mockResolvedValue({
-      items: [createDefinitionListItem({ name: 'my-validator', type: 'validator' })],
+      definitions: [createDefinitionListItem({ name: 'my-validator', type: 'validator' })],
       total: 1,
     });
     const output = captureOutput();
@@ -51,7 +51,7 @@ describe('definitions list', () => {
   });
 
   it('should show message when empty', async () => {
-    mockClient.definitions.list.mockResolvedValue({ items: [], total: 0 });
+    mockClient.definitions.list.mockResolvedValue({ definitions: [], total: 0 });
     const output = captureOutput();
     await parse('definitions', 'list');
     expect(output.stdout()).toContain('No definitions found');
@@ -59,7 +59,7 @@ describe('definitions list', () => {
   });
 
   it('should pass filter options', async () => {
-    mockClient.definitions.list.mockResolvedValue({ items: [], total: 0 });
+    mockClient.definitions.list.mockResolvedValue({ definitions: [], total: 0 });
     const output = captureOutput();
     await parse('definitions', 'list', '--type', 'agent', '--status', 'published');
     expect(mockClient.definitions.list).toHaveBeenCalledWith(expect.objectContaining({

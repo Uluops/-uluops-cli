@@ -6,9 +6,16 @@ import { createPublicApiKey } from '../helpers/mock-factories.js';
 import type { OpsCliContext } from '../../src/context.js';
 
 vi.mock('../../src/context.js');
-vi.mock('@uluops/ops-sdk', () => ({
-  OpsClient: vi.fn(),
-}));
+vi.mock('@uluops/ops-sdk', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@uluops/ops-sdk')>();
+  return {
+    ...actual,
+    OpsClient: vi.fn().mockImplementation(() => ({
+      logout: vi.fn().mockResolvedValue({ sessionsRevoked: 2 }),
+    })),
+    loadConfig: vi.fn().mockReturnValue({ baseUrl: 'http://localhost:3100', debug: false, credentials: {} }),
+  };
+});
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs')>();
   return {
@@ -16,8 +23,8 @@ vi.mock('node:fs', async (importOriginal) => {
     writeFileSync: vi.fn(),
     renameSync: vi.fn(),
     mkdirSync: vi.fn(),
-    existsSync: vi.fn(() => false),
-    readFileSync: vi.fn(() => '{}'),
+    existsSync: vi.fn(() => true),
+    readFileSync: vi.fn(() => JSON.stringify({ default: { type: 'session', sessionToken: 'tok123' } })),
   };
 });
 vi.mock('node:os', async (importOriginal) => {
@@ -26,16 +33,18 @@ vi.mock('node:os', async (importOriginal) => {
 });
 
 import { createOpsContext, createUnauthenticatedContext, handleOpsError } from '../../src/context.js';
-import { OpsClient } from '@uluops/ops-sdk';
 import { registerAuthCommands } from '../../src/commands/auth.js';
 
 const mockedCreateOpsContext = vi.mocked(createOpsContext);
 const mockedCreateUnauthContext = vi.mocked(createUnauthenticatedContext);
 const mockedHandleOpsError = vi.mocked(handleOpsError);
-const mockedOpsClient = vi.mocked(OpsClient);
 
 type MockClient = ReturnType<typeof createMockOpsClient>;
 let mockClient: MockClient;
+
+// Mock global fetch for login tests
+const mockFetch = vi.fn();
+vi.stubGlobal('fetch', mockFetch);
 
 beforeEach(() => {
   mockClient = createMockOpsClient();
@@ -49,9 +58,7 @@ beforeEach(() => {
     quiet: true,
   } as ReturnType<typeof createUnauthenticatedContext>);
   mockedHandleOpsError.mockImplementation((error) => { throw error; });
-  mockedOpsClient.mockImplementation(() => ({
-    login: vi.fn().mockResolvedValue({ sessionToken: 'test-token', expiresAt: '2025-12-31T00:00:00Z' }),
-  }) as any);
+  mockFetch.mockReset();
 });
 
 function parse(...args: string[]) {
@@ -67,21 +74,33 @@ describe('auth login', () => {
   });
 
   it('should login and save credentials', async () => {
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({
+        data: {
+          user: { email: 'test@example.com' },
+          sessionToken: 'test-token',
+          expiresAt: '2025-12-31T00:00:00Z',
+        },
+      }),
+    });
     const output = captureOutput();
     await parse('auth', 'login', '--email', 'test@example.com', '--password', 'secret');
-    expect(mockedOpsClient).toHaveBeenCalled();
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://localhost:3100/auth/login',
+      expect.objectContaining({ method: 'POST' })
+    );
     expect(output.stdout()).toContain('Credentials saved');
     output.restore();
   });
 });
 
 describe('auth logout', () => {
-  it('should logout and show sessions revoked', async () => {
-    mockClient.logout.mockResolvedValue({ sessionsRevoked: 2 });
+  it('should logout, revoke sessions, and remove local credentials', async () => {
     const output = captureOutput();
     await parse('auth', 'logout');
-    expect(mockClient.logout).toHaveBeenCalled();
-    expect(output.stdout()).toContain('Revoked 2 session(s)');
+    expect(output.stdout()).toContain('Revoked 2 server session(s)');
+    expect(output.stdout()).toContain('Removed local credentials');
     output.restore();
   });
 });
