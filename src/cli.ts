@@ -23,6 +23,9 @@ import { registerModelCommands } from './commands/models.js';
 import { registerExecutionCommands } from './commands/executions.js';
 import { registerTranslationCommands } from './commands/translation.js';
 
+// Core SDK commands
+import { registerExecCommands } from './commands/exec.js';
+
 // Infrastructure commands
 import { registerConfigCommands } from './commands/config.js';
 import { registerCompletionCommands } from './commands/completion.js';
@@ -83,6 +86,9 @@ registerForkCommands(program);
 registerModelCommands(program);
 registerExecutionCommands(program);
 registerTranslationCommands(program);
+
+// Core SDK commands
+registerExecCommands(program);
 
 // Infrastructure commands
 registerConfigCommands(program);

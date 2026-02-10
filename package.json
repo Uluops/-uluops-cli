@@ -15,7 +15,7 @@
   },
   "scripts": {
     "build": "tsc",
-    "dev": "tsx src/cli.ts",
+    "dev": "NODE_ENV=development tsx src/cli.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest watch",
@@ -33,6 +33,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@uluops/core": "file:../uluops-core-sdk",
     "@uluops/ops-sdk": "file:../ops-sdk",
     "@uluops/registry-sdk": "file:../registry-sdk",
     "commander": "^13.1.0",

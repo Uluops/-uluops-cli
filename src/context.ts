@@ -2,6 +2,21 @@ import { OpsClient, loadConfig as loadOpsConfig, OpsApiError } from '@uluops/ops
 import { RegistryClient } from '@uluops/registry-sdk';
 import { RegistryApiError } from '@uluops/registry-sdk/errors';
 import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
+import {
+  UluOpsClient,
+  UluOpsError,
+  ConfigurationError,
+  ExecutionError,
+  ModelNotFoundError,
+  PreflightError,
+  HashVerificationError,
+  ParseError,
+  ValidationError,
+  WorkflowError,
+  PipelineError,
+  SdkApiError,
+} from '@uluops/core';
+import type { UluOpsConfig } from '@uluops/core';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
@@ -35,6 +50,26 @@ export interface OpsCliContext {
  */
 export interface RegistryCliContext {
   client: RegistryClient;
+  json: boolean;
+  debug: boolean;
+  quiet: boolean;
+}
+
+/**
+ * Options specific to exec commands
+ */
+export interface CoreExecOptions {
+  localDefinitions?: string;
+  registryUrl?: string;
+  project?: string;
+  tracking?: boolean;
+}
+
+/**
+ * CLI execution context for core SDK commands (exec)
+ */
+export interface CoreCliContext {
+  client: UluOpsClient;
   json: boolean;
   debug: boolean;
   quiet: boolean;
@@ -193,6 +228,54 @@ export function createUnauthenticatedContext(options: GlobalOptions): { baseUrl:
 }
 
 /**
+ * Create CLI context for core SDK commands (exec)
+ */
+export function createCoreContext(options: GlobalOptions & CoreExecOptions): CoreCliContext {
+  // Resolve API key from global options or env
+  const opsConfig = loadOpsConfig({
+    apiKey: options.apiKey,
+    baseUrl: options.baseUrl,
+    profile: options.profile,
+    debug: options.debug,
+  });
+
+  const apiKey = opsConfig.credentials.apiKey ?? options.apiKey;
+  if (!apiKey) {
+    requireCredentials(false, options.profile ?? 'default');
+  }
+
+  const config: UluOpsConfig = {
+    apiKey,
+    localDefinitions: options.localDefinitions,
+    trackingEnabled: options.tracking,
+    defaultProject: options.project,
+  };
+
+  if (options.registryUrl) {
+    config.registryUrl = options.registryUrl;
+  }
+
+  const timeout = options.timeout ? parseIntOption(options.timeout, '--timeout') : undefined;
+  if (timeout) {
+    config.timeout = timeout;
+  }
+
+  let client: UluOpsClient;
+  try {
+    client = new UluOpsClient(config);
+  } catch (error) {
+    exitWithError(error instanceof Error ? error.message : String(error));
+  }
+
+  return {
+    client,
+    json: options.json ?? false,
+    debug: options.debug ?? false,
+    quiet: options.quiet ?? false,
+  };
+}
+
+/**
  * Hint overrides for domain-specific error messages
  */
 interface ErrorHintOverrides {
@@ -265,6 +348,97 @@ export function handleRegistryError(error: unknown, ctx: Pick<RegistryCliContext
       notFound: 'The resource was not found. Check the type, name, and version.',
       validation: 'Invalid input. Check the command arguments or YAML file.',
     });
+    process.exit(1);
+  }
+
+  handleGenericError(error, ctx);
+}
+
+/**
+ * Handle core SDK errors consistently
+ */
+export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json' | 'debug'>): never {
+  if (error instanceof SdkApiError) {
+    printApiErrorDetails(
+      error as unknown as { message: string; code?: string; statusCode?: number; details?: unknown; requestId?: string; toJSON(): unknown },
+      ctx,
+      {
+        unauthorized: 'Check your ULUOPS_API_KEY environment variable.',
+        notFound: 'The definition was not found. Check the name and version.',
+        validation: 'Invalid request. Check the command arguments.',
+      },
+    );
+    process.exit(1);
+  }
+
+  if (error instanceof ConfigurationError) {
+    console.error(`Error: ${error.message}`);
+    console.error('\nHint: Check ULUOPS_API_KEY and ANTHROPIC_API_KEY environment variables.');
+    process.exit(1);
+  }
+
+  if (error instanceof ModelNotFoundError) {
+    console.error(`Error: ${error.message}`);
+    console.error('\nHint: Use --model with a known alias (haiku, sonnet, opus) or provider:modelId format.');
+    process.exit(1);
+  }
+
+  if (error instanceof PreflightError) {
+    console.error(`Error: Pre-flight check "${error.check}" failed: ${error.message}`);
+    if (ctx.debug && error.details) {
+      console.error('\nDetails:', JSON.stringify(error.details, null, 2));
+    }
+    process.exit(1);
+  }
+
+  if (error instanceof HashVerificationError) {
+    console.error(`Error: ${error.message}`);
+    console.error('\nHint: Definition integrity check failed. Use --local-definitions or re-fetch from registry.');
+    process.exit(1);
+  }
+
+  if (error instanceof ParseError) {
+    console.error(`Error: ${error.message}`);
+    if (ctx.debug) {
+      console.error('\nContent preview:', error.contentPreview);
+    } else {
+      console.error('\nHint: Run with --debug to see the raw output that failed to parse.');
+    }
+    process.exit(1);
+  }
+
+  if (error instanceof ValidationError) {
+    console.error(`Error: ${error.message}`);
+    if (error.code) {
+      console.error(`\nValidation error code: ${error.code}`);
+    }
+    process.exit(1);
+  }
+
+  if (error instanceof ExecutionError) {
+    console.error(`Error: ${error.message}`);
+    console.error('\nHint: Check that the target path exists and the agent definition is valid.');
+    if (ctx.debug && error.partialResult) {
+      console.error('\nPartial result:', JSON.stringify(error.partialResult, null, 2));
+    }
+    process.exit(1);
+  }
+
+  if (error instanceof WorkflowError) {
+    console.error(`Error: ${error.message}`);
+    if (ctx.debug && error.context?.partialResult) {
+      console.error('\nPartial result:', JSON.stringify(error.context.partialResult, null, 2));
+    }
+    process.exit(1);
+  }
+
+  if (error instanceof PipelineError) {
+    console.error(`Error: ${error.message}`);
+    process.exit(1);
+  }
+
+  if (error instanceof UluOpsError) {
+    console.error(`Error: ${error.message}`);
     process.exit(1);
   }
 
