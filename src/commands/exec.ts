@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { createCoreContext, handleCoreError, type GlobalOptions, type CoreExecOptions } from '../context.js';
-import { withSpinner, parseIntOption } from '../utils.js';
+import { withSpinner, parseIntOption, parseFloatOption } from '../utils.js';
 import {
   formatAgentResult,
   formatExecutionResult,
@@ -50,6 +50,18 @@ function buildExecOptions(opts: Record<string, unknown>): ExecutionOptions | und
   }
   if (opts.tracking === false) {
     execOpts.trackResults = false;
+    hasOptions = true;
+  }
+  if (opts.temperature !== undefined) {
+    execOpts.temperature = parseFloatOption(opts.temperature as string, '--temperature');
+    hasOptions = true;
+  }
+  if (opts.maxSteps) {
+    execOpts.maxSteps = parseIntOption(opts.maxSteps as string, '--max-steps');
+    hasOptions = true;
+  }
+  if (opts.timeout) {
+    execOpts.timeoutMs = parseIntOption(opts.timeout as string, '--timeout');
     hasOptions = true;
   }
 
@@ -103,6 +115,9 @@ export function registerExecCommands(program: Command): void {
     .description('Execute an agent definition directly')
     .option('-m, --model <model>', 'Model override (alias, tier, or provider:modelId)')
     .option('--max-tokens <n>', 'Maximum response tokens')
+    .option('--max-steps <n>', 'Maximum tool loop iterations (default: 50)')
+    .option('--temperature <n>', 'Generation temperature 0-1 (default: 0)')
+    .option('--timeout <ms>', 'Execution timeout in milliseconds')
     .option('--threshold-pass <n>', 'Pass threshold score (validators)')
     .option('--threshold-warn <n>', 'Warning threshold score (validators)')
     .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {

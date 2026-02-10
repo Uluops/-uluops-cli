@@ -244,11 +244,13 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions): Cor
     requireCredentials(false, options.profile ?? 'default');
   }
 
+  const thinkingBudgetEnv = process.env['ULUOPS_THINKING_BUDGET'];
   const config: UluOpsConfig = {
     apiKey,
     localDefinitions: options.localDefinitions,
     trackingEnabled: options.tracking,
     defaultProject: options.project,
+    ...(thinkingBudgetEnv ? { defaultThinkingBudget: parseInt(thinkingBudgetEnv, 10) } : {}),
   };
 
   if (options.registryUrl) {

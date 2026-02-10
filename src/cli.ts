@@ -30,6 +30,10 @@ import { registerExecCommands } from './commands/exec.js';
 import { registerConfigCommands } from './commands/config.js';
 import { registerCompletionCommands } from './commands/completion.js';
 
+// Load .env files early so all SDK contexts see them
+import { loadEnvFiles } from '@uluops/ops-sdk';
+loadEnvFiles();
+
 // Global unhandled rejection handler (defense-in-depth)
 process.on('unhandledRejection', (reason) => {
   const debug = process.argv.includes('--debug');

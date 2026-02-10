@@ -69,6 +69,12 @@ export function formatAgentResult(result: AgentResult): string {
   lines.push('Token Usage:');
   lines.push(`  Input: ${result.metrics.inputTokens.toLocaleString()}`);
   lines.push(`  Output: ${result.metrics.outputTokens.toLocaleString()}`);
+  if (result.metrics.cacheCreationTokens) {
+    lines.push(`  Cache write: ${result.metrics.cacheCreationTokens.toLocaleString()}`);
+  }
+  if (result.metrics.cacheReadTokens) {
+    lines.push(`  Cache read: ${result.metrics.cacheReadTokens.toLocaleString()}`);
+  }
   lines.push(`  Total effective: ${result.metrics.totalEffectiveTokens.toLocaleString()}`);
   if (result.metrics.costUsd !== undefined) {
     lines.push(`  Estimated cost: $${result.metrics.costUsd.toFixed(4)}`);
@@ -103,6 +109,12 @@ export function formatExecutionResult(result: ExecutionResult): string {
   lines.push('Token Usage:');
   lines.push(`  Input: ${result.metrics.inputTokens.toLocaleString()}`);
   lines.push(`  Output: ${result.metrics.outputTokens.toLocaleString()}`);
+  if (result.metrics.cacheCreationTokens) {
+    lines.push(`  Cache write: ${result.metrics.cacheCreationTokens.toLocaleString()}`);
+  }
+  if (result.metrics.cacheReadTokens) {
+    lines.push(`  Cache read: ${result.metrics.cacheReadTokens.toLocaleString()}`);
+  }
   lines.push(`  Total effective: ${result.metrics.totalEffectiveTokens.toLocaleString()}`);
   if (result.metrics.costUsd !== undefined) {
     lines.push(`  Estimated cost: $${result.metrics.costUsd.toFixed(4)}`);
