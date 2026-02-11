@@ -250,6 +250,7 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions): Cor
     localDefinitions: options.localDefinitions,
     trackingEnabled: options.tracking,
     defaultProject: options.project,
+    validationUrl: opsConfig.baseUrl,
     debug: options.debug,
     ...(thinkingBudgetEnv ? { defaultThinkingBudget: parseInt(thinkingBudgetEnv, 10) } : {}),
   };
