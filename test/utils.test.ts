@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   toSnakeCase,
   toCamelCase,
@@ -9,6 +9,8 @@ import {
   getFlexibleProperty,
   parseIntOption,
   parseFloatOption,
+  readFileOption,
+  asFlexibleResponse,
 } from '../src/utils.js';
 
 describe('toSnakeCase', () => {
@@ -368,5 +370,72 @@ describe('getFlexibleProperty', () => {
   it('works with typed default values', () => {
     const result = getFlexibleProperty<string[]>({ items: ['a', 'b'] }, 'items', []);
     expect(result).toEqual(['a', 'b']);
+  });
+});
+
+describe('readFileOption', () => {
+  it('exits with error for non-existent file', () => {
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    readFileOption('/tmp/does-not-exist-cli-test-file.txt');
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('File not found'));
+
+    mockExit.mockRestore();
+    mockError.mockRestore();
+  });
+
+  it('exits with error for directory path', () => {
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    readFileOption('/tmp');
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('directory'));
+
+    mockExit.mockRestore();
+    mockError.mockRestore();
+  });
+
+  it('reads valid file successfully', () => {
+    const { writeFileSync, unlinkSync } = require('node:fs');
+    const path = '/tmp/cli-test-readFileOption.txt';
+    writeFileSync(path, 'hello world');
+    try {
+      const content = readFileOption(path);
+      expect(content).toBe('hello world');
+    } finally {
+      unlinkSync(path);
+    }
+  });
+});
+
+describe('asFlexibleResponse', () => {
+  it('returns object as record', () => {
+    const obj = { foo: 'bar', count: 42 };
+    const result = asFlexibleResponse(obj);
+    expect(result.foo).toBe('bar');
+    expect(result.count).toBe(42);
+  });
+
+  it('returns empty record for null', () => {
+    expect(asFlexibleResponse(null)).toEqual({});
+  });
+
+  it('returns empty record for undefined', () => {
+    expect(asFlexibleResponse(undefined)).toEqual({});
+  });
+
+  it('returns empty record for primitives', () => {
+    expect(asFlexibleResponse('string')).toEqual({});
+    expect(asFlexibleResponse(42)).toEqual({});
+    expect(asFlexibleResponse(true)).toEqual({});
+  });
+
+  it('handles arrays as objects', () => {
+    const arr = [1, 2, 3];
+    const result = asFlexibleResponse(arr);
+    expect(result).toBe(arr);
   });
 });

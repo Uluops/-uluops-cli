@@ -52,17 +52,79 @@ vi.mock('@uluops/registry-sdk/config', () => ({
   loadConfig: vi.fn(),
 }));
 
+vi.mock('@uluops/core', () => {
+  class SdkApiError extends Error {
+    constructor(
+      public statusCode: number,
+      message: string,
+      public code: string = 'UNKNOWN',
+      public details?: Record<string, unknown>,
+      public requestId?: string
+    ) {
+      super(message);
+      this.name = 'SdkApiError';
+    }
+    toJSON() {
+      return { name: this.name, message: this.message, statusCode: this.statusCode, code: this.code, details: this.details, requestId: this.requestId };
+    }
+  }
+  class UluOpsError extends Error { constructor(message: string) { super(message); this.name = 'UluOpsError'; } }
+  class ConfigurationError extends UluOpsError { constructor(message: string) { super(message); this.name = 'ConfigurationError'; } }
+  class ModelNotFoundError extends UluOpsError { constructor(message: string) { super(message); this.name = 'ModelNotFoundError'; } }
+  class PreflightError extends UluOpsError {
+    check = 'target-exists';
+    details?: Record<string, unknown>;
+    constructor(message: string, check?: string, details?: Record<string, unknown>) {
+      super(message);
+      this.name = 'PreflightError';
+      if (check) this.check = check;
+      this.details = details;
+    }
+  }
+  class HashVerificationError extends UluOpsError { constructor(message: string) { super(message); this.name = 'HashVerificationError'; } }
+  class ParseError extends UluOpsError {
+    contentPreview?: string;
+    constructor(message: string, contentPreview?: string) { super(message); this.name = 'ParseError'; this.contentPreview = contentPreview; }
+  }
+  class ValidationError extends UluOpsError {
+    code?: string;
+    constructor(message: string, code?: string) { super(message); this.name = 'ValidationError'; this.code = code; }
+  }
+  class ExecutionError extends UluOpsError {
+    partialResult?: unknown;
+    constructor(message: string, partialResult?: unknown) { super(message); this.name = 'ExecutionError'; this.partialResult = partialResult; }
+  }
+  class WorkflowError extends UluOpsError {
+    context?: { partialResult?: unknown };
+    constructor(message: string, context?: { partialResult?: unknown }) { super(message); this.name = 'WorkflowError'; this.context = context; }
+  }
+  class PipelineError extends UluOpsError { constructor(message: string) { super(message); this.name = 'PipelineError'; } }
+
+  return {
+    UluOpsClient: vi.fn().mockReturnValue({}),
+    UluOpsError, SdkApiError, ConfigurationError, ModelNotFoundError,
+    PreflightError, HashVerificationError, ParseError, ValidationError,
+    ExecutionError, WorkflowError, PipelineError,
+  };
+});
+
 // Import after mocks are set up
 import { OpsClient, loadConfig as loadOpsConfig, OpsApiError } from '@uluops/ops-sdk';
 import { RegistryClient } from '@uluops/registry-sdk';
 import { RegistryApiError } from '@uluops/registry-sdk/errors';
 import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
 import {
+  SdkApiError, ConfigurationError, ModelNotFoundError, PreflightError,
+  HashVerificationError, ParseError, ValidationError as CoreValidationError,
+  ExecutionError, WorkflowError, PipelineError, UluOpsError,
+} from '@uluops/core';
+import {
   createOpsContext,
   createRegistryContext,
   createUnauthenticatedContext,
   handleOpsError,
   handleRegistryError,
+  handleCoreError,
 } from '../src/context.js';
 
 const mockedLoadOpsConfig = vi.mocked(loadOpsConfig);
@@ -414,6 +476,159 @@ describe('handleRegistryError', () => {
 
     expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Request ID: req-xyz-789');
+    output.restore();
+  });
+});
+
+describe('handleCoreError', () => {
+  it('should handle SdkApiError with core-specific hints', () => {
+    const output = captureOutput();
+    const error = new SdkApiError(401, 'Unauthorized', 'UNAUTHORIZED');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('ULUOPS_API_KEY');
+    output.restore();
+  });
+
+  it('should handle SdkApiError 404 with definition hint', () => {
+    const output = captureOutput();
+    const error = new SdkApiError(404, 'Not found', 'NOT_FOUND');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('definition was not found');
+    output.restore();
+  });
+
+  it('should handle ConfigurationError', () => {
+    const output = captureOutput();
+    const error = new ConfigurationError('Missing API key');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Missing API key');
+    expect(output.stderr()).toContain('ANTHROPIC_API_KEY');
+    output.restore();
+  });
+
+  it('should handle ModelNotFoundError', () => {
+    const output = captureOutput();
+    const error = new ModelNotFoundError('Model "bad-model" not found');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('bad-model');
+    expect(output.stderr()).toContain('haiku, sonnet, opus');
+    output.restore();
+  });
+
+  it('should handle PreflightError', () => {
+    const output = captureOutput();
+    const error = new PreflightError('Target directory not found', 'target-exists');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Pre-flight check');
+    expect(output.stderr()).toContain('target-exists');
+    output.restore();
+  });
+
+  it('should handle PreflightError with details in debug mode', () => {
+    const output = captureOutput();
+    const error = new PreflightError('Check failed', 'api-key', { checked: true });
+
+    expect(() => handleCoreError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Details:');
+    output.restore();
+  });
+
+  it('should handle HashVerificationError', () => {
+    const output = captureOutput();
+    const error = new HashVerificationError('Hash mismatch');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Hash mismatch');
+    expect(output.stderr()).toContain('--local-definitions');
+    output.restore();
+  });
+
+  it('should handle ParseError with debug preview', () => {
+    const output = captureOutput();
+    const error = new ParseError('Failed to parse JSON', '{"broken');
+
+    expect(() => handleCoreError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Content preview:');
+    expect(output.stderr()).toContain('{"broken');
+    output.restore();
+  });
+
+  it('should handle ParseError without debug showing hint', () => {
+    const output = captureOutput();
+    const error = new ParseError('Failed to parse');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('--debug');
+    output.restore();
+  });
+
+  it('should handle ValidationError with code', () => {
+    const output = captureOutput();
+    const error = new CoreValidationError('Schema invalid', 'SCHEMA_ERROR');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Schema invalid');
+    expect(output.stderr()).toContain('SCHEMA_ERROR');
+    output.restore();
+  });
+
+  it('should handle ExecutionError', () => {
+    const output = captureOutput();
+    const error = new ExecutionError('Agent timed out');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Agent timed out');
+    expect(output.stderr()).toContain('target path');
+    output.restore();
+  });
+
+  it('should handle ExecutionError with partial result in debug', () => {
+    const output = captureOutput();
+    const error = new ExecutionError('Failed mid-execution', { score: 42 });
+
+    expect(() => handleCoreError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Partial result:');
+    output.restore();
+  });
+
+  it('should handle WorkflowError', () => {
+    const output = captureOutput();
+    const error = new WorkflowError('Phase 2 failed');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Phase 2 failed');
+    output.restore();
+  });
+
+  it('should handle PipelineError', () => {
+    const output = captureOutput();
+    const error = new PipelineError('Pipeline aborted');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Pipeline aborted');
+    output.restore();
+  });
+
+  it('should handle generic UluOpsError', () => {
+    const output = captureOutput();
+    const error = new UluOpsError('Unknown SDK error');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Unknown SDK error');
+    output.restore();
+  });
+
+  it('should fall through to generic handler for non-SDK errors', () => {
+    const output = captureOutput();
+    const error = new Error('ECONNREFUSED');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('ECONNREFUSED');
     output.restore();
   });
 });
