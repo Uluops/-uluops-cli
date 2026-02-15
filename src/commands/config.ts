@@ -60,7 +60,13 @@ function saveProfiles(profiles: ProfilesFile): void {
     if (code === 'EACCES') {
       exitWithError(`Permission denied writing to ${PROFILES_PATH}. Check file permissions.`);
     }
-    exitWithError(`Failed to save config: ${(error as Error).message}`);
+    if (code === 'ENOSPC') {
+      exitWithError(`No disk space available to write ${PROFILES_PATH}. Free up disk space and try again.`);
+    }
+    if (code === 'EROFS') {
+      exitWithError(`Cannot write to ${PROFILES_PATH}: filesystem is read-only.`);
+    }
+    exitWithError(`Failed to save config to ${PROFILES_PATH}: ${(error as Error).message}`);
   }
 }
 

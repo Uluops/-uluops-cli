@@ -114,6 +114,7 @@ import { RegistryClient } from '@uluops/registry-sdk';
 import { RegistryApiError } from '@uluops/registry-sdk/errors';
 import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
 import {
+  UluOpsClient,
   SdkApiError, ConfigurationError, ModelNotFoundError, PreflightError,
   HashVerificationError, ParseError, ValidationError as CoreValidationError,
   ExecutionError, WorkflowError, PipelineError, UluOpsError,
@@ -121,6 +122,7 @@ import {
 import {
   createOpsContext,
   createRegistryContext,
+  createCoreContext,
   createUnauthenticatedContext,
   handleOpsError,
   handleRegistryError,
@@ -131,6 +133,7 @@ const mockedLoadOpsConfig = vi.mocked(loadOpsConfig);
 const mockedLoadRegistryConfig = vi.mocked(loadRegistryConfig);
 const mockedOpsClient = vi.mocked(OpsClient);
 const mockedRegistryClient = vi.mocked(RegistryClient);
+const mockedUluOpsClient = vi.mocked(UluOpsClient);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -266,6 +269,44 @@ describe('createRegistryContext', () => {
     expect(output.stderr()).toContain('No credentials found');
     output.restore();
   });
+
+  it('should pass timeout to client when provided', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: {},
+    } as ReturnType<typeof loadOpsConfig>);
+    mockedLoadRegistryConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3200',
+      authBaseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { apiKey: 'ulr_test-key' },
+    } as ReturnType<typeof loadRegistryConfig>);
+
+    createRegistryContext({ timeout: '45000' });
+    expect(mockedRegistryClient).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: 45000 })
+    );
+  });
+
+  it('should not pass timeout when not provided', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: {},
+    } as ReturnType<typeof loadOpsConfig>);
+    mockedLoadRegistryConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3200',
+      authBaseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { apiKey: 'ulr_test-key' },
+    } as ReturnType<typeof loadRegistryConfig>);
+
+    createRegistryContext({});
+    expect(mockedRegistryClient).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: undefined })
+    );
+  });
 });
 
 describe('createUnauthenticatedContext', () => {
@@ -280,6 +321,47 @@ describe('createUnauthenticatedContext', () => {
     expect(ctx.baseUrl).toBe('http://localhost:3100');
     expect(ctx.json).toBe(true);
     expect(ctx.quiet).toBe(true);
+  });
+});
+
+describe('createCoreContext', () => {
+  it('should pass timeout to client when provided', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { apiKey: 'ulr_test-key' },
+    } as ReturnType<typeof loadOpsConfig>);
+
+    createCoreContext({ timeout: '30000' });
+    expect(mockedUluOpsClient).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: 30000 })
+    );
+  });
+
+  it('should not pass timeout when not provided', () => {
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { apiKey: 'ulr_test-key' },
+    } as ReturnType<typeof loadOpsConfig>);
+
+    createCoreContext({});
+    expect(mockedUluOpsClient).toHaveBeenCalledWith(
+      expect.not.objectContaining({ timeout: expect.any(Number) })
+    );
+  });
+
+  it('should exit when no API key found', () => {
+    const output = captureOutput();
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: {},
+    } as ReturnType<typeof loadOpsConfig>);
+
+    expect(() => createCoreContext({})).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('No credentials found');
+    output.restore();
   });
 });
 
@@ -460,6 +542,25 @@ describe('handleRegistryError', () => {
     output.restore();
   });
 
+  it('should show service unavailable hint for 503', () => {
+    const output = captureOutput();
+    const error = new RegistryApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE');
+
+    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Service unavailable');
+    expect(output.stderr()).toContain('Try again');
+    output.restore();
+  });
+
+  it('should show retry-after value for 503 when available', () => {
+    const output = captureOutput();
+    const error = new RegistryApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE', { retryAfter: 60 });
+
+    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Try again in 60 seconds');
+    output.restore();
+  });
+
   it('should show details in debug mode', () => {
     const output = captureOutput();
     const error = new RegistryApiError(400, 'Bad', 'VALIDATION_ERROR', { field: 'yaml' });
@@ -496,6 +597,25 @@ describe('handleCoreError', () => {
 
     expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('definition was not found');
+    output.restore();
+  });
+
+  it('should handle SdkApiError 503 with service unavailable hint', () => {
+    const output = captureOutput();
+    const error = new SdkApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Service unavailable');
+    expect(output.stderr()).toContain('Try again');
+    output.restore();
+  });
+
+  it('should handle SdkApiError 503 with retry-after value', () => {
+    const output = captureOutput();
+    const error = new SdkApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE', { retryAfter: 15 });
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Try again in 15 seconds');
     output.restore();
   });
 

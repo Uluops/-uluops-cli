@@ -90,17 +90,23 @@ export function redact(value: string, showLast = 4): string {
  */
 export function readFileOption(filePath: string): string {
   if (!existsSync(filePath)) {
-    exitWithError(`File not found: ${filePath}`);
+    console.error(`Error: File not found: ${filePath}`);
+    console.error('\nHint: Check the path passed to --file. Use an absolute path or a path relative to the current directory.');
+    process.exit(1);
   }
   try {
     return readFileSync(filePath, 'utf-8');
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
     if (code === 'EISDIR') {
-      exitWithError(`${filePath} is a directory, not a file`);
+      console.error(`Error: ${filePath} is a directory, not a file`);
+      console.error('\nHint: The --file option requires a path to a YAML file, not a directory.');
+      process.exit(1);
     }
     if (code === 'EACCES') {
-      exitWithError(`Permission denied: ${filePath}`);
+      console.error(`Error: Permission denied: ${filePath}`);
+      console.error('\nHint: Check file permissions. Run "chmod +r" on the file if needed.');
+      process.exit(1);
     }
     exitWithError(`Cannot read file: ${filePath}`);
   }
