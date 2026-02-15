@@ -245,6 +245,7 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions): Cor
   }
 
   const thinkingBudgetEnv = process.env['ULUOPS_THINKING_BUDGET'];
+  const thinkingBudget = thinkingBudgetEnv ? parseInt(thinkingBudgetEnv, 10) : undefined;
   const config: UluOpsConfig = {
     apiKey,
     localDefinitions: options.localDefinitions,
@@ -252,7 +253,7 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions): Cor
     defaultProject: options.project,
     validationUrl: opsConfig.baseUrl,
     debug: options.debug,
-    ...(thinkingBudgetEnv ? { defaultThinkingBudget: parseInt(thinkingBudgetEnv, 10) } : {}),
+    ...(thinkingBudget !== undefined && !Number.isNaN(thinkingBudget) ? { defaultThinkingBudget: thinkingBudget } : {}),
   };
 
   if (options.registryUrl) {
@@ -260,7 +261,7 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions): Cor
   }
 
   const timeout = options.timeout ? parseIntOption(options.timeout, '--timeout') : undefined;
-  if (timeout) {
+  if (timeout !== undefined) {
     config.timeout = timeout;
   }
 
@@ -282,6 +283,16 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions): Cor
 /**
  * Hint overrides for domain-specific error messages
  */
+/** Common shape for API error objects from any SDK */
+interface ApiErrorLike {
+  message: string;
+  code?: string;
+  statusCode?: number;
+  details?: unknown;
+  requestId?: string;
+  toJSON(): unknown;
+}
+
 interface ErrorHintOverrides {
   unauthorized?: string;
   notFound?: string;
@@ -293,7 +304,7 @@ interface ErrorHintOverrides {
  * Shared logic for both ops and registry error handlers.
  */
 function printApiErrorDetails(
-  error: { message: string; code?: string; statusCode?: number; details?: unknown; requestId?: string; toJSON(): unknown },
+  error: ApiErrorLike,
   ctx: { json: boolean; debug: boolean },
   hints: ErrorHintOverrides = {}
 ): void {
@@ -364,7 +375,7 @@ export function handleRegistryError(error: unknown, ctx: Pick<RegistryCliContext
 export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json' | 'debug'>): never {
   if (error instanceof SdkApiError) {
     printApiErrorDetails(
-      error as unknown as { message: string; code?: string; statusCode?: number; details?: unknown; requestId?: string; toJSON(): unknown },
+      error as ApiErrorLike,
       ctx,
       {
         unauthorized: 'Check your ULUOPS_API_KEY environment variable.',

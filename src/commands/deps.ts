@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
-import { withSpinner, parseIntOption } from '../utils.js';
+import { withSpinner, parseIntOption, asFlexibleResponse } from '../utils.js';
 import type { DefinitionType } from '@uluops/registry-sdk';
 
 /**
@@ -36,7 +36,7 @@ export function registerDepsCommands(program: Command): void {
           console.log(JSON.stringify(graph, null, 2));
         } else {
           // API may return { graph, flat, totalCount } or { nodes, edges }
-          const data = graph as unknown as Record<string, unknown>;
+          const data = asFlexibleResponse(graph);
           const nodes = (data.nodes ?? data.flat ?? []) as Array<{ type: string; name: string; version: string; status: string }>;
           const edges = (data.edges ?? []) as unknown[];
           console.log(`Dependencies for ${type}/${name}@${version}:`);
@@ -84,7 +84,7 @@ export function registerDepsCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(graph, null, 2));
         } else {
-          const depData = graph as unknown as Record<string, unknown>;
+          const depData = asFlexibleResponse(graph);
           const nodes = (depData.nodes ?? depData.flat ?? []) as Array<{ type: string; name: string; version: string; status: string }>;
           if (nodes.length === 0) {
             console.log('No dependents found');

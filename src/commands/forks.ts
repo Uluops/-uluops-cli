@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
-import { withSpinner } from '../utils.js';
+import { withSpinner, asFlexibleResponse } from '../utils.js';
 import { formatDefinitions } from '../formatters/registry.js';
 import type { DefinitionType } from '@uluops/registry-sdk';
 
@@ -31,7 +31,7 @@ export function registerForkCommands(program: Command): void {
           console.log(JSON.stringify(result, null, 2));
         } else {
           // API may return { forks: [{fork, definition}], totalForks } or { items, total }
-          const data = result as unknown as Record<string, unknown>;
+          const data = asFlexibleResponse(result);
           const forkItems = (data.items ?? data.forks ?? []) as Array<Record<string, unknown>>;
           const total = (data.total ?? data.totalForks ?? forkItems.length) as number;
           if (forkItems.length === 0) {
@@ -134,7 +134,7 @@ export function registerForkCommands(program: Command): void {
           console.log(JSON.stringify(result, null, 2));
         } else {
           // API may return { isFork, fork, source } or { chain, current, source }
-          const lineage = result as unknown as Record<string, unknown>;
+          const lineage = asFlexibleResponse(result);
           if (result.chain) {
             console.log('Fork Lineage:');
             for (const item of result.chain) {

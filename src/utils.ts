@@ -146,6 +146,15 @@ export function parseFloatOption(value: string, name: string): number {
 }
 
 /**
+ * Cast SDK response to a flexible record for handling API/SDK type mismatches.
+ * Provides a runtime safety check instead of double assertions (as unknown as Record).
+ */
+export function asFlexibleResponse(value: unknown): Record<string, unknown> {
+  if (typeof value !== 'object' || value === null) return {};
+  return value as Record<string, unknown>;
+}
+
+/**
  * Convert camelCase string to snake_case.
  * @param str - The camelCase string to convert (e.g. "someField" → "some_field")
  */
