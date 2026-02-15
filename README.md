@@ -27,6 +27,9 @@ ulu issues list my-project --status open --priority critical
 
 # Check analytics
 ulu analytics burndown --project my-project --days 30
+
+# Run a validator agent
+ulu exec agent code-validator ./src --model sonnet --project my-project
 ```
 
 ## Table of Contents
@@ -51,6 +54,7 @@ ulu analytics burndown --project my-project --days 30
   - [Deps](#deps) — Dependency graphs
   - [Forks](#forks) — Definition forking
   - [Models](#models) — AI model catalog
+  - [Exec](#exec) — Execute agents, commands, and workflows
   - [Executions](#executions) — Execution tracking
   - [Translation](#translation) — Definition translation & upgrades
   - [Completion](#completion) — Shell completion scripts
@@ -614,6 +618,73 @@ ulu models providers              # List providers
 ulu models aliases                # List model aliases
 ulu models resolve <alias>        # Resolve alias to concrete model
 ulu models sync                   # Sync from providers (admin only)
+```
+
+---
+
+### Exec
+
+Execute agents, commands, and workflows via the @uluops/core SDK.
+
+```bash
+# Auto-detect definition type and execute
+ulu exec run <name> <target>
+
+# Execute an agent validator
+ulu exec agent code-validator ./src --model sonnet
+
+# Execute a saved command configuration
+ulu exec command my-command ./src
+
+# Execute a multi-phase workflow
+ulu exec workflow post-implementation ./
+
+# List available definitions
+ulu exec list                          # All definitions
+ulu exec list --type agent             # Filter by type (agent, command, workflow, pipeline)
+ulu exec list --domain security        # Filter by domain
+
+# Inspect a definition's metadata
+ulu exec describe code-validator
+```
+
+**Parent options** (apply to all subcommands):
+
+| Option | Description |
+|--------|-------------|
+| `--local-definitions <dir>` | Local YAML definitions directory |
+| `--registry-url <url>` | Override registry URL |
+| `--project <name>` | Project name for result tracking |
+| `--no-tracking` | Disable validation service submission |
+
+**Agent-specific options** (`exec agent` only):
+
+| Option | Description |
+|--------|-------------|
+| `-m, --model <model>` | Model override (alias, tier, or provider:modelId) |
+| `--max-tokens <n>` | Maximum response tokens |
+| `--max-steps <n>` | Maximum tool loop iterations (default: 50) |
+| `--temperature <n>` | Generation temperature 0-1 (default: 0) |
+| `--timeout <ms>` | Execution timeout in milliseconds |
+| `--threshold-pass <n>` | Pass threshold score (validators) |
+| `--threshold-warn <n>` | Warning threshold score (validators) |
+
+**Examples:**
+
+```bash
+# Run code-validator with a specific model
+ulu exec agent code-validator . --model sonnet --project my-project
+
+# Use local definitions instead of registry
+ulu exec agent my-validator ./src \
+  --local-definitions ./agent-defs \
+  --project my-project
+
+# Execute without tracking results
+ulu exec workflow ship ./packages/api --no-tracking
+
+# Inspect what a definition expects
+ulu exec describe code-validator
 ```
 
 ---

@@ -7,6 +7,8 @@ import {
   redact,
   formatDisplayDate,
   getFlexibleProperty,
+  parseIntOption,
+  parseFloatOption,
 } from '../src/utils.js';
 
 describe('toSnakeCase', () => {
@@ -228,6 +230,96 @@ describe('formatDisplayDate', () => {
   it('formats a Date object', () => {
     const result = formatDisplayDate(new Date('2026-01-15T10:30:00.000Z'));
     expect(result).not.toBe('N/A');
+  });
+});
+
+describe('parseIntOption', () => {
+  it('parses valid integers', () => {
+    expect(parseIntOption('42', '--limit')).toBe(42);
+    expect(parseIntOption('0', '--offset')).toBe(0);
+    expect(parseIntOption('-5', '--delta')).toBe(-5);
+  });
+
+  it('parses large numbers', () => {
+    expect(parseIntOption('1000000', '--max')).toBe(1000000);
+    expect(parseIntOption('2147483647', '--max')).toBe(2147483647);
+  });
+
+  it('truncates decimal strings to integer', () => {
+    // parseInt('3.14', 10) returns 3 - this is standard JS behavior
+    expect(parseIntOption('3.14', '--limit')).toBe(3);
+    expect(parseIntOption('9.99', '--count')).toBe(9);
+  });
+
+  it('exits with error for non-numeric strings', () => {
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    parseIntOption('abc', '--limit');
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockError).toHaveBeenCalledWith('Error: Invalid number for --limit: "abc"');
+
+    mockExit.mockRestore();
+    mockError.mockRestore();
+  });
+
+  it('exits with error for empty string', () => {
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    parseIntOption('', '--limit');
+    expect(mockExit).toHaveBeenCalledWith(1);
+
+    mockExit.mockRestore();
+    mockError.mockRestore();
+  });
+
+  it('handles leading/trailing whitespace', () => {
+    expect(parseIntOption(' 42 ', '--limit')).toBe(42);
+  });
+});
+
+describe('parseFloatOption', () => {
+  it('parses valid floats', () => {
+    expect(parseFloatOption('3.14', '--temperature')).toBeCloseTo(3.14);
+    expect(parseFloatOption('0.5', '--temp')).toBeCloseTo(0.5);
+    expect(parseFloatOption('0', '--temp')).toBe(0);
+  });
+
+  it('parses negative floats', () => {
+    expect(parseFloatOption('-1.5', '--offset')).toBeCloseTo(-1.5);
+  });
+
+  it('parses scientific notation', () => {
+    expect(parseFloatOption('1e5', '--max')).toBe(100000);
+    expect(parseFloatOption('2.5e2', '--max')).toBe(250);
+  });
+
+  it('parses integers as floats', () => {
+    expect(parseFloatOption('42', '--score')).toBe(42);
+  });
+
+  it('exits with error for non-numeric strings', () => {
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    parseFloatOption('abc', '--temperature');
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockError).toHaveBeenCalledWith('Error: Invalid number for --temperature: "abc"');
+
+    mockExit.mockRestore();
+    mockError.mockRestore();
+  });
+
+  it('exits with error for empty string', () => {
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    parseFloatOption('', '--temperature');
+    expect(mockExit).toHaveBeenCalledWith(1);
+
+    mockExit.mockRestore();
+    mockError.mockRestore();
   });
 });
 
