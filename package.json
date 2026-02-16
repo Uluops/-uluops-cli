@@ -30,7 +30,11 @@
     "agents",
     "workflows"
   ],
-  "author": "",
+  "author": "UluOps",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Uluops/-uluops-cli.git"
+  },
   "license": "MIT",
   "dependencies": {
     "@uluops/core": "file:../uluops-core-sdk",
