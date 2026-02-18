@@ -43,8 +43,16 @@ describe('render get', () => {
     mockClient.render.get.mockResolvedValue({ markdown: '# My Agent\n\nDescription here.' });
     const output = captureOutput();
     await parse('render', 'get', 'agent', 'my-agent', '1.0.0');
-    expect(mockClient.render.get).toHaveBeenCalledWith('agent', 'my-agent', '1.0.0');
+    expect(mockClient.render.get).toHaveBeenCalledWith('agent', 'my-agent', '1.0.0', undefined);
     expect(output.stdout()).toContain('# My Agent');
+    output.restore();
+  });
+
+  it('should pass render profile option', async () => {
+    mockClient.render.get.mockResolvedValue({ markdown: '# Agent with profile' });
+    const output = captureOutput();
+    await parse('render', 'get', 'agent', 'my-agent', '1.0.0', '--render-profile', 'uluops-full');
+    expect(mockClient.render.get).toHaveBeenCalledWith('agent', 'my-agent', '1.0.0', { renderProfile: 'uluops-full' });
     output.restore();
   });
 });
@@ -56,6 +64,14 @@ describe('render preview', () => {
     await parse('render', 'preview', 'agent', '--file', '/tmp/test.yaml');
     expect(mockClient.render.preview).toHaveBeenCalledWith('agent', { yaml: 'name: test\nversion: 1.0.0' });
     expect(output.stdout()).toContain('# Preview Output');
+    output.restore();
+  });
+
+  it('should pass render profile in preview body', async () => {
+    mockClient.render.preview.mockResolvedValue({ markdown: '# Full Profile Preview' });
+    const output = captureOutput();
+    await parse('render', 'preview', 'agent', '--file', '/tmp/test.yaml', '--render-profile', 'uluops-full');
+    expect(mockClient.render.preview).toHaveBeenCalledWith('agent', { yaml: 'name: test\nversion: 1.0.0', renderProfile: 'uluops-full' });
     output.restore();
   });
 });
