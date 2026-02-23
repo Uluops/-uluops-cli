@@ -763,8 +763,8 @@ Create a `.env` file in your project directory:
 
 ```env
 ULUOPS_API_KEY=ulr_your-api-key-here
-ULUOPS_BASE_URL=https://api.uluops.com/api/v1
-ULUOPS_REGISTRY_URL=https://registry.uluops.ai/api/v1
+ULUOPS_BASE_URL=https://api.uluops.ai/api/v1/ops
+ULUOPS_REGISTRY_URL=https://api.uluops.ai/api/v1/registry
 ```
 
 ## Error Handling

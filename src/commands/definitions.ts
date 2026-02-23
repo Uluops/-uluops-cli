@@ -125,11 +125,12 @@ export function registerDefinitionCommands(program: Command): void {
   // ulu definitions update <type> <name> <version>
   defs
     .command('update <type> <name> <version>')
-    .description('Update a draft definition')
+    .description('Update a definition (use --change-type to create a new version from a published one)')
     .option('-f, --file <path>', 'Path to YAML file')
     .option('--visibility <visibility>', 'Visibility (public|private)')
     .option('--display-name <name>', 'Display name')
     .option('--description <desc>', 'Description')
+    .option('--change-type <changeType>', 'Version bump type: major, minor, or patch (creates new version from published)')
     .action(async (type: string, name: string, version: string, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);
@@ -145,6 +146,7 @@ export function registerDefinitionCommands(program: Command): void {
             visibility: options.visibility,
             displayName: options.displayName,
             description: options.description,
+            changeType: options.changeType,
           })
         );
 
