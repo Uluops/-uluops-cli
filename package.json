@@ -39,7 +39,7 @@
   "dependencies": {
     "@uluops/core": "file:../uluops-core-sdk",
     "@uluops/ops-sdk": "file:../ops-sdk",
-    "@uluops/registry-sdk": "file:../registry-sdk",
+    "@uluops/registry-sdk": "^0.2.0",
     "commander": "^13.1.0",
     "ora": "^8.1.1"
   },
