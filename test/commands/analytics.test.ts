@@ -30,13 +30,13 @@ function parse(...args: string[]) {
   return program.parseAsync(['node', 'ulu', ...args]);
 }
 
-describe('analytics validators', () => {
-  it('should display validator performance table', async () => {
-    mockClient.analytics.getValidatorPerformance.mockResolvedValue([
+describe('analytics agents', () => {
+  it('should display agent performance table', async () => {
+    mockClient.analytics.getAgentPerformance.mockResolvedValue([
       { name: 'code-validator', totalRuns: 10, averageScore: 88.5, passRate: 90 },
     ]);
     const output = captureOutput();
-    await parse('analytics', 'validators');
+    await parse('analytics', 'agents');
     expect(output.stdout()).toContain('code-validator');
     expect(output.stdout()).toContain('88.5');
     expect(output.stdout()).toContain('90%');
@@ -44,21 +44,21 @@ describe('analytics validators', () => {
   });
 
   it('should show message when empty', async () => {
-    mockClient.analytics.getValidatorPerformance.mockResolvedValue([]);
+    mockClient.analytics.getAgentPerformance.mockResolvedValue([]);
     const output = captureOutput();
-    await parse('analytics', 'validators');
-    expect(output.stdout()).toContain('No validator data');
+    await parse('analytics', 'agents');
+    expect(output.stdout()).toContain('No agent data');
     output.restore();
   });
 
   it('should output JSON in json mode', async () => {
     const data = [{ name: 'test-validator', totalRuns: 5, averageScore: 80, passRate: 100 }];
-    mockClient.analytics.getValidatorPerformance.mockResolvedValue(data);
+    mockClient.analytics.getAgentPerformance.mockResolvedValue(data);
     mockedCreateOpsContext.mockReturnValue(
       createMockOpsContext({ client: mockClient as unknown as OpsCliContext['client'], json: true })
     );
     const output = captureOutput();
-    await parse('analytics', 'validators');
+    await parse('analytics', 'agents');
     const parsed = JSON.parse(output.stdout());
     expect(parsed[0].name).toBe('test-validator');
     output.restore();
@@ -67,8 +67,8 @@ describe('analytics validators', () => {
 
 describe('analytics reliability', () => {
   it('should display reliability stats', async () => {
-    mockClient.analytics.getValidatorReliability.mockResolvedValue({
-      validators: [
+    mockClient.analytics.getAgentReliability.mockResolvedValue({
+      agents: [
         { name: 'code-validator', falsePositiveRate: 5.2, resolutionRate: 85.0, reliabilityScore: 92.3 },
       ],
     });

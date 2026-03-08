@@ -11,10 +11,10 @@ export function registerAnalyticsCommands(program: Command): void {
     .command('analytics')
     .description('View validation analytics and metrics');
 
-  // ulu analytics validators
+  // ulu analytics agents
   analytics
-    .command('validators')
-    .description('Get validator performance metrics')
+    .command('agents')
+    .description('Get agent performance metrics')
     .option('-p, --project <name>', 'Filter by project')
     .option('-d, --days <number>', 'Time window in days', '30')
     .option('-l, --limit <number>', 'Maximum results', '20')
@@ -25,8 +25,8 @@ export function registerAnalyticsCommands(program: Command): void {
       try {
         const data = await withSpinner(
           ctx,
-          { start: 'Fetching validator performance...', failure: 'Failed to fetch validator performance' },
-          () => ctx.client.analytics.getValidatorPerformance({
+          { start: 'Fetching agent performance...', failure: 'Failed to fetch agent performance' },
+          () => ctx.client.analytics.getAgentPerformance({
             project: options.project,
             days: parseIntOption(options.days, '--days'),
             limit: parseIntOption(options.limit, '--limit'),
@@ -36,10 +36,10 @@ export function registerAnalyticsCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(data, null, 2));
         } else if (data.length === 0) {
-          console.log('No validator data found');
+          console.log('No agent data found');
         } else {
           const columns: Column<(typeof data)[0]>[] = [
-            { header: 'VALIDATOR', accessor: 'name', width: 25 },
+            { header: 'AGENT', accessor: 'name', width: 25 },
             { header: 'RUNS', accessor: (v) => String(v.totalRuns), width: 8, align: 'right' },
             { header: 'AVG SCORE', accessor: (v) => {
               const score = getFlexibleProperty(v, 'averageScore', v.avgScore);
@@ -57,8 +57,8 @@ export function registerAnalyticsCommands(program: Command): void {
   // ulu analytics reliability
   analytics
     .command('reliability')
-    .description('Get validator reliability statistics')
-    .option('-v, --validator <name>', 'Filter by validator')
+    .description('Get agent reliability statistics')
+    .option('-a, --agent <name>', 'Filter by agent')
     .option('-p, --project <name>', 'Filter by project')
     .option('-d, --days <number>', 'Time window in days', '90')
     .action(async (options, cmd) => {
@@ -69,8 +69,8 @@ export function registerAnalyticsCommands(program: Command): void {
         const data = await withSpinner(
           ctx,
           { start: 'Fetching reliability stats...', failure: 'Failed to fetch reliability stats' },
-          () => ctx.client.analytics.getValidatorReliability({
-            validator: options.validator,
+          () => ctx.client.analytics.getAgentReliability({
+            agent: options.agent,
             project: options.project,
             days: parseIntOption(options.days, '--days'),
           })
@@ -78,11 +78,11 @@ export function registerAnalyticsCommands(program: Command): void {
 
         if (ctx.json) {
           console.log(JSON.stringify(data, null, 2));
-        } else if (data.validators.length === 0) {
+        } else if (data.agents.length === 0) {
           console.log('No reliability data found');
         } else {
-          const columns: Column<(typeof data.validators)[0]>[] = [
-            { header: 'VALIDATOR', accessor: 'name', width: 25 },
+          const columns: Column<(typeof data.agents)[0]>[] = [
+            { header: 'AGENT', accessor: 'name', width: 25 },
             { header: 'FALSE POS', accessor: (v) => {
               const rate = getFlexibleProperty(v, 'falsePositiveRate', null as number | null);
               return `${rate?.toFixed(1) ?? '-'}%`;
@@ -96,7 +96,7 @@ export function registerAnalyticsCommands(program: Command): void {
               return score?.toFixed(1) ?? '-';
             }, width: 12, align: 'right' },
           ];
-          console.log(formatTable(data.validators, columns));
+          console.log(formatTable(data.agents, columns));
         }
       } catch (error) {
         handleOpsError(error, ctx);
@@ -287,7 +287,7 @@ export function registerAnalyticsCommands(program: Command): void {
   // ulu analytics matrix
   analytics
     .command('matrix')
-    .description('Get validator-taxonomy coverage matrix')
+    .description('Get agent-taxonomy coverage matrix')
     .option('-p, --project <name>', 'Filter by project')
     .option('-d, --days <number>', 'Time window in days', '90')
     .option('-m, --min-issues <number>', 'Minimum issues for inclusion', '5')
@@ -298,8 +298,8 @@ export function registerAnalyticsCommands(program: Command): void {
       try {
         const data = await withSpinner(
           ctx,
-          { start: 'Fetching validator matrix...', failure: 'Failed to fetch validator matrix' },
-          () => ctx.client.analytics.getValidatorMatrix({
+          { start: 'Fetching agent matrix...', failure: 'Failed to fetch agent matrix' },
+          () => ctx.client.analytics.getAgentMatrix({
             project: options.project,
             days: parseIntOption(options.days, '--days'),
             minIssues: parseIntOption(options.minIssues, '--min-issues'),
@@ -309,11 +309,11 @@ export function registerAnalyticsCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(data, null, 2));
         } else {
-          console.log('Validator-Taxonomy Coverage:\n');
+          console.log('Agent-Taxonomy Coverage:\n');
 
           if (data.analysis) {
             if (data.analysis.blindSpots.length > 0) {
-              console.log(`  Blind spots: ${data.analysis.blindSpots.length} validators missing domains`);
+              console.log(`  Blind spots: ${data.analysis.blindSpots.length} agents missing domains`);
             }
 
             if (data.analysis.singlePoints.length > 0) {
@@ -321,12 +321,12 @@ export function registerAnalyticsCommands(program: Command): void {
             }
 
             if (data.analysis.highOverlap.length > 0) {
-              console.log(`  High overlap (3+ validators): ${data.analysis.highOverlap.length}`);
+              console.log(`  High overlap (3+ agents): ${data.analysis.highOverlap.length}`);
             }
           }
 
           if (data.matrix && data.matrix.length > 0) {
-            console.log(`\nMatrix: ${data.matrix.length} validators analyzed`);
+            console.log(`\nMatrix: ${data.matrix.length} agents analyzed`);
           }
         }
       } catch (error) {
