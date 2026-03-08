@@ -19,7 +19,7 @@ export function registerIssueCommands(program: Command): void {
     .option('-s, --status <status>', 'Filter by status (open, completed, deferred, wontfix)')
     .option('-p, --priority <priority>', 'Filter by priority (critical, suggested, backlog)')
     .option('--severity <severity>', 'Filter by severity (critical, high, medium, low, info)')
-    .option('-v, --validator <name>', 'Filter by validator')
+    .option('-a, --agent <name>', 'Filter by agent')
     .option('-d, --domain <domain>', 'Filter by failure domain (STR, SEM, PRA, EPI)')
     .option('-l, --limit <number>', 'Maximum number of issues', '50')
     .option('--include-resolved', 'Include resolved issues')
@@ -35,7 +35,7 @@ export function registerIssueCommands(program: Command): void {
             status: options.status as Status | undefined,
             priority: options.priority as Priority | undefined,
             severity: options.severity as Severity | undefined,
-            validator: options.validator,
+            agent: options.agent,
             failureDomain: options.domain as FailureDomain | undefined,
             limit: parseIntOption(options.limit, '--limit'),
             includeResolved: options.includeResolved,
@@ -79,7 +79,7 @@ export function registerIssueCommands(program: Command): void {
             if (details.occurrences.length > 0) {
               console.log(`\nOccurrences (${details.occurrences.length}):`);
               for (const occ of details.occurrences.slice(0, 5)) {
-                console.log(`  - ${occ.validator} at ${occ.filePath ?? '(no file)'}${occ.lineNumber ? `:${occ.lineNumber}` : ''}`);
+                console.log(`  - ${occ.agent} at ${occ.filePath ?? '(no file)'}${occ.lineNumber ? `:${occ.lineNumber}` : ''}`);
               }
               if (details.occurrences.length > 5) {
                 console.log(`  ... and ${details.occurrences.length - 5} more`);
@@ -309,7 +309,7 @@ export function registerIssueCommands(program: Command): void {
     .requiredOption('-t, --title <text>', 'Issue title')
     .requiredOption('--priority <priority>', 'Priority (critical, suggested, backlog)')
     .option('--severity <severity>', 'Severity (critical, high, medium, low, info)')
-    .option('-v, --validator <name>', 'Validator name')
+    .option('-a, --agent <name>', 'Agent name')
     .option('--category <category>', 'Issue category')
     .option('--description <text>', 'Detailed description')
     .option('--file-path <path>', 'File path where issue was found')
@@ -330,7 +330,7 @@ export function registerIssueCommands(program: Command): void {
             title: options.title,
             priority: options.priority as Priority,
             severity: options.severity as Severity | undefined,
-            validator: options.validator,
+            agent: options.agent,
             category: options.category,
             description: options.description,
             filePath: options.filePath,

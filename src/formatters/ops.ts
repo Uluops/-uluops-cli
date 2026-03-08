@@ -112,7 +112,7 @@ export function formatIssue(issue: Issue): string {
     status: issue.status,
     priority: issue.priority,
     severity: issue.severity,
-    validator: issue.validator,
+    agent: issue.agent,
     filePath: issue.filePath,
     lineNumber: issue.lineNumber,
     failureCode: issue.failureCode,

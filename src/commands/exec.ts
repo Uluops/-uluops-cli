@@ -118,8 +118,8 @@ export function registerExecCommands(program: Command): void {
     .option('--max-steps <n>', 'Maximum tool loop iterations (default: 50)')
     .option('--temperature <n>', 'Generation temperature 0-1 (default: 0)')
     .option('--timeout <ms>', 'Execution timeout in milliseconds')
-    .option('--threshold-pass <n>', 'Pass threshold score (validators)')
-    .option('--threshold-warn <n>', 'Warning threshold score (validators)')
+    .option('--threshold-pass <n>', 'Pass threshold score (agents)')
+    .option('--threshold-warn <n>', 'Warning threshold score (agents)')
     .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
       const options = getMergedOptions(cmd);
       const ctx = createCoreContext(options);

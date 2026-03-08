@@ -165,7 +165,7 @@ export function registerRunCommands(program: Command): void {
   // ulu runs details <project>
   runs
     .command('details <project>')
-    .description('Get detailed run information including validators and recommendations')
+    .description('Get detailed run information including agents and recommendations')
     .option('-n, --number <number>', 'Run number (defaults to latest)')
     .action(async (project: string, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
@@ -187,9 +187,9 @@ export function registerRunCommands(program: Command): void {
           console.log(`Passed: ${details.run.allGatesPassed ? 'Yes' : 'No'}`);
           console.log('');
 
-          if (details.validators.length > 0) {
-            console.log('Validators:');
-            for (const v of details.validators) {
+          if (details.agents.length > 0) {
+            console.log('Agents:');
+            for (const v of details.agents) {
               const status = v.status === 'PASS' ? '\u2713' : '\u2717';
               console.log(`  ${status} ${v.name}: ${v.score}/${v.maxScore ?? 100} (${v.status})`);
             }
@@ -200,7 +200,7 @@ export function registerRunCommands(program: Command): void {
             for (const r of details.recommendations.slice(0, 10)) {
               const marker = r.correlation === 'new' ? '[NEW]' : r.correlation === 'regression' ? '[REG]' : '';
               console.log(`  - ${r.title} ${marker}`);
-              console.log(`    ${r.priority}/${r.severity ?? '-'} from ${r.validator}`);
+              console.log(`    ${r.priority}/${r.severity ?? '-'} from ${r.agent}`);
             }
             if (details.recommendations.length > 10) {
               console.log(`\n  ... and ${details.recommendations.length - 10} more`);
@@ -243,8 +243,8 @@ export function registerRunCommands(program: Command): void {
         if (!input.workflowType) {
           exitWithError('Missing required field: workflowType (or snake_case: workflow_type)');
         }
-        if (!Array.isArray(input.validators)) {
-          exitWithError('Missing required field: validators (must be an array)');
+        if (!Array.isArray(input.agents)) {
+          exitWithError('Missing required field: agents (must be an array)');
         }
 
         const result = await withSpinner(
@@ -438,8 +438,8 @@ export function registerRunCommands(program: Command): void {
     .requiredOption('-n, --number <number>', 'Run number')
     .option('--score <number>', 'New average score')
     .option('--passed <boolean>', 'All gates passed (true/false)')
-    .option('-f, --file <path>', 'JSON file with validator updates')
-    .option('--stdin', 'Read validator updates from stdin')
+    .option('-f, --file <path>', 'JSON file with agent updates')
+    .option('--stdin', 'Read agent updates from stdin')
     .action(async (project: string, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
@@ -453,10 +453,10 @@ export function registerRunCommands(program: Command): void {
         if (options.score !== undefined) input.averageScore = parseFloatOption(options.score, '--score');
         if (options.passed !== undefined) input.allGatesPassed = options.passed === 'true';
 
-        // Read validator updates from file/stdin if provided
+        // Read agent updates from file/stdin if provided
         if (options.file || options.stdin) {
-          const data = await readJsonInput(options) as { validators?: unknown[] };
-          if (data.validators) input.validators = data.validators as UpdateRunByNumberInput['validators'];
+          const data = await readJsonInput(options) as { agents?: unknown[] };
+          if (data.agents) input.agents = data.agents as UpdateRunByNumberInput['agents'];
         }
 
         const run = await withSpinner(
