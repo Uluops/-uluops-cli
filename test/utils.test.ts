@@ -139,7 +139,7 @@ describe('normalizeKeys', () => {
     expect(normalizeKeys([])).toEqual([]);
   });
 
-  it('handles realistic SaveFeaturesListInput with snake_case', () => {
+  it('handles realistic SaveRunInput with snake_case', () => {
     const input = {
       project: 'my-project',
       workflow_type: 'post-implementation',

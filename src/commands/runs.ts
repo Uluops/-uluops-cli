@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
 import { withSpinner, exitWithError, getFlexibleProperty, normalizeKeys, parseIntOption, parseFloatOption } from '../utils.js';
 import { formatRuns, formatRun } from '../formatters/ops.js';
-import type { SaveFeaturesListInput, UpdateRunByNumberInput } from '@uluops/ops-sdk';
+import type { SaveRunInput, UpdateRunByNumberInput } from '@uluops/ops-sdk';
 
 /**
  * Read JSON input from file or stdin
@@ -230,7 +230,7 @@ export function registerRunCommands(program: Command): void {
 
       try {
         // Read, normalize (snake_case → camelCase), and parse input
-        const input = normalizeKeys(await readJsonInput(options)) as SaveFeaturesListInput;
+        const input = normalizeKeys(await readJsonInput(options)) as SaveRunInput;
 
         // Apply overrides
         if (options.project) input.project = options.project;
@@ -289,7 +289,7 @@ export function registerRunCommands(program: Command): void {
 
       try {
         // Read, normalize (snake_case → camelCase), and parse input
-        const input = normalizeKeys(await readJsonInput(options)) as SaveFeaturesListInput;
+        const input = normalizeKeys(await readJsonInput(options)) as SaveRunInput;
 
         // Apply overrides
         if (options.project) input.project = options.project;
