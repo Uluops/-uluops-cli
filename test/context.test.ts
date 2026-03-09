@@ -81,7 +81,6 @@ vi.mock('@uluops/core', () => {
       this.details = details;
     }
   }
-  class HashVerificationError extends UluOpsError { constructor(message: string) { super(message); this.name = 'HashVerificationError'; } }
   class ParseError extends UluOpsError {
     contentPreview?: string;
     constructor(message: string, contentPreview?: string) { super(message); this.name = 'ParseError'; this.contentPreview = contentPreview; }
@@ -103,7 +102,7 @@ vi.mock('@uluops/core', () => {
   return {
     UluOpsClient: vi.fn().mockReturnValue({}),
     UluOpsError, SdkApiError, ConfigurationError, ModelNotFoundError,
-    PreflightError, HashVerificationError, ParseError, ValidationError,
+    PreflightError, ParseError, ValidationError,
     ExecutionError, WorkflowError, PipelineError,
   };
 });
@@ -116,7 +115,7 @@ import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
 import {
   UluOpsClient,
   SdkApiError, ConfigurationError, ModelNotFoundError, PreflightError,
-  HashVerificationError, ParseError, ValidationError as CoreValidationError,
+  ParseError, ValidationError as CoreValidationError,
   ExecutionError, WorkflowError, PipelineError, UluOpsError,
 } from '@uluops/core';
 import {
@@ -655,16 +654,6 @@ describe('handleCoreError', () => {
 
     expect(() => handleCoreError(error, { json: false, debug: true })).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Details:');
-    output.restore();
-  });
-
-  it('should handle HashVerificationError', () => {
-    const output = captureOutput();
-    const error = new HashVerificationError('Hash mismatch');
-
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
-    expect(output.stderr()).toContain('Hash mismatch');
-    expect(output.stderr()).toContain('--local-definitions');
     output.restore();
   });
 

@@ -9,7 +9,6 @@ import {
   ExecutionError,
   ModelNotFoundError,
   PreflightError,
-  HashVerificationError,
   ParseError,
   ValidationError,
   WorkflowError,
@@ -403,12 +402,6 @@ export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json'
     if (ctx.debug && error.details) {
       console.error('\nDetails:', JSON.stringify(error.details, null, 2));
     }
-    process.exit(1);
-  }
-
-  if (error instanceof HashVerificationError) {
-    console.error(`Error: ${error.message}`);
-    console.error('\nHint: Definition integrity check failed. Use --local-definitions or re-fetch from registry.');
     process.exit(1);
   }
 
