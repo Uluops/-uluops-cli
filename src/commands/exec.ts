@@ -1,3 +1,5 @@
+import { writeFile, mkdir } from 'node:fs/promises';
+import { dirname, resolve } from 'node:path';
 import { Command } from 'commander';
 import { createCoreContext, handleCoreError, type GlobalOptions, type CoreExecOptions } from '../context.js';
 import { withSpinner, parseIntOption, parseFloatOption } from '../utils.js';
@@ -7,7 +9,7 @@ import {
   formatDefinitionList,
   formatDefinitionDetails,
 } from '../formatters/core.js';
-import type { ExecutionOptions, DefinitionType } from '@uluops/core';
+import type { ExecutionOptions, DefinitionType, AgentResult } from '@uluops/core';
 
 type ExecOptions = GlobalOptions & CoreExecOptions;
 
@@ -69,6 +71,44 @@ function buildExecOptions(opts: Record<string, unknown>): ExecutionOptions | und
 }
 
 /**
+ * Write agent report and/or features list files if CLI flags are set.
+ */
+async function writeReportFiles(result: AgentResult, opts: Record<string, unknown>): Promise<void> {
+  if (opts.report && typeof opts.report === 'string') {
+    const reportPath = resolve(opts.report as string);
+    if (result.rawOutput) {
+      await mkdir(dirname(reportPath), { recursive: true });
+      await writeFile(reportPath, result.rawOutput, 'utf-8');
+      console.log(`Report written to ${reportPath}`);
+    } else {
+      console.log('No raw output available to write (agent may have hit step limit)');
+    }
+  }
+
+  if (opts.featuresList && typeof opts.featuresList === 'string') {
+    const featuresPath = resolve(opts.featuresList as string);
+    const features = {
+      agent: result.name,
+      version: result.version,
+      decision: result.decision,
+      score: result.agentType === 'validator' ? (result as { score: number }).score : undefined,
+      maxScore: result.agentType === 'validator' ? (result as { maxScore: number }).maxScore : undefined,
+      recommendations: result.recommendations,
+      metrics: {
+        durationMs: result.durationMs,
+        model: result.metrics.model,
+        inputTokens: result.metrics.inputTokens,
+        outputTokens: result.metrics.outputTokens,
+        totalEffectiveTokens: result.metrics.totalEffectiveTokens,
+      },
+    };
+    await mkdir(dirname(featuresPath), { recursive: true });
+    await writeFile(featuresPath, JSON.stringify(features, null, 2), 'utf-8');
+    console.log(`Features list written to ${featuresPath}`);
+  }
+}
+
+/**
  * Register exec commands for core SDK execution
  */
 export function registerExecCommands(program: Command): void {
@@ -120,6 +160,8 @@ export function registerExecCommands(program: Command): void {
     .option('--timeout <ms>', 'Execution timeout in milliseconds')
     .option('--threshold-pass <n>', 'Pass threshold score (agents)')
     .option('--threshold-warn <n>', 'Warning threshold score (agents)')
+    .option('--report <path>', 'Write raw agent output report to file')
+    .option('--features-list <path>', 'Write structured features/recommendations to file (JSON)')
     .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
       const options = getMergedOptions(cmd);
       const ctx = createCoreContext(options);
@@ -137,6 +179,9 @@ export function registerExecCommands(program: Command): void {
         } else {
           console.log(formatAgentResult(result));
         }
+
+        // Write report files if requested
+        await writeReportFiles(result, cmdOpts);
       } catch (error) {
         handleCoreError(error, ctx);
       }
