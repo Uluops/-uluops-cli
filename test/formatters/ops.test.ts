@@ -33,7 +33,7 @@ const mockIssue = {
   status: 'open' as const,
   priority: 'suggested' as const,
   severity: 'medium' as const,
-  validator: 'code-validator',
+  agent: 'code-validator',
   filePath: 'src/index.ts',
   lineNumber: 42,
   failureCode: 'SEM-VAL/H',

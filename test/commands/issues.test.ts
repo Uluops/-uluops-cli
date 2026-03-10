@@ -196,10 +196,10 @@ describe('issues create', () => {
     mockClient.issues.create.mockResolvedValue(createIssue());
     const output = captureOutput();
     await parse('issues', 'create', '--project', 'p', '--title', 't', '--priority', 'suggested',
-      '--severity', 'high', '--validator', 'code-validator', '--file-path', 'src/foo.ts', '--line', '42');
+      '--severity', 'high', '--agent', 'code-validator', '--file-path', 'src/foo.ts', '--line', '42');
     expect(mockClient.issues.create).toHaveBeenCalledWith(expect.objectContaining({
       severity: 'high',
-      validator: 'code-validator',
+      agent: 'code-validator',
       filePath: 'src/foo.ts',
       lineNumber: 42,
     }));

@@ -14,7 +14,7 @@ vi.mock('node:fs', async (importOriginal) => {
     readFileSync: vi.fn(() => JSON.stringify({
       project: 'test-proj',
       workflowType: 'ship',
-      validators: [{ name: 'code-validator', score: 85, status: 'PASS' }],
+      agents: [{ name: 'code-validator', score: 85, status: 'PASS' }],
     })),
   };
 });
@@ -101,9 +101,9 @@ describe('runs details', () => {
   it('should display detailed run info', async () => {
     mockClient.runs.getDetails.mockResolvedValue({
       run: createRun({ runNumber: 5, workflowType: 'ship', averageScore: 88.5, allGatesPassed: true }),
-      validators: [{ name: 'code-validator', score: 90, maxScore: 100, status: 'PASS' }],
+      agents: [{ name: 'code-validator', score: 90, maxScore: 100, status: 'PASS' }],
       recommendations: [
-        { title: 'Add error handling', priority: 'suggested', severity: 'medium', validator: 'code-validator', correlation: 'new' },
+        { title: 'Add error handling', priority: 'suggested', severity: 'medium', agent: 'code-validator', correlation: 'new' },
       ],
     });
     const output = captureOutput();

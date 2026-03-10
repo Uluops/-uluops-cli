@@ -1,6 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { captureOutput } from './helpers/capture.js';
 
+// Mock node:fs to prevent isSessionExpired from reading real credentials
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return {
+    ...actual,
+    existsSync: vi.fn(() => false),
+    readFileSync: actual.readFileSync,
+  };
+});
+
 // Mock the SDK modules — factories cannot reference outer variables (hoisted)
 vi.mock('@uluops/ops-sdk', () => {
   class OpsApiError extends Error {
