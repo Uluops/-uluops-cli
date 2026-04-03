@@ -10,7 +10,7 @@ import { registerProjectCommands } from './commands/projects.js';
 import { registerRunCommands } from './commands/runs.js';
 import { registerIssueCommands } from './commands/issues.js';
 import { registerAnalyticsCommands } from './commands/analytics.js';
-import { registerAdminCommands } from './commands/admin.js';
+
 import { registerTaxonomyCommands } from './commands/taxonomy.js';
 
 // Registry commands
@@ -78,7 +78,7 @@ registerProjectCommands(program);
 registerRunCommands(program);
 registerIssueCommands(program);
 registerAnalyticsCommands(program);
-registerAdminCommands(program);
+
 registerTaxonomyCommands(program);
 
 // Registry commands
