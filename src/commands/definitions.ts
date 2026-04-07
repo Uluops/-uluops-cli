@@ -18,7 +18,7 @@ export function registerDefinitionCommands(program: Command): void {
     .command('list')
     .description('List definitions')
     .option('-t, --type <type>', 'Filter by type (agent|command|workflow|pipeline)')
-    .option('-s, --status <status>', 'Filter by status (draft|published|deprecated)')
+    .option('-s, --status <status>', 'Filter by status (draft|published|deprecated|archived)')
     .option('-d, --domain <domain>', 'Filter by domain')
     .option('-v, --visibility <visibility>', 'Filter by visibility (public|private)')
     .option('-l, --limit <number>', 'Limit results', '50')
