@@ -30,19 +30,11 @@ export function registerForkCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
-          // API may return { forks: [{fork, definition}], totalForks } or { items, total }
-          const data = asFlexibleResponse(result);
-          const forkItems = (data.items ?? data.forks ?? []) as Array<Record<string, unknown>>;
-          const total = (data.total ?? data.totalForks ?? forkItems.length) as number;
-          if (forkItems.length === 0) {
+          if (result.items.length === 0) {
             console.log('No forks found');
           } else {
-            // Extract definitions from fork items for formatting
-            const definitions = forkItems.map((item) =>
-              (item.definition ?? item) as Record<string, unknown>
-            );
-            console.log(formatDefinitions(definitions as never));
-            console.log(`\n${total} fork(s)`);
+            console.log(formatDefinitions(result.items));
+            console.log(`\n${result.total} fork(s)`);
           }
         }
       } catch (error) {

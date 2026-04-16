@@ -20,7 +20,7 @@ async function readJsonInput(options: { file?: string; stdin?: boolean }): Promi
   if (options.stdin) {
     // Read from stdin with timeout to prevent indefinite hangs
     const chunks: Buffer[] = [];
-    let timerId: ReturnType<typeof setTimeout>;
+    let timerId: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
       timerId = setTimeout(() => reject(new Error('stdin timeout')), STDIN_TIMEOUT_MS);
     });
@@ -37,7 +37,7 @@ async function readJsonInput(options: { file?: string; stdin?: boolean }): Promi
       }
       throw error;
     } finally {
-      clearTimeout(timerId!);
+      if (timerId) clearTimeout(timerId);
     }
     const content = stripBom(Buffer.concat(chunks).toString('utf-8'));
     try {
