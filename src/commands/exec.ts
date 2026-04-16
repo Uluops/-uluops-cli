@@ -151,8 +151,9 @@ export function registerExecCommands(program: Command): void {
   // ── exec agent ──────────────────────────────────────────────────────────
 
   exec
-    .command('agent <name> <target>')
-    .description('Execute an agent definition directly')
+    .command('agent <names...>')
+    .description('Execute one or more agent definitions (runs in parallel when multiple)')
+    .requiredOption('-t, --target <path>', 'Target directory to analyze')
     .option('-m, --model <model>', 'Model override (alias, tier, or provider:modelId)')
     .option('--max-tokens <n>', 'Maximum response tokens')
     .option('--max-steps <n>', 'Maximum tool loop iterations (default: 50)')
@@ -160,30 +161,84 @@ export function registerExecCommands(program: Command): void {
     .option('--timeout <ms>', 'Execution timeout in milliseconds')
     .option('--threshold-pass <n>', 'Pass threshold score (agents)')
     .option('--threshold-warn <n>', 'Warning threshold score (agents)')
-    .option('--report <path>', 'Write raw agent output report to file')
-    .option('--features-list <path>', 'Write structured features/recommendations to file (JSON)')
-    .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
+    .option('--report <path>', 'Write raw agent output report to file (single agent only)')
+    .option('--features-list <path>', 'Write structured features/recommendations to file (single agent only)')
+    .action(async (names: string[], cmdOpts: Record<string, unknown>, cmd: Command) => {
       const options = getMergedOptions(cmd);
       const ctx = createCoreContext(options);
       const execOpts = buildExecOptions({ ...cmdOpts, ...options });
+      const target: string = cmd.opts()['target'];
+      const agentNames: string[] = names.filter(Boolean);
 
-      try {
-        const result = await withSpinner(ctx, {
-          start: `Running agent ${name} against ${target}...`,
-          success: `Agent execution complete`,
-          failure: `Agent execution failed`,
-        }, () => ctx.client.runAgent(name, target, execOpts));
+      // Single agent — original behavior
+      if (agentNames.length === 1) {
+        const agentName = agentNames[0]!;
+        try {
+          const result = await withSpinner(ctx, {
+            start: `Running agent ${agentName} against ${target}...`,
+            success: `Agent execution complete`,
+            failure: `Agent execution failed`,
+          }, () => ctx.client.runAgent(agentName, target, execOpts));
 
-        if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
-        } else {
+          if (ctx.json) {
+            console.log(JSON.stringify(result, null, 2));
+          } else {
+            console.log(formatAgentResult(result));
+          }
+
+          await writeReportFiles(result, cmdOpts);
+        } catch (error) {
+          handleCoreError(error, ctx);
+        }
+        return;
+      }
+
+      // Multiple agents — run in parallel
+      console.log(`Running ${agentNames.length} agents in parallel against ${target}...\n`);
+
+      const results = await Promise.allSettled(
+        agentNames.map(name =>
+          ctx.client.runAgent(name, target, execOpts)
+            .then(result => ({ name, result }))
+        ),
+      );
+
+      const succeeded: AgentResult[] = [];
+      const failed: { name: string; error: string }[] = [];
+
+      for (let i = 0; i < results.length; i++) {
+        const outcome = results[i]!;
+        if (outcome.status === 'fulfilled') {
+          succeeded.push(outcome.value.result);
+        } else if (outcome.status === 'rejected') {
+          const reason: unknown = outcome.reason;
+          failed.push({ name: agentNames[i] ?? 'unknown', error: reason instanceof Error ? reason.message : String(reason) });
+        }
+      }
+
+      if (ctx.json) {
+        console.log(JSON.stringify({ succeeded, failed }, null, 2));
+      } else {
+        for (const result of succeeded) {
+          console.log('─'.repeat(60));
           console.log(formatAgentResult(result));
+          console.log('');
         }
 
-        // Write report files if requested
-        await writeReportFiles(result, cmdOpts);
-      } catch (error) {
-        handleCoreError(error, ctx);
+        if (failed.length > 0) {
+          console.log('─'.repeat(60));
+          console.log('Failed:');
+          for (const f of failed) {
+            console.log(`  ${f.name}: ${f.error}`);
+          }
+        }
+
+        // Summary
+        console.log('─'.repeat(60));
+        const avgScore = succeeded.length > 0
+          ? (succeeded.reduce((sum, r) => sum + (r.score ?? 0), 0) / succeeded.length).toFixed(1)
+          : '-';
+        console.log(`\n${succeeded.length}/${agentNames.length} agents completed | Average score: ${avgScore}`);
       }
     });
 
