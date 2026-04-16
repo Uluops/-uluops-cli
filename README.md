@@ -89,7 +89,7 @@ npm install -g @uluops/cli
 npx @uluops/cli --help
 
 # From source (monorepo)
-cd packages/cli
+cd packages/-uluops-cli
 npm run build
 node dist/cli.js --help
 ```
@@ -433,7 +433,7 @@ ulu issues bulk-update --ids id1,id2,id3 --status completed --reason "Batch fix"
 | `--status` | `open`, `completed`, `deferred`, `wontfix`, `all` |
 | `--priority` | `critical`, `suggested`, `backlog`, `all` |
 | `--severity` | `critical`, `high`, `medium`, `low`, `info` |
-| `--validator` | Any validator name (e.g., `code-validator`) |
+| `--agent` | Any agent name (e.g., `code-validator`) |
 | `--domain` | `STR`, `SEM`, `PRA`, `EPI` |
 | `--limit` | Max results (default: 50) |
 
@@ -604,7 +604,7 @@ Execute agents, commands, and workflows via the @uluops/core SDK.
 # Auto-detect definition type and execute
 ulu exec run <name> <target>
 
-# Execute an agent validator
+# Execute an agent
 ulu exec agent code-validator ./src --model sonnet
 
 # Execute a saved command configuration
@@ -642,6 +642,8 @@ ulu exec describe code-validator
 | `--timeout <ms>` | Execution timeout in milliseconds |
 | `--threshold-pass <n>` | Pass threshold score (agents) |
 | `--threshold-warn <n>` | Warning threshold score (agents) |
+| `--report <path>` | Write raw agent output report to file (single agent only) |
+| `--features-list <path>` | Write structured features/recommendations to file (single agent only) |
 
 **Examples:**
 
