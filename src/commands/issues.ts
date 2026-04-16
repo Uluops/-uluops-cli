@@ -79,7 +79,7 @@ export function registerIssueCommands(program: Command): void {
             if (details.occurrences.length > 0) {
               console.log(`\nOccurrences (${details.occurrences.length}):`);
               for (const occ of details.occurrences.slice(0, 5)) {
-                console.log(`  - ${occ.agent} at ${occ.filePath ?? '(no file)'}${occ.lineNumber ? `:${occ.lineNumber}` : ''}`);
+                console.log(`  - ${occ.agentName} at ${occ.filePath ?? '(no file)'}${occ.lineNumber ? `:${occ.lineNumber}` : ''}`);
               }
               if (details.occurrences.length > 5) {
                 console.log(`  ... and ${details.occurrences.length - 5} more`);
@@ -93,8 +93,8 @@ export function registerIssueCommands(program: Command): void {
               }
             }
 
-            if (details.statusHistory.length > 0) {
-              console.log(`\nStatus History (${details.statusHistory.length} changes)`);
+            if (details.history && details.history.length > 0) {
+              console.log(`\nStatus History (${details.history.length} changes)`);
             }
           }
         } else {
@@ -459,9 +459,9 @@ export function registerIssueCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(results, null, 2));
         } else {
-          console.log(`Updated ${results.length} issues to: ${options.status}`);
-          for (const r of results) {
-            console.log(`  ${r.id.slice(0, 8)}: ${r.previousStatus} → ${r.newStatus}`);
+          console.log(`Updated ${results.updated} issues to: ${options.status}`);
+          if (results.failed.length > 0) {
+            console.log(`Failed: ${results.failed.join(', ')}`);
           }
         }
       } catch (error) {

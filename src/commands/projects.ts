@@ -207,16 +207,16 @@ export function registerProjectCommands(program: Command): void {
 
         if (ctx.json) {
           console.log(JSON.stringify(trends, null, 2));
-        } else if (trends.length === 0) {
+        } else if (trends.daily.length === 0) {
           console.log('No trend data available');
         } else {
-          console.log(`Issue trends for ${name} (last ${options.days} days):\n`);
-          for (const point of trends.slice(-10)) {
-            const bar = '#'.repeat(Math.min(point.openIssues, 50));
-            console.log(`${point.date}: ${bar} ${point.openIssues} open (+${point.newIssues} new, -${point.resolvedIssues} resolved)`);
+          console.log(`Issue trends for ${name} (last ${trends.days} days):\n`);
+          for (const point of trends.daily.slice(-10)) {
+            const bar = '#'.repeat(Math.min(point.total, 50));
+            console.log(`${point.date}: ${bar} ${point.total} total (+${point.new} new, -${point.resolved} resolved)`);
           }
-          if (trends.length > 10) {
-            console.log(`\n... showing last 10 of ${trends.length} data points`);
+          if (trends.daily.length > 10) {
+            console.log(`\n... showing last 10 of ${trends.daily.length} data points`);
           }
         }
       } catch (error) {
@@ -278,7 +278,7 @@ export function registerProjectCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(results, null, 2));
         } else {
-          console.log(`Updated ${results.length} issues in project ${name}`);
+          console.log(`Updated ${results.updated} issues in project ${name}`);
         }
       } catch (error) {
         handleOpsError(error, ctx);

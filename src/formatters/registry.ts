@@ -9,6 +9,7 @@ import type {
   AliasResolution,
   VersionListItem,
   VersionDiff,
+  VersionDiffSummary,
   ValidationResult,
 } from '@uluops/registry-sdk';
 import { formatTable, formatKeyValue, type Column } from './table.js';
@@ -143,25 +144,32 @@ export function formatVersions(versions: VersionListItem[]): string {
 /**
  * Format version diff
  */
-export function formatVersionDiff(diff: VersionDiff): string {
+export function formatVersionDiff(diff: VersionDiff | VersionDiffSummary): string {
   const lines = [
     `From: ${diff.fromVersion} -> To: ${diff.toVersion}`,
     '',
   ];
 
-  // Compute a simple line-level diff between the two YAML strings
-  const fromLines = diff.fromYaml.split('\n');
-  const toLines = diff.toYaml.split('\n');
+  if (!diff.hasChanges) {
+    lines.push('No changes');
+    return lines.join('\n');
+  }
 
-  const added = toLines.filter(l => !fromLines.includes(l)).length;
-  const removed = fromLines.filter(l => !toLines.includes(l)).length;
-
-  if (added > 0 || removed > 0) {
+  // Full diff includes raw YAML
+  if ('fromYaml' in diff) {
+    const fromLines = diff.fromYaml.split('\n');
+    const toLines = diff.toYaml.split('\n');
+    const added = toLines.filter(l => !fromLines.includes(l)).length;
+    const removed = fromLines.filter(l => !toLines.includes(l)).length;
     lines.push('YAML changes:');
     lines.push(`  + ${added} lines added`);
     lines.push(`  - ${removed} lines removed`);
   } else {
-    lines.push('No changes');
+    // Summary diff — section-level changes
+    lines.push(`Lines: ${diff.fromLineCount} -> ${diff.toLineCount}`);
+    if (diff.sectionsAdded.length > 0) lines.push(`Added: ${diff.sectionsAdded.join(', ')}`);
+    if (diff.sectionsRemoved.length > 0) lines.push(`Removed: ${diff.sectionsRemoved.join(', ')}`);
+    if (diff.sectionsModified.length > 0) lines.push(`Modified: ${diff.sectionsModified.join(', ')}`);
   }
 
   return lines.join('\n');

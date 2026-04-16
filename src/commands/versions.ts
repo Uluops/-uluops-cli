@@ -2,7 +2,7 @@ import { Command } from 'commander';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
 import { withSpinner } from '../utils.js';
 import { formatVersions, formatVersionDiff } from '../formatters/registry.js';
-import type { DefinitionType } from '@uluops/registry-sdk';
+import type { DefinitionType, VersionDiff, VersionDiffSummary } from '@uluops/registry-sdk';
 
 /**
  * Register version commands
@@ -33,7 +33,7 @@ export function registerVersionCommands(program: Command): void {
           console.log('No versions found');
         } else {
           console.log(formatVersions(data.versions));
-          console.log(`\n${data.versions.length} of ${data.totalVersions} versions`);
+          console.log(`\n${data.versions.length} versions`);
         }
       } catch (error) {
         handleRegistryError(error, ctx);
@@ -58,7 +58,11 @@ export function registerVersionCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
-          console.log(formatVersionDiff(result));
+          if ('fromYaml' in result || 'sectionsModified' in result) {
+            console.log(formatVersionDiff(result as VersionDiff | VersionDiffSummary));
+          } else {
+            console.log(JSON.stringify(result, null, 2));
+          }
         }
       } catch (error) {
         handleRegistryError(error, ctx);

@@ -250,7 +250,7 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions): Cor
     localDefinitions: options.localDefinitions,
     trackingEnabled: options.tracking,
     defaultProject: options.project,
-    validationUrl: opsConfig.baseUrl,
+    validationUrl: process.env['ULUOPS_VALIDATION_URL'] ?? opsConfig.baseUrl,
     debug: options.debug,
     ...(thinkingBudget !== undefined && !Number.isNaN(thinkingBudget) ? { defaultThinkingBudget: thinkingBudget } : {}),
   };

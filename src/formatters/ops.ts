@@ -63,8 +63,8 @@ export function formatProjectSummary(response: unknown): string {
 /**
  * Format a list of runs as table
  */
-export function formatRuns(runs: Run[]): string {
-  const columns: Column<Run>[] = [
+export function formatRuns(runs: Array<{ runNumber: number; workflowType: string; averageScore?: number | null; allGatesPassed: boolean; createdAt: string }>): string {
+  const columns: Column<typeof runs[number]>[] = [
     { header: '#', accessor: (r) => String(r.runNumber), width: 5, align: 'right' },
     { header: 'WORKFLOW', accessor: 'workflowType', width: 20 },
     { header: 'SCORE', accessor: (r) => r.averageScore?.toFixed(1) ?? '-', width: 7, align: 'right' },

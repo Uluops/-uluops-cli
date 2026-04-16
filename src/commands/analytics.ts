@@ -41,10 +41,7 @@ export function registerAnalyticsCommands(program: Command): void {
           const columns: Column<(typeof data)[0]>[] = [
             { header: 'AGENT', accessor: 'name', width: 25 },
             { header: 'RUNS', accessor: (v) => String(v.totalRuns), width: 8, align: 'right' },
-            { header: 'AVG SCORE', accessor: (v) => {
-              const score = getFlexibleProperty(v, 'averageScore', v.avgScore);
-              return score?.toFixed(1) ?? '-';
-            }, width: 10, align: 'right' },
+            { header: 'AVG SCORE', accessor: (v) => v.averageScore?.toFixed(1) ?? '-', width: 10, align: 'right' },
             { header: 'PASS RATE', accessor: (v) => `${v.passRate.toFixed(0)}%`, width: 10, align: 'right' },
           ];
           console.log(formatTable(data, columns));
@@ -400,7 +397,6 @@ export function registerAnalyticsCommands(program: Command): void {
         } else {
           const columns: Column<(typeof data)[0]>[] = [
             { header: 'DOMAIN', accessor: (d) => d.domain ?? '-', width: 10 },
-            { header: 'MODE', accessor: (d) => d.mode ?? '-', width: 10 },
             { header: 'COUNT', accessor: (d) => String(d.count ?? 0), width: 8, align: 'right' },
             { header: '%', accessor: (d) => `${d.percentage?.toFixed(1) ?? '-'}%`, width: 8, align: 'right' },
           ];
@@ -437,19 +433,23 @@ export function registerAnalyticsCommands(program: Command): void {
           console.log(JSON.stringify(result, null, 2));
         } else {
           console.log('Full Taxonomy Analytics:\n');
-          console.log(`  Computed at: ${result.computedAt}`);
 
-          const d = result.data;
-          if (d.byDomain && d.byDomain.length > 0) {
-            console.log('\n  By Domain:');
-            for (const item of d.byDomain) {
-              console.log(`    ${item.domain}: ${item.count}`);
+          if (result.byDomain && result.byDomain.length > 0) {
+            console.log('  By Domain:');
+            for (const item of result.byDomain) {
+              console.log(`    ${item.domain} (${item.label}): ${item.count} (${item.percentage.toFixed(1)}%)`);
             }
           }
-          if (d.bySeverity && d.bySeverity.length > 0) {
+          if (result.bySeverity && result.bySeverity.length > 0) {
             console.log('\n  By Severity:');
-            for (const item of d.bySeverity) {
-              console.log(`    ${item.severity}: ${item.count}`);
+            for (const item of result.bySeverity) {
+              console.log(`    ${item.severity} (${item.label}): ${item.count} (${item.percentage.toFixed(1)}%)`);
+            }
+          }
+          if (result.topCodes && result.topCodes.length > 0) {
+            console.log('\n  Top Codes:');
+            for (const item of result.topCodes) {
+              console.log(`    ${item.code}: ${item.count} (${item.percentage.toFixed(1)}%)`);
             }
           }
         }
@@ -487,8 +487,7 @@ export function registerAnalyticsCommands(program: Command): void {
         } else {
           console.log('Trend Summary:\n');
           for (const item of data) {
-            const arrow = item.trend === 'improving' ? '↓' : item.trend === 'degrading' ? '↑' : '→';
-            console.log(`  ${item.metric}: ${arrow} ${item.trend} (${item.change >= 0 ? '+' : ''}${item.change})`);
+            console.log(`  ${item.period}: score ${item.averageScore?.toFixed(1) ?? '-'} | +${item.newIssues} new, -${item.resolvedIssues} resolved, ${item.regressions} regressions`);
           }
         }
       } catch (error) {

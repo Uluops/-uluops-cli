@@ -190,17 +190,16 @@ export function registerRunCommands(program: Command): void {
           if (details.agents.length > 0) {
             console.log('Agents:');
             for (const v of details.agents) {
-              const status = v.status === 'PASS' ? '\u2713' : '\u2717';
-              console.log(`  ${status} ${v.name}: ${v.score}/${v.maxScore ?? 100} (${v.status})`);
+              const marker = v.decision === 'PASS' ? '\u2713' : '\u2717';
+              console.log(`  ${marker} ${v.name}: ${v.score}/${v.maxScore ?? 100} (${v.decision})`);
             }
           }
 
           if (details.recommendations.length > 0) {
             console.log('\nRecommendations:');
             for (const r of details.recommendations.slice(0, 10)) {
-              const marker = r.correlation === 'new' ? '[NEW]' : r.correlation === 'regression' ? '[REG]' : '';
-              console.log(`  - ${r.title} ${marker}`);
-              console.log(`    ${r.priority}/${r.severity ?? '-'} from ${r.agent}`);
+              console.log(`  - ${r.title}`);
+              console.log(`    ${r.priority} from ${r.agent}`);
             }
             if (details.recommendations.length > 10) {
               console.log(`\n  ... and ${details.recommendations.length - 10} more`);
@@ -424,7 +423,7 @@ export function registerRunCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
-          console.log(`Archived ${result.archivedCount} runs`);
+          console.log(`Archived ${result.archived} runs`);
         }
       } catch (error) {
         handleOpsError(error, ctx);

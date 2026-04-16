@@ -29,18 +29,20 @@ export function registerTaxonomyCommands(program: Command): void {
           console.log(JSON.stringify(schema, null, 2));
         } else {
           console.log('Failure Domains:');
-          for (const domain of schema.failureDomains) {
+          for (const domain of schema.domains) {
             console.log(`  ${domain.code} - ${domain.name}`);
             console.log(`    ${domain.description}`);
+            for (const mode of domain.modes) {
+              console.log(`      ${mode.code} - ${mode.name}`);
+            }
           }
 
-          console.log('\nSeverity Codes:');
-          for (const sev of schema.severityCodes) {
-            console.log(`  ${sev.code} - ${sev.severity}: ${sev.description}`);
+          console.log('\nSeverities:');
+          for (const sev of schema.severities) {
+            console.log(`  ${sev.code} - ${sev.name} (weight: ${sev.weight})`);
           }
 
-          console.log(`\nFailure Code Pattern: ${schema.failureCodePattern}`);
-          console.log(`Severities: ${schema.severities.join(', ')}`);
+          console.log(`\nFailure Code Pattern: ${schema.failureCodePattern.pattern}`);
           console.log(`Priorities: ${schema.priorities.join(', ')}`);
           console.log(`Statuses: ${schema.statuses.join(', ')}`);
         }

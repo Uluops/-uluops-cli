@@ -3,7 +3,6 @@
  */
 import type {
   AgentResult,
-  ValidatorAgentResult,
   ExecutionResult,
   Recommendation,
   DefinitionSummary,
@@ -22,11 +21,10 @@ export function formatAgentResult(result: AgentResult): string {
   lines.push(`Agent: ${result.name} v${result.version}`);
   lines.push(`Decision: ${result.decision}`);
 
-  if (result.agentType === 'validator') {
-    const vResult = result as ValidatorAgentResult;
-    lines.push(`Score: ${vResult.score}/${vResult.maxScore}`);
-    if (vResult.threshold !== undefined) {
-      lines.push(`Threshold: ${vResult.threshold}`);
+  if (result.score !== undefined) {
+    lines.push(`Score: ${result.score}/${result.maxScore}`);
+    if (result.threshold !== undefined) {
+      lines.push(`Threshold: ${result.threshold}`);
     }
   }
 
@@ -38,24 +36,21 @@ export function formatAgentResult(result: AgentResult): string {
   }
 
   // Categories (validators only)
-  if (result.agentType === 'validator') {
-    const vResult = result as ValidatorAgentResult;
-    if (vResult.categories && vResult.categories.length > 0) {
-      lines.push('');
-      lines.push('Categories:');
-      const catColumns: Column<{ name: string; score: number; maxScore: number; findings: number }>[] = [
-        { header: 'CATEGORY', accessor: 'name', width: 30 },
-        { header: 'SCORE', accessor: (c) => `${c.score}/${c.maxScore}`, width: 10, align: 'right' },
-        { header: 'FINDINGS', accessor: (c) => String(c.findings), width: 10, align: 'right' },
-      ];
-      const catData = vResult.categories.map((c) => ({
-        name: c.name,
-        score: c.score,
-        maxScore: c.maxScore,
-        findings: c.findings.length,
-      }));
-      lines.push(formatTable(catData, catColumns));
-    }
+  if (result.categories && result.categories.length > 0) {
+    lines.push('');
+    lines.push('Categories:');
+    const catColumns: Column<{ name: string; score: number; maxScore: number; findings: number }>[] = [
+      { header: 'CATEGORY', accessor: 'name', width: 30 },
+      { header: 'SCORE', accessor: (c: { score: number; maxScore: number }) => `${c.score}/${c.maxScore}`, width: 10, align: 'right' },
+      { header: 'FINDINGS', accessor: (c: { findings: number }) => String(c.findings), width: 10, align: 'right' },
+    ];
+    const catData = result.categories.map((c) => ({
+      name: c.name,
+      score: c.score,
+      maxScore: c.maxScore,
+      findings: c.findings.length,
+    }));
+    lines.push(formatTable(catData, catColumns));
   }
 
   // Recommendations
