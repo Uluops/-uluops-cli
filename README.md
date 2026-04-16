@@ -51,7 +51,7 @@ ulu exec agent code-validator ./src --model sonnet --project my-project
   - [Issues](#issues) — Issue tracking & management
   - [Analytics](#analytics) — Validation analytics & metrics
   - [Taxonomy](#taxonomy) — Failure taxonomy schema
-  - [Admin](#admin) — Administrative operations
+
   - [Definitions](#definitions) — Workflow definition management
   - [Versions](#versions) — Definition version history
   - [Render](#render) — Definition rendering
@@ -304,7 +304,7 @@ Validation run management — save, compare, and archive pipeline results.
 ulu runs list <project>           # List runs (--workflow, --limit)
 ulu runs get <runId>              # Get run by UUID
 ulu runs latest <project>         # Get latest run (--workflow)
-ulu runs details <project>        # Detailed run with validators/recommendations
+ulu runs details <project>        # Detailed run with agents/recommendations
 ulu runs save                     # Save run from JSON (--file or --stdin)
 ulu runs validate                 # Dry run — preview without saving
 ulu runs diff <project>           # Compare two runs (--base, --compare)
@@ -346,18 +346,18 @@ The JSON file for `ulu runs save` follows this structure:
 {
   "project": "my-project",
   "workflow_type": "post-implementation",
-  "validators": [
+  "agents": [
     {
       "name": "code-validator",
       "score": 85,
-      "status": "PASS",
+      "decision": "PASS",
       "model": "sonnet",
       "tokens": { "input_tokens": 1000, "output_tokens": 500 }
     }
   ],
   "recommendations": [
     {
-      "validator": "code-validator",
+      "agent": "code-validator",
       "title": "Missing error handling",
       "priority": "suggested",
       "severity": "medium",
@@ -444,13 +444,13 @@ ulu issues bulk-update --ids id1,id2,id3 --status completed --reason "Batch fix"
 Validation analytics and trend metrics.
 
 ```bash
-ulu analytics validators          # Validator performance (avg score, pass rate)
-ulu analytics reliability         # Validator reliability (false positive rate)
+ulu analytics agents              # Agent performance (avg score, pass rate)
+ulu analytics reliability         # Agent reliability (false positive rate)
 ulu analytics hotspots            # Files with most issues
 ulu analytics burndown            # Taxonomy burndown time series
 ulu analytics velocity            # Rate of change per failure mode
 ulu analytics discovery           # New vs recurring issues timeline
-ulu analytics matrix              # Validator-taxonomy coverage matrix
+ulu analytics matrix              # Agent-taxonomy coverage matrix
 ulu analytics resolution          # Issue resolution rates by project
 ulu analytics taxonomy            # Taxonomy distribution
 ulu analytics full-taxonomy       # Full taxonomy analytics breakdown
@@ -460,8 +460,8 @@ ulu analytics trends              # Trend summary metrics
 **Examples:**
 
 ```bash
-# Which validators are most effective?
-ulu analytics validators --project my-project --days 30
+# Which agents are most effective?
+ulu analytics agents --project my-project --days 30
 
 # Which files keep generating issues?
 ulu analytics hotspots --project my-project --limit 10
@@ -475,10 +475,10 @@ ulu analytics velocity --project my-project --threshold 50
 # New issues vs recurring — is validation finding new problems?
 ulu analytics discovery --project my-project --group-by week
 
-# Coverage gaps — which domains lack validator coverage?
+# Coverage gaps — which domains lack agent coverage?
 ulu analytics matrix --project my-project
 
-# Reliability — which validators have high false positive rates?
+# Reliability — which agents have high false positive rates?
 ulu analytics reliability --days 90
 ```
 
@@ -493,36 +493,6 @@ ulu taxonomy get                  # Display domains, severity codes, statuses
 ```
 
 Displays the four failure domains (STR, SEM, PRA, EPI), their failure modes, severity levels, and priority tiers.
-
----
-
-### Admin
-
-Administrative operations (requires admin role).
-
-```bash
-# Dashboard
-ulu admin stats                          # Get platform statistics
-
-# User management
-ulu admin users list                     # List users (--search, --role, --tier)
-ulu admin users get <id>                 # Get user details
-ulu admin users create                   # Create user (--email, --role, --tier)
-ulu admin users update <id>              # Update user (--role, --tier)
-ulu admin users deactivate <id>          # Deactivate user
-ulu admin users reactivate <id>          # Reactivate user
-ulu admin users reset-password <id>      # Send password reset email
-ulu admin users bulk-deactivate          # Bulk deactivate (--ids)
-
-# Session management
-ulu admin sessions list                  # List sessions (--user)
-ulu admin sessions terminate <id>        # Terminate session
-ulu admin sessions terminate-user <uid>  # Terminate all sessions for user
-
-# API key management
-ulu admin keys list                      # List API keys (--user, --search)
-ulu admin keys revoke <id>               # Revoke API key
-```
 
 ---
 
@@ -670,8 +640,8 @@ ulu exec describe code-validator
 | `--max-steps <n>` | Maximum tool loop iterations (default: 50) |
 | `--temperature <n>` | Generation temperature 0-1 (default: 0) |
 | `--timeout <ms>` | Execution timeout in milliseconds |
-| `--threshold-pass <n>` | Pass threshold score (validators) |
-| `--threshold-warn <n>` | Warning threshold score (validators) |
+| `--threshold-pass <n>` | Pass threshold score (agents) |
+| `--threshold-warn <n>` | Warning threshold score (agents) |
 
 **Examples:**
 
