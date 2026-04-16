@@ -247,16 +247,18 @@ export function registerExecCommands(program: Command): void {
   exec
     .command('command <name> <target>')
     .description('Execute a saved command configuration')
-    .action(async (name: string, target: string, _cmdOpts: Record<string, unknown>, cmd: Command) => {
+    .option('-m, --model <model>', 'Model override (overrides command definition default)')
+    .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
       const options = getMergedOptions(cmd);
       const ctx = createCoreContext(options);
+      const modelOverride = cmdOpts['model'] as string | undefined;
 
       try {
         const result = await withSpinner(ctx, {
           start: `Running command ${name} against ${target}...`,
           success: `Command execution complete`,
           failure: `Command execution failed`,
-        }, () => ctx.client.runCommand(name, { target }));
+        }, () => ctx.client.runCommand(name, { target }, modelOverride ? { model: modelOverride } : undefined));
 
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));

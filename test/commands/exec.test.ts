@@ -206,7 +206,7 @@ describe('exec command', () => {
   it('executes a command and displays formatted result', async () => {
     mockClient.runCommand.mockResolvedValue(createExecutionResult());
     await parse('exec', 'command', 'my-command', './src');
-    expect(mockClient.runCommand).toHaveBeenCalledWith('my-command', { target: './src' });
+    expect(mockClient.runCommand).toHaveBeenCalledWith('my-command', { target: './src' }, undefined);
     expect(output.stdout()).toContain('my-command');
   });
 
