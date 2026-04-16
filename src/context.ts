@@ -239,7 +239,10 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions): Cor
   });
 
   const apiKey = opsConfig.credentials.apiKey ?? options.apiKey;
-  if (!apiKey) {
+  // API key is optional when using local definitions with tracking disabled —
+  // the core SDK handles this gracefully (local-only execution, no remote calls).
+  const localOnly = !!options.localDefinitions && options.tracking === false;
+  if (!apiKey && !localOnly) {
     requireCredentials(false, options.profile ?? 'default');
   }
 
