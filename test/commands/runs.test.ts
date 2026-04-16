@@ -101,9 +101,9 @@ describe('runs details', () => {
   it('should display detailed run info', async () => {
     mockClient.runs.getDetails.mockResolvedValue({
       run: createRun({ runNumber: 5, workflowType: 'ship', averageScore: 88.5, allGatesPassed: true }),
-      agents: [{ name: 'code-validator', score: 90, maxScore: 100, status: 'PASS' }],
+      agents: [{ name: 'code-validator', score: 90, maxScore: 100, decision: 'PASS' }],
       recommendations: [
-        { title: 'Add error handling', priority: 'suggested', severity: 'medium', agent: 'code-validator', correlation: 'new' },
+        { title: 'Add error handling', priority: 'suggested', severity: 'medium', agent: 'code-validator' },
       ],
     });
     const output = captureOutput();
@@ -111,7 +111,6 @@ describe('runs details', () => {
     expect(output.stdout()).toContain('Run #5');
     expect(output.stdout()).toContain('code-validator');
     expect(output.stdout()).toContain('Add error handling');
-    expect(output.stdout()).toContain('[NEW]');
     output.restore();
   });
 });
@@ -154,7 +153,7 @@ describe('runs save', () => {
 
 describe('runs archive', () => {
   it('should archive runs with --keep-last', async () => {
-    mockClient.runs.archive.mockResolvedValue({ archivedCount: 5 });
+    mockClient.runs.archive.mockResolvedValue({ archived: 5 });
     const output = captureOutput();
     await parse('runs', 'archive', 'my-proj', '--keep-last', '3');
     expect(mockClient.runs.archive).toHaveBeenCalledWith(expect.objectContaining({

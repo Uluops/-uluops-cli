@@ -140,9 +140,12 @@ describe('projects summary', () => {
 
 describe('projects trends', () => {
   it('should pass --days option', async () => {
-    mockClient.projects.getTrends.mockResolvedValue([
-      { date: '2025-01-15', openIssues: 5, newIssues: 2, resolvedIssues: 1 },
-    ]);
+    mockClient.projects.getTrends.mockResolvedValue({
+      days: 14,
+      daily: [
+        { date: '2025-01-15', total: 5, new: 2, resolved: 1 },
+      ],
+    });
     const output = captureOutput();
     await parse('projects', 'trends', 'my-proj', '--days', '14');
     expect(mockClient.projects.getTrends).toHaveBeenCalledWith('my-proj', { days: 14 });
@@ -151,7 +154,7 @@ describe('projects trends', () => {
   });
 
   it('should show message when empty', async () => {
-    mockClient.projects.getTrends.mockResolvedValue([]);
+    mockClient.projects.getTrends.mockResolvedValue({ days: 30, daily: [] });
     const output = captureOutput();
     await parse('projects', 'trends', 'my-proj');
     expect(output.stdout()).toContain('No trend data');
@@ -173,10 +176,10 @@ describe('projects rename', () => {
 
 describe('projects bulk-update-issues', () => {
   it('should batch update issue statuses', async () => {
-    mockClient.projects.bulkUpdateIssueStatus.mockResolvedValue([
-      { issueId: 'issue-1', status: 'completed' },
-      { issueId: 'issue-2', status: 'completed' },
-    ]);
+    mockClient.projects.bulkUpdateIssueStatus.mockResolvedValue({
+      updated: 2,
+      failed: [],
+    });
     const output = captureOutput();
     await parse('projects', 'bulk-update-issues', 'my-proj', '--ids', 'issue-1,issue-2', '--status', 'completed', '--reason', 'Fixed in v2');
     expect(mockClient.projects.bulkUpdateIssueStatus).toHaveBeenCalledWith('my-proj', [

@@ -33,16 +33,15 @@ function parse(...args: string[]) {
 describe('taxonomy get', () => {
   it('should display failure taxonomy', async () => {
     mockClient.taxonomy.get.mockResolvedValue({
-      failureDomains: [
-        { code: 'STR', name: 'Structural', description: 'Structure and syntax issues' },
-        { code: 'SEM', name: 'Semantic', description: 'Meaning and logic issues' },
+      domains: [
+        { code: 'STR', name: 'Structural', description: 'Structure and syntax issues', modes: [{ code: 'OMI', name: 'Omission' }] },
+        { code: 'SEM', name: 'Semantic', description: 'Meaning and logic issues', modes: [{ code: 'VAL', name: 'Validation' }] },
       ],
-      severityCodes: [
-        { code: 'C', severity: 'critical', description: 'Critical severity' },
-        { code: 'H', severity: 'high', description: 'High severity' },
+      severities: [
+        { code: 'C', name: 'critical', weight: 4 },
+        { code: 'H', name: 'high', weight: 3 },
       ],
-      failureCodePattern: '^(STR|SEM|PRA|EPI)-[A-Z]{3}/[CHMLI]$',
-      severities: ['critical', 'high', 'medium', 'low', 'info'],
+      failureCodePattern: { pattern: '^(STR|SEM|PRA|EPI)-[A-Z]{3}/[CHMLI]$' },
       priorities: ['critical', 'suggested', 'backlog'],
       statuses: ['open', 'completed', 'deferred', 'wontfix'],
     });
@@ -52,7 +51,7 @@ describe('taxonomy get', () => {
     expect(output.stdout()).toContain('Failure Domains');
     expect(output.stdout()).toContain('STR');
     expect(output.stdout()).toContain('Structural');
-    expect(output.stdout()).toContain('Severity Codes');
+    expect(output.stdout()).toContain('Severities:');
     expect(output.stdout()).toContain('critical');
     output.restore();
   });

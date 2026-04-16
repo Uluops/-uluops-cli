@@ -139,14 +139,14 @@ describe('analytics resolution', () => {
 describe('analytics taxonomy', () => {
   it('should display taxonomy distribution', async () => {
     mockClient.analytics.getTaxonomyDistribution.mockResolvedValue([
-      { domain: 'SEM', mode: 'VAL', count: 15 },
-      { domain: 'STR', mode: 'OMI', count: 8 },
+      { domain: 'SEM', count: 15, percentage: 65.2 },
+      { domain: 'STR', count: 8, percentage: 34.8 },
     ]);
     const output = captureOutput();
     await parse('analytics', 'taxonomy');
     expect(output.stdout()).toContain('SEM');
-    expect(output.stdout()).toContain('VAL');
     expect(output.stdout()).toContain('15');
+    expect(output.stdout()).toContain('STR');
     output.restore();
   });
 
@@ -162,11 +162,8 @@ describe('analytics taxonomy', () => {
 describe('analytics full-taxonomy', () => {
   it('should display full taxonomy breakdown', async () => {
     mockClient.analytics.getFullTaxonomy.mockResolvedValue({
-      data: {
-        byDomain: [{ domain: 'SEM', count: 20 }],
-        bySeverity: [{ severity: 'high', count: 10 }],
-      },
-      computedAt: '2025-06-15T10:00:00Z',
+      byDomain: [{ domain: 'SEM', label: 'Semantic', count: 20, percentage: 66.7 }],
+      bySeverity: [{ severity: 'high', label: 'High', count: 10, percentage: 33.3 }],
     });
     const output = captureOutput();
     await parse('analytics', 'full-taxonomy');
@@ -180,13 +177,13 @@ describe('analytics full-taxonomy', () => {
 describe('analytics trends', () => {
   it('should display trend summary', async () => {
     mockClient.analytics.getTrendSummary.mockResolvedValue([
-      { metric: 'open_issues', current: 10, previous: 15, change: -5, changePercent: -33.3, trend: 'improving' },
-      { metric: 'resolution_rate', current: 87, previous: 75, change: 12, changePercent: 16.0, trend: 'improving' },
+      { period: '2025-W03', averageScore: 85.0, newIssues: 10, resolvedIssues: 15, regressions: 1 },
+      { period: '2025-W04', averageScore: 87.5, newIssues: 8, resolvedIssues: 12, regressions: 0 },
     ]);
     const output = captureOutput();
     await parse('analytics', 'trends');
-    expect(output.stdout()).toContain('open_issues');
-    expect(output.stdout()).toContain('improving');
+    expect(output.stdout()).toContain('2025-W03');
+    expect(output.stdout()).toContain('85.0');
     output.restore();
   });
 

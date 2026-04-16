@@ -234,10 +234,10 @@ describe('issues restore', () => {
 
 describe('issues bulk-update', () => {
   it('should bulk update issue statuses', async () => {
-    mockClient.issues.bulkUpdateStatus.mockResolvedValue([
-      { id: 'id-1', previousStatus: 'open', newStatus: 'completed', fingerprint: 'a', updatedAt: '2025-01-01' },
-      { id: 'id-2', previousStatus: 'open', newStatus: 'completed', fingerprint: 'b', updatedAt: '2025-01-01' },
-    ]);
+    mockClient.issues.bulkUpdateStatus.mockResolvedValue({
+      updated: 2,
+      failed: [],
+    });
     const output = captureOutput();
     await parse('issues', 'bulk-update', '--ids', 'id-1,id-2', '--status', 'completed', '--reason', 'Fixed all');
     expect(mockClient.issues.bulkUpdateStatus).toHaveBeenCalledWith([

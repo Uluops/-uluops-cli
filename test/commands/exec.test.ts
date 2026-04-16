@@ -141,14 +141,14 @@ describe('exec run', () => {
 describe('exec agent', () => {
   it('executes an agent and displays formatted result', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', 'agent', 'code-validator', './src');
+    await parse('exec', 'agent', '-t', './src', 'code-validator');
     expect(mockClient.runAgent).toHaveBeenCalledWith('code-validator', './src', undefined);
     expect(output.stdout()).toContain('Score: 85/100');
   });
 
   it('passes model option to execution options', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', 'agent', 'code-validator', './src', '--model', 'haiku');
+    await parse('exec', 'agent', '-t', './src', 'code-validator', '--model', 'haiku');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       './src',
@@ -158,7 +158,7 @@ describe('exec agent', () => {
 
   it('passes threshold options', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', 'agent', 'code-validator', './src', '--threshold-pass', '80', '--threshold-warn', '60');
+    await parse('exec', 'agent', '-t', './src', 'code-validator', '--threshold-pass', '80', '--threshold-warn', '60');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       './src',
@@ -170,7 +170,7 @@ describe('exec agent', () => {
 
   it('passes max-tokens and max-steps options', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', 'agent', 'code-validator', './src', '--max-tokens', '4096', '--max-steps', '25');
+    await parse('exec', 'agent', '-t', './src', 'code-validator', '--max-tokens', '4096', '--max-steps', '25');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       './src',
@@ -183,7 +183,7 @@ describe('exec agent', () => {
 
   it('passes temperature option', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', 'agent', 'code-validator', './src', '--temperature', '0.7');
+    await parse('exec', 'agent', '-t', './src', 'code-validator', '--temperature', '0.7');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       './src',
@@ -196,7 +196,7 @@ describe('exec agent', () => {
   it('delegates errors to handleCoreError', async () => {
     const err = new Error('Agent failed');
     mockClient.runAgent.mockRejectedValue(err);
-    await expect(parse('exec', 'agent', 'code-validator', './src')).rejects.toThrow('Agent failed');
+    await expect(parse('exec', 'agent', '-t', './src', 'code-validator')).rejects.toThrow('Agent failed');
   });
 });
 
@@ -336,7 +336,7 @@ describe('exec describe', () => {
 describe('parent options', () => {
   it('passes --no-tracking to disable result submission', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', '--no-tracking', 'agent', 'code-validator', './src');
+    await parse('exec', '--no-tracking', 'agent', '-t', './src', 'code-validator');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       './src',
@@ -346,7 +346,7 @@ describe('parent options', () => {
 
   it('passes --project option', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', '--project', 'my-proj', 'agent', 'code-validator', './src');
+    await parse('exec', '--project', 'my-proj', 'agent', '-t', './src', 'code-validator');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       './src',

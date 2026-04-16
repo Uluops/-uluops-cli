@@ -178,6 +178,7 @@ describe('formatVersionDiff', () => {
     const diff = {
       fromVersion: '1.0.0',
       toVersion: '1.1.0',
+      hasChanges: true,
       fromYaml: 'name: foo\nversion: "1.0.0"\ndescription: old',
       toYaml: 'name: foo\nversion: "1.1.0"\ndescription: new\ntags:\n  - test',
     };
@@ -192,6 +193,7 @@ describe('formatVersionDiff', () => {
     const diff = {
       fromVersion: '1.0.0',
       toVersion: '1.1.0',
+      hasChanges: true,
       fromYaml: 'name: foo',
       toYaml: 'name: foo\nextra: line',
     };
