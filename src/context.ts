@@ -229,7 +229,7 @@ export function createUnauthenticatedContext(options: GlobalOptions): { baseUrl:
 /**
  * Create CLI context for core SDK commands (exec)
  */
-export function createCoreContext(options: GlobalOptions & CoreExecOptions): CoreCliContext {
+export function createCoreContext(options: GlobalOptions & CoreExecOptions, modelOverride?: string): CoreCliContext {
   // Resolve API key from global options or env
   const opsConfig = loadOpsConfig({
     apiKey: options.apiKey,
@@ -257,6 +257,10 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions): Cor
     debug: options.debug,
     ...(thinkingBudget !== undefined && !Number.isNaN(thinkingBudget) ? { defaultThinkingBudget: thinkingBudget } : {}),
   };
+
+  if (modelOverride) {
+    config.ai = { ...config.ai, modelOverride } as typeof config.ai;
+  }
 
   if (options.registryUrl) {
     config.registryUrl = options.registryUrl;

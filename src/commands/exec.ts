@@ -275,9 +275,11 @@ export function registerExecCommands(program: Command): void {
   exec
     .command('workflow <name> <target>')
     .description('Execute a multi-phase workflow')
-    .action(async (name: string, target: string, _cmdOpts: Record<string, unknown>, cmd: Command) => {
+    .option('-m, --model <model>', 'Model override for all phases (alias, tier, or provider:modelId)')
+    .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
       const options = getMergedOptions(cmd);
-      const ctx = createCoreContext(options);
+      const modelOverride = cmdOpts['model'] as string | undefined;
+      const ctx = createCoreContext(options, modelOverride);
 
       try {
         const result = await withSpinner(ctx, {
