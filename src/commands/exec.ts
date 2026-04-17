@@ -125,9 +125,11 @@ export function registerExecCommands(program: Command): void {
   exec
     .command('run <name> <target>')
     .description('Execute a definition (auto-detects type)')
-    .action(async (name: string, target: string, _cmdOpts: Record<string, unknown>, cmd: Command) => {
+    .option('-m, --model <model>', 'Model override for all agents (alias, tier, or provider:modelId)')
+    .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
       const options = getMergedOptions(cmd);
-      const ctx = createCoreContext(options);
+      const modelOverride = cmdOpts['model'] as string | undefined;
+      const ctx = createCoreContext(options, modelOverride);
 
       try {
         const result = await withSpinner(ctx, {
