@@ -14,6 +14,7 @@ import {
   WorkflowError,
   PipelineError,
   SdkApiError,
+  SubscriptionRequiredError,
 } from '@uluops/core';
 import type { UluOpsConfig } from '@uluops/core';
 import { existsSync, readFileSync } from 'node:fs';
@@ -326,6 +327,20 @@ function printApiErrorDetails(
       console.error(`\nHint: ${hints.notFound ?? 'The resource was not found. Check the name or ID.'}`);
     } else if (error.code === 'VALIDATION_ERROR' || error.statusCode === 400) {
       console.error(`\nHint: ${hints.validation ?? 'Invalid input. Check the command arguments.'}`);
+    } else if (error.code === 'SUBSCRIPTION_REQUIRED' || error.statusCode === 402) {
+      const details = error.details as Record<string, unknown> | undefined;
+      const requiredTier = details?.requiredTier as string | undefined;
+      const upgradeUrl = details?.upgradeUrl as string | undefined;
+      const sep = upgradeUrl?.includes('?') ? '&' : '?';
+      const trackedUrl = upgradeUrl ? `${upgradeUrl}${sep}source=cli` : undefined;
+      console.error('');
+      console.error('┌─────────────────────────────────────────────────┐');
+      console.error(`│  Subscription required${requiredTier ? `: ${requiredTier} tier or higher` : ''}`.padEnd(50) + '│');
+      console.error('│                                                 │');
+      if (trackedUrl) {
+        console.error(`│  Upgrade: ${trackedUrl}`.padEnd(50) + '│');
+      }
+      console.error('└─────────────────────────────────────────────────┘');
     } else if (error.code === 'RATE_LIMITED' || error.statusCode === 429) {
       console.error('\nHint: Rate limited. Wait a moment and try again.');
     } else if (error.code === 'SERVICE_UNAVAILABLE' || error.statusCode === 503) {
@@ -379,6 +394,27 @@ export function handleRegistryError(error: unknown, ctx: Pick<RegistryCliContext
  * Handle core SDK errors consistently
  */
 export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json' | 'debug'>): never {
+  if (error instanceof SubscriptionRequiredError) {
+    if (ctx.json) {
+      console.error(JSON.stringify(error.toJSON(), null, 2));
+    } else {
+      const defLabel = error.definition?.name
+        ? `"${error.definition.displayName ?? error.definition.name}"`
+        : 'this definition';
+      const trackedUrl = error.trackedUpgradeUrl('cli');
+      console.error(`Error: ${defLabel} requires ${error.requiredTier} tier or higher (current: ${error.currentTier})`);
+      console.error('');
+      console.error('┌─────────────────────────────────────────────────┐');
+      console.error(`│  Upgrade to ${error.requiredTier} to access this content`.padEnd(50) + '│');
+      console.error('│                                                 │');
+      if (trackedUrl) {
+        console.error(`│  ${trackedUrl}`.padEnd(50) + '│');
+      }
+      console.error('└─────────────────────────────────────────────────┘');
+    }
+    process.exit(1);
+  }
+
   if (error instanceof SdkApiError) {
     printApiErrorDetails(
       error as ApiErrorLike,
