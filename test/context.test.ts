@@ -95,9 +95,9 @@ vi.mock('@uluops/core', () => {
     contentPreview?: string;
     constructor(message: string, contentPreview?: string) { super(message); this.name = 'ParseError'; this.contentPreview = contentPreview; }
   }
-  class ValidationError extends UluOpsError {
+  class SubmissionError extends UluOpsError {
     code?: string;
-    constructor(message: string, code?: string) { super(message); this.name = 'ValidationError'; this.code = code; }
+    constructor(message: string, code?: string) { super(message); this.name = 'SubmissionError'; this.code = code; }
   }
   class ExecutionError extends UluOpsError {
     partialResult?: unknown;
@@ -108,12 +108,13 @@ vi.mock('@uluops/core', () => {
     constructor(message: string, context?: { partialResult?: unknown }) { super(message); this.name = 'WorkflowError'; this.context = context; }
   }
   class PipelineError extends UluOpsError { constructor(message: string) { super(message); this.name = 'PipelineError'; } }
+  class SubscriptionRequiredError extends UluOpsError { constructor(message: string) { super(message); this.name = 'SubscriptionRequiredError'; } }
 
   return {
     UluOpsClient: vi.fn().mockReturnValue({}),
     UluOpsError, SdkApiError, ConfigurationError, ModelNotFoundError,
-    PreflightError, ParseError, ValidationError,
-    ExecutionError, WorkflowError, PipelineError,
+    PreflightError, ParseError, SubmissionError,
+    ExecutionError, WorkflowError, PipelineError, SubscriptionRequiredError,
   };
 });
 
@@ -125,7 +126,7 @@ import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
 import {
   UluOpsClient,
   SdkApiError, ConfigurationError, ModelNotFoundError, PreflightError,
-  ParseError, ValidationError as CoreValidationError,
+  ParseError, SubmissionError as CoreSubmissionError,
   ExecutionError, WorkflowError, PipelineError, UluOpsError,
 } from '@uluops/core';
 import {
@@ -686,9 +687,9 @@ describe('handleCoreError', () => {
     output.restore();
   });
 
-  it('should handle ValidationError with code', () => {
+  it('should handle SubmissionError with code', () => {
     const output = captureOutput();
-    const error = new CoreValidationError('Schema invalid', 'SCHEMA_ERROR');
+    const error = new CoreSubmissionError('Schema invalid', 'SCHEMA_ERROR');
 
     expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Schema invalid');

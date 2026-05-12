@@ -10,7 +10,7 @@ import {
   ModelNotFoundError,
   PreflightError,
   ParseError,
-  ValidationError,
+  SubmissionError,
   WorkflowError,
   PipelineError,
   SdkApiError,
@@ -254,7 +254,7 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions, mode
     localDefinitions: options.localDefinitions,
     trackingEnabled: options.tracking,
     defaultProject: options.project,
-    validationUrl: process.env['ULUOPS_VALIDATION_URL'] ?? opsConfig.baseUrl,
+    submissionUrl: process.env['ULUOPS_SUBMISSION_URL'] ?? opsConfig.baseUrl,
     debug: options.debug,
     ...(thinkingBudget !== undefined && !Number.isNaN(thinkingBudget) ? { defaultThinkingBudget: thinkingBudget } : {}),
   };
@@ -458,10 +458,10 @@ export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json'
     process.exit(1);
   }
 
-  if (error instanceof ValidationError) {
+  if (error instanceof SubmissionError) {
     console.error(`Error: ${error.message}`);
     if (error.code) {
-      console.error(`\nValidation error code: ${error.code}`);
+      console.error(`\nSubmission error code: ${error.code}`);
     }
     process.exit(1);
   }
