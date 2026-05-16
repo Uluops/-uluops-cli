@@ -119,7 +119,7 @@ export function registerForkCommands(program: Command): void {
         const result = await withSpinner(
           ctx,
           { start: 'Fetching lineage...', failure: 'Failed to fetch lineage' },
-          () => ctx.client.forks.getLineage(type as DefinitionType, name, version)
+          () => ctx.client.forks.getAncestry(type as DefinitionType, name, version)
         );
 
         if (ctx.json) {

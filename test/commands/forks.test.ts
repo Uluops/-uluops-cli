@@ -89,7 +89,7 @@ describe('forks check', () => {
 
 describe('forks lineage', () => {
   it('should display fork lineage', async () => {
-    mockClient.forks.getLineage.mockResolvedValue({
+    mockClient.forks.getAncestry.mockResolvedValue({
       current: createDefinitionListItem({ name: 'my-fork' }),
       source: createDefinitionListItem({ name: 'original' }),
       chain: [createDefinitionListItem({ name: 'intermediate' })],
