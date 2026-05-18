@@ -88,7 +88,7 @@ export function registerForkCommands(program: Command): void {
         const result = await withSpinner(
           ctx,
           { start: 'Checking...', failure: 'Failed to check forkability' },
-          () => ctx.client.forks.checkForkable(type as DefinitionType, name, version)
+          () => ctx.client.forks.isForkable(type as DefinitionType, name, version)
         );
 
         if (ctx.json) {

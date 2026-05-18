@@ -81,7 +81,7 @@ export function registerTranslationCommands(program: Command): void {
         const result = await withSpinner(
           ctx,
           { start: 'Upgrading definition...', success: 'Upgrade complete', failure: 'Failed to upgrade' },
-          () => ctx.client.translation.upgrade(type as DefinitionType, name, { yaml })
+          () => ctx.client.translation.upgradeDefinition(type as DefinitionType, name, { yaml })
         );
 
         if (ctx.json) {

@@ -141,8 +141,8 @@ export function createMockRegistryClient() {
     forks: {
       list: vi.fn(),
       create: vi.fn(),
-      checkForkable: vi.fn(),
-      getLineage: vi.fn(),
+      isForkable: vi.fn(),
+      getAncestry: vi.fn(),
     },
     executions: {
       record: vi.fn(),
@@ -151,7 +151,7 @@ export function createMockRegistryClient() {
     translation: {
       getVersion: vi.fn(),
       retranslate: vi.fn(),
-      upgrade: vi.fn(),
+      upgradeDefinition: vi.fn(),
     },
     render: {
       get: vi.fn(),

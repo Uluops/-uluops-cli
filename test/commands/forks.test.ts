@@ -70,7 +70,7 @@ describe('forks create', () => {
 
 describe('forks check', () => {
   it('should check forkability', async () => {
-    mockClient.forks.checkForkable.mockResolvedValue({ canFork: true });
+    mockClient.forks.isForkable.mockResolvedValue({ canFork: true });
     const output = captureOutput();
     await parse('forks', 'check', 'agent', 'base-agent', '1.0.0');
     expect(output.stdout()).toContain('Forkable: Yes');
@@ -78,7 +78,7 @@ describe('forks check', () => {
   });
 
   it('should show reason when not forkable', async () => {
-    mockClient.forks.checkForkable.mockResolvedValue({ canFork: false, reason: 'Definition is private' });
+    mockClient.forks.isForkable.mockResolvedValue({ canFork: false, reason: 'Definition is private' });
     const output = captureOutput();
     await parse('forks', 'check', 'agent', 'base-agent', '1.0.0');
     expect(output.stdout()).toContain('Forkable: No');

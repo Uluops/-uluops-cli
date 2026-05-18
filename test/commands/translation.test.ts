@@ -70,14 +70,14 @@ describe('translation retranslate', () => {
 
 describe('translation upgrade', () => {
   it('should upgrade legacy YAML', async () => {
-    mockClient.translation.upgrade.mockResolvedValue({
+    mockClient.translation.upgradeDefinition.mockResolvedValue({
       definition: createDefinition({ name: 'test-agent' }),
       version: '2.0.0',
       changes: { schema: 'v1.0.0 → v1.2.0' },
     });
     const output = captureOutput();
     await parse('translation', 'upgrade', 'agent', 'test-agent', '--file', '/tmp/legacy.yaml');
-    expect(mockClient.translation.upgrade).toHaveBeenCalledWith('agent', 'test-agent', {
+    expect(mockClient.translation.upgradeDefinition).toHaveBeenCalledWith('agent', 'test-agent', {
       yaml: 'name: test-agent\nversion: 1.0.0\n',
     });
     expect(output.stdout()).toContain('Upgraded');
