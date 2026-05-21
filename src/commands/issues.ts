@@ -388,7 +388,7 @@ export function registerIssueCommands(program: Command): void {
         const issue = await withSpinner(
           ctx,
           { start: 'Updating issue...', success: 'Issue updated', failure: 'Failed to update issue' },
-          () => ctx.client.issues.edit(id, input)
+          () => ctx.client.issues.update(id, input)
         );
 
         if (ctx.json) {

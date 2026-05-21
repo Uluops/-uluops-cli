@@ -1,7 +1,6 @@
 import { Command } from 'commander';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
 import { withSpinner, asFlexibleResponse } from '../utils.js';
-import { formatDefinitions } from '../formatters/registry.js';
 import type { DefinitionType } from '@uluops/registry-sdk';
 
 /**
@@ -30,11 +29,16 @@ export function registerForkCommands(program: Command): void {
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
-          if (result.items.length === 0) {
+          if (result.forks.length === 0) {
             console.log('No forks found');
           } else {
-            console.log(formatDefinitions(result.items));
-            console.log(`\n${result.total} fork(s)`);
+            for (const entry of result.forks) {
+              const d = entry.definition;
+              if (d) {
+                console.log(`  ${d.type}/${d.name}@${d.version} (${d.authorId.slice(0, 8)})`);
+              }
+            }
+            console.log(`\n${result.totalForks} fork(s)`);
           }
         }
       } catch (error) {
@@ -132,7 +136,9 @@ export function registerForkCommands(program: Command): void {
             for (const item of result.chain) {
               console.log(`  ${item.type}/${item.name}@${item.version} (${item.status})`);
             }
-            console.log(`  -> ${result.current.type}/${result.current.name}@${result.current.version} (current)`);
+            if (result.current) {
+              console.log(`  -> ${result.current.type}/${result.current.name}@${result.current.version} (current)`);
+            }
           } else if (lineage.isFork) {
             console.log('Fork Lineage:');
             const src = lineage.source as { type: string; name: string; version: string } | undefined;
