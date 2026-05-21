@@ -105,7 +105,7 @@ describe('exec run', () => {
   it('executes a definition by name and displays formatted result', async () => {
     mockClient.run.mockResolvedValue(createAgentResult());
     await parse('exec', 'run', 'code-validator', './src');
-    expect(mockClient.run).toHaveBeenCalledWith('code-validator', { target: './src' });
+    expect(mockClient.run).toHaveBeenCalledWith('code-validator', { target: './src', prompt: undefined });
     expect(output.stdout()).toContain('code-validator');
   });
 
@@ -142,7 +142,7 @@ describe('exec agent', () => {
   it('executes an agent and displays formatted result', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
     await parse('exec', 'agent', '-t', './src', 'code-validator');
-    expect(mockClient.runAgent).toHaveBeenCalledWith('code-validator', './src', undefined);
+    expect(mockClient.runAgent).toHaveBeenCalledWith('code-validator', { target: './src', prompt: undefined }, undefined);
     expect(output.stdout()).toContain('Score: 85/100');
   });
 
@@ -151,7 +151,7 @@ describe('exec agent', () => {
     await parse('exec', 'agent', '-t', './src', 'code-validator', '--model', 'haiku');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
-      './src',
+      { target: './src', prompt: undefined },
       expect.objectContaining({ model: 'haiku' })
     );
   });
@@ -161,7 +161,7 @@ describe('exec agent', () => {
     await parse('exec', 'agent', '-t', './src', 'code-validator', '--threshold-pass', '80', '--threshold-warn', '60');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
-      './src',
+      { target: './src', prompt: undefined },
       expect.objectContaining({
         thresholds: { pass: 80, warn: 60 },
       })
@@ -173,7 +173,7 @@ describe('exec agent', () => {
     await parse('exec', 'agent', '-t', './src', 'code-validator', '--max-tokens', '4096', '--max-steps', '25');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
-      './src',
+      { target: './src', prompt: undefined },
       expect.objectContaining({
         maxTokens: 4096,
         maxSteps: 25,
@@ -186,7 +186,7 @@ describe('exec agent', () => {
     await parse('exec', 'agent', '-t', './src', 'code-validator', '--temperature', '0.7');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
-      './src',
+      { target: './src', prompt: undefined },
       expect.objectContaining({
         temperature: 0.7,
       })
@@ -206,7 +206,7 @@ describe('exec command', () => {
   it('executes a command and displays formatted result', async () => {
     mockClient.runCommand.mockResolvedValue(createExecutionResult());
     await parse('exec', 'command', 'my-command', './src');
-    expect(mockClient.runCommand).toHaveBeenCalledWith('my-command', { target: './src' }, undefined);
+    expect(mockClient.runCommand).toHaveBeenCalledWith('my-command', { target: './src', prompt: undefined }, undefined);
     expect(output.stdout()).toContain('my-command');
   });
 
@@ -235,7 +235,7 @@ describe('exec workflow', () => {
   it('executes a workflow and displays formatted result', async () => {
     mockClient.runWorkflow.mockResolvedValue(createExecutionResult({ type: 'workflow', name: 'ship' }));
     await parse('exec', 'workflow', 'ship', './src');
-    expect(mockClient.runWorkflow).toHaveBeenCalledWith('ship', { target: './src' });
+    expect(mockClient.runWorkflow).toHaveBeenCalledWith('ship', { target: './src', prompt: undefined });
   });
 
   it('delegates errors to handleCoreError', async () => {
@@ -339,7 +339,7 @@ describe('parent options', () => {
     await parse('exec', '--no-tracking', 'agent', '-t', './src', 'code-validator');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
-      './src',
+      { target: './src', prompt: undefined },
       expect.objectContaining({ trackResults: false })
     );
   });
@@ -349,7 +349,7 @@ describe('parent options', () => {
     await parse('exec', '--project', 'my-proj', 'agent', '-t', './src', 'code-validator');
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
-      './src',
+      { target: './src', prompt: undefined },
       expect.objectContaining({ project: 'my-proj' })
     );
   });
