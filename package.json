@@ -38,9 +38,9 @@
   "license": "MIT",
   "dependencies": {
     "@uluops/core": "^0.13.0",
-    "@uluops/ops-sdk": "file:../-uluops-ops-sdk",
-    "@uluops/registry-sdk": "file:../-uluops-registry-sdk",
-    "@uluops/sdk-core": "file:../-uluops-sdk-core",
+    "@uluops/ops-sdk": "^1.9.0",
+    "@uluops/registry-sdk": "^0.26.0",
+    "@uluops/sdk-core": "^0.10.0",
     "commander": "^13.1.0",
     "ora": "^8.1.1"
   },
