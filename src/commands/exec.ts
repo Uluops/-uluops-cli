@@ -126,9 +126,11 @@ export function registerExecCommands(program: Command): void {
     .command('run <name> <target>')
     .description('Execute a definition (auto-detects type)')
     .option('-m, --model <model>', 'Model override for all agents (alias, tier, or provider:modelId)')
+    .option('-p, --prompt <text>', 'Operator directive or context for the agent')
     .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
       const options = getMergedOptions(cmd);
       const modelOverride = cmdOpts['model'] as string | undefined;
+      const prompt = cmdOpts['prompt'] as string | undefined;
       const ctx = createCoreContext(options, modelOverride);
 
       try {
@@ -136,7 +138,7 @@ export function registerExecCommands(program: Command): void {
           start: `Executing ${name} against ${target}...`,
           success: `Execution complete`,
           failure: `Execution failed`,
-        }, () => ctx.client.run(name, { target }));
+        }, () => ctx.client.run(name, { target, prompt }));
 
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
@@ -165,11 +167,13 @@ export function registerExecCommands(program: Command): void {
     .option('--threshold-warn <n>', 'Warning threshold score (agents)')
     .option('--report <path>', 'Write raw agent output report to file (single agent only)')
     .option('--features-list <path>', 'Write structured features/recommendations to file (single agent only)')
+    .option('-p, --prompt <text>', 'Operator directive or context for the agent')
     .action(async (names: string[], cmdOpts: Record<string, unknown>, cmd: Command) => {
       const options = getMergedOptions(cmd);
       const ctx = createCoreContext(options);
       const execOpts = buildExecOptions({ ...cmdOpts, ...options });
       const target: string = cmd.opts()['target'];
+      const prompt = cmdOpts['prompt'] as string | undefined;
       const agentNames: string[] = names.filter(Boolean);
 
       // Single agent — original behavior
@@ -180,7 +184,7 @@ export function registerExecCommands(program: Command): void {
             start: `Running agent ${agentName} against ${target}...`,
             success: `Agent execution complete`,
             failure: `Agent execution failed`,
-          }, () => ctx.client.runAgent(agentName, target, execOpts));
+          }, () => ctx.client.runAgent(agentName, { target, prompt }, execOpts));
 
           if (ctx.json) {
             console.log(JSON.stringify(result, null, 2));
@@ -200,7 +204,7 @@ export function registerExecCommands(program: Command): void {
 
       const results = await Promise.allSettled(
         agentNames.map(name =>
-          ctx.client.runAgent(name, target, execOpts)
+          ctx.client.runAgent(name, { target, prompt }, execOpts)
             .then(result => ({ name, result }))
         ),
       );
@@ -250,17 +254,19 @@ export function registerExecCommands(program: Command): void {
     .command('command <name> <target>')
     .description('Execute a saved command configuration')
     .option('-m, --model <model>', 'Model override (overrides command definition default)')
+    .option('-p, --prompt <text>', 'Operator directive or context for the agent')
     .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
       const options = getMergedOptions(cmd);
       const ctx = createCoreContext(options);
       const modelOverride = cmdOpts['model'] as string | undefined;
+      const prompt = cmdOpts['prompt'] as string | undefined;
 
       try {
         const result = await withSpinner(ctx, {
           start: `Running command ${name} against ${target}...`,
           success: `Command execution complete`,
           failure: `Command execution failed`,
-        }, () => ctx.client.runCommand(name, { target }, modelOverride ? { model: modelOverride } : undefined));
+        }, () => ctx.client.runCommand(name, { target, prompt }, modelOverride ? { model: modelOverride } : undefined));
 
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
@@ -278,9 +284,11 @@ export function registerExecCommands(program: Command): void {
     .command('workflow <name> <target>')
     .description('Execute a multi-phase workflow')
     .option('-m, --model <model>', 'Model override for all phases (alias, tier, or provider:modelId)')
+    .option('-p, --prompt <text>', 'Operator directive or context for the agent')
     .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
       const options = getMergedOptions(cmd);
       const modelOverride = cmdOpts['model'] as string | undefined;
+      const prompt = cmdOpts['prompt'] as string | undefined;
       const ctx = createCoreContext(options, modelOverride);
 
       try {
@@ -288,7 +296,7 @@ export function registerExecCommands(program: Command): void {
           start: `Running workflow ${name} against ${target}...`,
           success: `Workflow execution complete`,
           failure: `Workflow execution failed`,
-        }, () => ctx.client.runWorkflow(name, { target }));
+        }, () => ctx.client.runWorkflow(name, { target, prompt }));
 
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
