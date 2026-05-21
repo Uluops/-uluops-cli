@@ -9,7 +9,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
-Unified CLI for UluOps — validation tracking and registry management from a single command. Wraps both the [ops-sdk](../ops-sdk) and [registry-sdk](../registry-sdk) into an ergonomic terminal interface.
+Unified CLI for UluOps — validation tracking and registry management from a single command. Wraps both the [ops-sdk](https://www.npmjs.com/package/@uluops/ops-sdk) and [registry-sdk](https://www.npmjs.com/package/@uluops/registry-sdk) into an ergonomic terminal interface.
 
 **Current version: 0.2.0** | [Changelog](./CHANGELOG.md)
 
@@ -817,8 +817,8 @@ source ~/.bashrc
 
 | Package | Description |
 |---------|-------------|
-| [`@uluops/ops-sdk`](../ops-sdk) | TypeScript SDK for the validation tracker API |
-| [`@uluops/registry-sdk`](../registry-sdk) | TypeScript SDK for the definition registry API |
+| [`@uluops/ops-sdk`](https://www.npmjs.com/package/@uluops/ops-sdk) | TypeScript SDK for the validation tracker API |
+| [`@uluops/registry-sdk`](https://www.npmjs.com/package/@uluops/registry-sdk) | TypeScript SDK for the definition registry API |
 
 ## License
 
