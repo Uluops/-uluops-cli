@@ -11,7 +11,7 @@
 
 Unified CLI for UluOps — validation tracking and registry management from a single command. Wraps both the [ops-sdk](../ops-sdk) and [registry-sdk](../registry-sdk) into an ergonomic terminal interface.
 
-**Current version: 0.1.0** | [Changelog](./CHANGELOG.md)
+**Current version: 0.2.0** | [Changelog](./CHANGELOG.md)
 
 ## Quick Start
 
@@ -631,11 +631,17 @@ ulu exec describe code-validator
 | `--project <name>` | Project name for result tracking |
 | `--no-tracking` | Disable validation service submission |
 
+**Shared options** (all `exec` subcommands):
+
+| Option | Description |
+|--------|-------------|
+| `-p, --prompt <text>` | Operator directive or context for the agent |
+| `-m, --model <model>` | Model override (alias, tier, or provider:modelId) |
+
 **Agent-specific options** (`exec agent` only):
 
 | Option | Description |
 |--------|-------------|
-| `-m, --model <model>` | Model override (alias, tier, or provider:modelId) |
 | `--max-tokens <n>` | Maximum response tokens |
 | `--max-steps <n>` | Maximum tool loop iterations (default: 50) |
 | `--temperature <n>` | Generation temperature 0-1 (default: 0) |
@@ -650,6 +656,14 @@ ulu exec describe code-validator
 ```bash
 # Run code-validator with a specific model
 ulu exec agent code-validator . --model sonnet --project my-project
+
+# Generator: tell the agent what to create
+ulu exec agent aristotle-generator -t ./src \
+  -p "Create a health check endpoint for the Express API"
+
+# Validator: provide focus context
+ulu exec agent security-analyst -t ./src \
+  -p "Focus on the authentication middleware and JWT handling"
 
 # Use local definitions instead of registry
 ulu exec agent my-validator ./src \
