@@ -209,10 +209,10 @@ describe('issues create', () => {
 
 describe('issues edit', () => {
   it('should edit issue metadata', async () => {
-    mockClient.issues.edit.mockResolvedValue(createIssue({ title: 'Updated title', severity: 'high' }));
+    mockClient.issues.update.mockResolvedValue(createIssue({ title: 'Updated title', severity: 'high' }));
     const output = captureOutput();
     await parse('issues', 'edit', 'abc-123', '--title', 'Updated title', '--severity', 'high');
-    expect(mockClient.issues.edit).toHaveBeenCalledWith('abc-123', expect.objectContaining({
+    expect(mockClient.issues.update).toHaveBeenCalledWith('abc-123', expect.objectContaining({
       title: 'Updated title',
       severity: 'high',
     }));

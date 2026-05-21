@@ -34,8 +34,8 @@ function parse(...args: string[]) {
 describe('forks list', () => {
   it('should list forks', async () => {
     mockClient.forks.list.mockResolvedValue({
-      items: [createDefinitionListItem({ name: 'my-fork' })],
-      total: 1,
+      forks: [{ definition: { type: 'agent', name: 'my-fork', version: '1.0.0', authorId: 'user-abc12345' } }],
+      totalForks: 1,
     });
     const output = captureOutput();
     await parse('forks', 'list', 'agent', 'base-agent', '1.0.0');
@@ -45,7 +45,7 @@ describe('forks list', () => {
   });
 
   it('should show empty message', async () => {
-    mockClient.forks.list.mockResolvedValue({ items: [], total: 0 });
+    mockClient.forks.list.mockResolvedValue({ forks: [], totalForks: 0 });
     const output = captureOutput();
     await parse('forks', 'list', 'agent', 'base-agent', '1.0.0');
     expect(output.stdout()).toContain('No forks found');
