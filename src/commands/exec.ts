@@ -168,6 +168,7 @@ Examples:
     .description('Execute one or more agent definitions (runs in parallel when multiple)')
     .requiredOption('-t, --target <path>', 'Target directory to analyze')
     .option('-m, --model <model>', 'Model override (alias, tier, or provider:modelId)')
+    .option('-c, --concurrency <n>', 'Max concurrent agents for parallel execution (default: 5)')
     .option('--max-tokens <n>', 'Maximum response tokens')
     .option('--max-steps <n>', 'Maximum tool loop iterations (default: 50)')
     .option('--temperature <n>', 'Generation temperature 0-1 (default: 0)')
@@ -212,29 +213,42 @@ Examples:
             console.log(formatAgentResult(result));
           }
 
-          await writeReportFiles(result, cmdOpts);
+          try {
+            await writeReportFiles(result, cmdOpts);
+          } catch (writeError) {
+            const msg = writeError instanceof Error ? writeError.message : String(writeError);
+            console.error(`\nWarning: Failed to write report files: ${msg}`);
+          }
         } catch (error) {
           handleCoreError(error, ctx);
         }
         return;
       }
 
-      // Multiple agents — run in parallel with per-agent status
-      console.log(`Running ${agentNames.length} agents in parallel against ${target}...\n`);
+      // Multiple agents — run with concurrency limit
+      const maxConcurrency = cmdOpts['concurrency']
+        ? parseIntOption(cmdOpts['concurrency'] as string, '--concurrency')
+        : 5;
+      console.log(`Running ${agentNames.length} agents (concurrency: ${maxConcurrency}) against ${target}...\n`);
 
-      const results = await Promise.allSettled(
-        agentNames.map(name =>
-          ctx.client.runAgent(name, { target, prompt }, execOpts)
-            .then(result => {
-              if (!ctx.json) {
-                const marker = result.decision === 'PASS' || result.decisionCategory === 'positive' ? '\u2713' : '\u2717';
-                const score = result.score !== undefined ? ` ${result.score}` : '';
-                console.log(`  ${marker} ${name}: ${result.decision}${score}`);
-              }
-              return { name, result };
-            })
-        ),
+      // Concurrency-limited execution pool
+      const tasks = agentNames.map(name => () =>
+        ctx.client.runAgent(name, { target, prompt }, execOpts)
+          .then(result => {
+            if (!ctx.json) {
+              const marker = result.decision === 'PASS' || result.decisionCategory === 'positive' ? '\u2713' : '\u2717';
+              const score = result.score !== undefined ? ` ${result.score}` : '';
+              console.log(`  ${marker} ${name}: ${result.decision}${score}`);
+            }
+            return { name, result };
+          })
       );
+      const results: PromiseSettledResult<{ name: string; result: AgentResult }>[] = [];
+      for (let i = 0; i < tasks.length; i += maxConcurrency) {
+        const batch = tasks.slice(i, i + maxConcurrency).map(fn => fn());
+        const batchResults = await Promise.allSettled(batch);
+        results.push(...batchResults);
+      }
 
       const succeeded: AgentResult[] = [];
       const failed: { name: string; error: string }[] = [];
@@ -353,12 +367,12 @@ Examples:
           start: `Running pipeline ${name} against ${target}...`,
           success: `Pipeline execution complete`,
           failure: `Pipeline execution failed`,
-        }, () => ctx.client.runPipeline(name, { target, prompt }));
+        }, () => (ctx.client as unknown as { runPipeline: typeof ctx.client.run }).runPipeline(name, { target, prompt }));
 
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
-          console.log(formatExecutionResult(result));
+          console.log(formatExecutionResult(result as import('@uluops/core').ExecutionResult));
         }
       } catch (error) {
         handleCoreError(error, ctx);

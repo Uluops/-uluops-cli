@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { readFileSync, existsSync } from 'node:fs';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner, exitWithError, getFlexibleProperty, normalizeKeys, parseIntOption, parseFloatOption, resolveProject, confirmAction } from '../utils.js';
+import { withSpinner, exitWithError, getErrorCode, getFlexibleProperty, normalizeKeys, parseIntOption, parseFloatOption, resolveProject, confirmAction } from '../utils.js';
 import { formatRuns, formatRun } from '../formatters/ops.js';
 import type { SaveRunInput, UpdateRunByNumberInput } from '@uluops/ops-sdk';
 
@@ -55,7 +55,7 @@ async function readJsonInput(options: { file?: string; stdin?: boolean }): Promi
     try {
       content = readFileSync(options.file, 'utf-8');
     } catch (error) {
-      const code = (error as NodeJS.ErrnoException).code;
+      const code = getErrorCode(error);
       if (code === 'EISDIR') {
         exitWithError(`${options.file} is a directory, not a file`);
       }

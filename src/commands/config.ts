@@ -3,7 +3,7 @@ import { readFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { homedir } from 'node:os';
 import type { GlobalOptions } from '../context.js';
-import { writeFileAtomic, exitWithError } from '../utils.js';
+import { writeFileAtomic, exitWithError, getErrorCode } from '../utils.js';
 
 /**
  * Config file paths
@@ -56,7 +56,7 @@ function saveProfiles(profiles: ProfilesFile): void {
     }
     writeFileAtomic(PROFILES_PATH, JSON.stringify(profiles, null, 2) + '\n');
   } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
+    const code = getErrorCode(error);
     if (code === 'EACCES') {
       exitWithError(`Permission denied writing to ${PROFILES_PATH}. Check file permissions.`);
     }
@@ -66,7 +66,7 @@ function saveProfiles(profiles: ProfilesFile): void {
     if (code === 'EROFS') {
       exitWithError(`Cannot write to ${PROFILES_PATH}: filesystem is read-only.`);
     }
-    exitWithError(`Failed to save config to ${PROFILES_PATH}: ${(error as Error).message}`);
+    exitWithError(`Failed to save config to ${PROFILES_PATH}: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
 

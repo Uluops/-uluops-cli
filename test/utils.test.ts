@@ -7,10 +7,14 @@ import {
   redact,
   formatDisplayDate,
   getFlexibleProperty,
+  getErrorCode,
   parseIntOption,
   parseFloatOption,
   readFileOption,
   asFlexibleResponse,
+  inferDefinitionType,
+  resolveDefinitionType,
+  resolveProject,
 } from '../src/utils.js';
 
 describe('toSnakeCase', () => {
@@ -437,5 +441,113 @@ describe('asFlexibleResponse', () => {
     const arr = [1, 2, 3];
     const result = asFlexibleResponse(arr);
     expect(result).toBe(arr);
+  });
+});
+
+describe('redact boundary', () => {
+  it('redacts when length equals showLast', () => {
+    expect(redact('abcd', 4)).toBe('[REDACTED]');
+  });
+
+  it('shows partial when length exceeds showLast by one', () => {
+    expect(redact('abcde', 4)).toBe('*bcde');
+  });
+});
+
+describe('getErrorCode', () => {
+  it('extracts code from ErrnoException', () => {
+    const err = Object.assign(new Error('fail'), { code: 'ENOENT' });
+    expect(getErrorCode(err)).toBe('ENOENT');
+  });
+
+  it('returns undefined for plain Error', () => {
+    expect(getErrorCode(new Error('fail'))).toBeUndefined();
+  });
+
+  it('returns undefined for non-Error values', () => {
+    expect(getErrorCode('string')).toBeUndefined();
+    expect(getErrorCode(null)).toBeUndefined();
+    expect(getErrorCode(42)).toBeUndefined();
+  });
+});
+
+describe('inferDefinitionType', () => {
+  it('infers agent from filename', () => {
+    expect(inferDefinitionType('code-validator.agent.yaml')).toBe('agent');
+  });
+
+  it('infers command from filename', () => {
+    expect(inferDefinitionType('commit-push.command.yaml')).toBe('command');
+  });
+
+  it('infers workflow from filename', () => {
+    expect(inferDefinitionType('ship.workflow.yaml')).toBe('workflow');
+  });
+
+  it('infers pipeline from filename', () => {
+    expect(inferDefinitionType('foundations.pipeline.yaml')).toBe('pipeline');
+  });
+
+  it('returns null for unknown pattern', () => {
+    expect(inferDefinitionType('random-file.yaml')).toBeNull();
+    expect(inferDefinitionType('README.md')).toBeNull();
+  });
+
+  it('handles paths with directories', () => {
+    expect(inferDefinitionType('/some/path/my.agent.yaml')).toBe('agent');
+  });
+});
+
+describe('resolveDefinitionType', () => {
+  it('returns explicit type when provided', () => {
+    expect(resolveDefinitionType('agent', undefined)).toBe('agent');
+    expect(resolveDefinitionType('command', 'foo.agent.yaml')).toBe('command');
+  });
+
+  it('infers from filename when no explicit type', () => {
+    expect(resolveDefinitionType(undefined, 'my.agent.yaml')).toBe('agent');
+    expect(resolveDefinitionType(undefined, 'my.workflow.yaml')).toBe('workflow');
+  });
+
+  it('exits with error when neither is available', () => {
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    resolveDefinitionType(undefined, undefined);
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Could not determine definition type'));
+
+    mockExit.mockRestore();
+    mockError.mockRestore();
+  });
+
+  it('exits when filename has no type pattern', () => {
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    resolveDefinitionType(undefined, 'some-random.yaml');
+    expect(mockExit).toHaveBeenCalledWith(1);
+
+    mockExit.mockRestore();
+    mockError.mockRestore();
+  });
+});
+
+describe('resolveProject', () => {
+  it('returns explicit project when provided', () => {
+    expect(resolveProject('my-project', {})).toBe('my-project');
+  });
+
+  it('exits with helpful error when no project available', () => {
+    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    resolveProject(undefined, { profile: 'nonexistent' });
+    expect(mockExit).toHaveBeenCalledWith(1);
+    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('No project specified'));
+    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('ulu config set defaultProject'));
+
+    mockExit.mockRestore();
+    mockError.mockRestore();
   });
 });

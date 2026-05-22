@@ -66,18 +66,22 @@ export function truncate(str: string, maxLength: number): string {
 }
 
 /**
- * Format JSON output
- */
-export function formatJson(data: unknown): string {
-  return JSON.stringify(data, null, 2);
-}
-
-/**
  * Print error message and exit
  */
 export function exitWithError(message: string, code = 1): never {
   console.error(`Error: ${message}`);
   process.exit(code);
+}
+
+/**
+ * Safely extract an error code from a caught error.
+ * Avoids unguarded `as NodeJS.ErrnoException` casts on `unknown`.
+ */
+export function getErrorCode(error: unknown): string | undefined {
+  if (error instanceof Error && 'code' in error) {
+    return (error as NodeJS.ErrnoException).code;
+  }
+  return undefined;
 }
 
 /**
@@ -101,7 +105,7 @@ export function readFileOption(filePath: string): string {
   try {
     return readFileSync(filePath, 'utf-8');
   } catch (error) {
-    const code = (error as NodeJS.ErrnoException).code;
+    const code = getErrorCode(error);
     if (code === 'EISDIR') {
       console.error(`Error: ${filePath} is a directory, not a file`);
       console.error('\nHint: The --file option requires a path to a YAML file, not a directory.');
