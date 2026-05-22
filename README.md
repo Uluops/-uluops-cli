@@ -11,7 +11,7 @@
 
 Unified CLI for UluOps — validation tracking and registry management from a single command. Wraps both the [ops-sdk](https://www.npmjs.com/package/@uluops/ops-sdk) and [registry-sdk](https://www.npmjs.com/package/@uluops/registry-sdk) into an ergonomic terminal interface.
 
-**Current version: 0.3.0** | [Changelog](./CHANGELOG.md)
+**Current version: 0.4.0** | [Changelog](./CHANGELOG.md)
 
 ## Quick Start
 

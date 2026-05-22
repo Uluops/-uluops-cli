@@ -4,6 +4,14 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.4.0] - 2026-05-21
+
+### Changed
+
+- **`ulu render` removed** — `render preview` moved to `ulu def render`, `render get` moved to `ulu def get --rendered`. All definition operations now live under one command group.
+- **Type auto-detection from filename** — `ulu def validate` and `ulu def render` no longer require the `type` argument. Type is inferred from the filename pattern (e.g., `*.agent.yaml` → agent). Explicit type still accepted.
+- **`--rendered` flag on `ulu def get`** — fetches rendered markdown for a published definition. Replaces the old `ulu render get` command.
+
 ## [0.3.0] - 2026-05-21
 
 ### Added
