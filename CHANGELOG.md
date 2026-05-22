@@ -4,12 +4,18 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.1] - 2026-05-21
+
+### Fixed
+
+- **`--target-model` renamed to `-m, --model`** — natural flag name for model override on `def get --rendered`. Old `--target-model` was unintuitive.
+
 ## [0.7.0] - 2026-05-21
 
 ### Added
 
 - **Multi-harness rendering** — `ulu def get --rendered` now accepts `--target` to render definitions for different AI harnesses: `claude-code` (default), `opencode`, `codex`, `gemini-cli` (with aliases `claude`, `oc`, `gemini`).
-- **Target model override** — `--target-model` sets the model in the rendered output envelope (e.g., `--target opencode --target-model gpt-5.3-turbo`).
+- **Target model override** — `--model` / `-m` sets the model in the rendered output envelope (e.g., `--target opencode --model gpt-5.3-turbo`).
 
 ## [0.6.0] - 2026-05-21
 

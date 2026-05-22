@@ -18,7 +18,7 @@ Examples:
   $ ulu def get agent code-validator
   $ ulu def get agent code-validator 1.2.0 --rendered
   $ ulu def get agent code-validator --rendered --target opencode
-  $ ulu def get agent code-validator --rendered --target gemini --model gemini-2.5-pro
+  $ ulu def get agent code-validator --rendered --target gemini -m gemini-2.5-pro
   $ ulu def publish agent code-validator 1.2.0
   $ ulu def search "security" --type agent
 `);
@@ -34,7 +34,7 @@ Examples:
   ).choices(['claude-code', 'claude', 'opencode', 'oc', 'codex', 'gemini-cli', 'gemini']);
 
   const targetModelOption = new Option(
-    '--target-model <model>',
+    '-m, --model <model>',
     'Model override for target harness envelope'
   );
 
@@ -100,7 +100,7 @@ Examples:
           // Fetch rendered markdown only (replaces ulu render get)
           const renderProfile = options.renderProfile as 'core' | 'uluops-full' | undefined;
           const target = options.target as string | undefined;
-          const model = options.targetModel as string | undefined;
+          const model = options.model as string | undefined;
           const renderOpts: Record<string, string> = {};
           if (renderProfile) renderOpts.renderProfile = renderProfile;
           if (target) renderOpts.target = target;
