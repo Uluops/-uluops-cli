@@ -1,4 +1,5 @@
 import ora, { type Ora } from 'ora';
+import * as path from 'node:path';
 import { readFileSync, existsSync, writeFileSync, renameSync, unlinkSync } from 'node:fs';
 
 /**
@@ -149,6 +150,37 @@ export function parseFloatOption(value: string, name: string): number {
     exitWithError(`Invalid number for ${name}: "${value}"`);
   }
   return parsed;
+}
+
+const DEFINITION_TYPES = ['agent', 'command', 'workflow', 'pipeline'] as const;
+
+/**
+ * Infer definition type from a YAML filename.
+ * Matches patterns like `foo.agent.yaml`, `bar.command.yml`, etc.
+ * Returns null if the type cannot be inferred.
+ */
+export function inferDefinitionType(filePath: string): string | null {
+  const basename = path.basename(filePath);
+  for (const t of DEFINITION_TYPES) {
+    if (basename.includes(`.${t}.`)) return t;
+  }
+  return null;
+}
+
+/**
+ * Resolve definition type from an explicit value or by inferring from filename.
+ * Exits with a helpful error if neither is available.
+ */
+export function resolveDefinitionType(explicit: string | undefined, filePath: string | undefined): string {
+  if (explicit) return explicit;
+  if (filePath) {
+    const inferred = inferDefinitionType(filePath);
+    if (inferred) return inferred;
+  }
+  console.error('Error: Could not determine definition type.');
+  console.error('\nHint: Either pass the type as an argument or use a filename like my-agent.agent.yaml');
+  console.error('Valid types: agent, command, workflow, pipeline');
+  process.exit(1);
 }
 
 /**

@@ -1,6 +1,6 @@
-import { Command } from 'commander';
+import { Command, Option } from 'commander';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
-import { withSpinner, parseIntOption, readFileOption } from '../utils.js';
+import { withSpinner, parseIntOption, readFileOption, resolveDefinitionType } from '../utils.js';
 import { formatDefinitions, formatDefinition, formatValidationResult } from '../formatters/registry.js';
 import type { DefinitionType } from '@uluops/registry-sdk';
 
@@ -12,6 +12,11 @@ export function registerDefinitionCommands(program: Command): void {
     .command('definitions')
     .alias('def')
     .description('Manage workflow definitions');
+
+  const renderProfileOption = new Option(
+    '--render-profile <profile>',
+    'Render profile for agent definitions'
+  ).choices(['core', 'uluops-full']);
 
   // ulu definitions list
   defs
@@ -61,29 +66,47 @@ export function registerDefinitionCommands(program: Command): void {
     .command('get <type> <name> [version]')
     .description('Get a definition')
     .option('--yaml', 'Output raw YAML')
+    .option('--rendered', 'Output rendered markdown only')
     .option('--include-runtime', 'Include runtime markdown')
+    .addOption(renderProfileOption)
     .action(async (type: string, name: string, version: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);
 
       try {
-        const def = await withSpinner(
-          ctx,
-          { start: 'Fetching definition...', failure: 'Failed to fetch definition' },
-          () => ctx.client.definitions.get(
-            type as DefinitionType,
-            name,
-            version,
-            { includeYaml: options.yaml, includeRuntime: options.includeRuntime }
-          )
-        );
+        if (options.rendered) {
+          // Fetch rendered markdown only (replaces ulu render get)
+          const renderProfile = options.renderProfile as 'core' | 'uluops-full' | undefined;
+          const result = await withSpinner(
+            ctx,
+            { start: 'Rendering...', failure: 'Failed to render definition' },
+            () => ctx.client.render.get(type as DefinitionType, name, version ?? 'latest', renderProfile ? { renderProfile } : undefined)
+          );
 
-        if (ctx.json) {
-          console.log(JSON.stringify(def, null, 2));
-        } else if (options.yaml) {
-          console.log(def.yaml);
+          if (ctx.json) {
+            console.log(JSON.stringify(result, null, 2));
+          } else {
+            console.log(result.markdown);
+          }
         } else {
-          console.log(formatDefinition(def));
+          const def = await withSpinner(
+            ctx,
+            { start: 'Fetching definition...', failure: 'Failed to fetch definition' },
+            () => ctx.client.definitions.get(
+              type as DefinitionType,
+              name,
+              version,
+              { includeYaml: options.yaml, includeRuntime: options.includeRuntime }
+            )
+          );
+
+          if (ctx.json) {
+            console.log(JSON.stringify(def, null, 2));
+          } else if (options.yaml) {
+            console.log(def.yaml);
+          } else {
+            console.log(formatDefinition(def));
+          }
         }
       } catch (error) {
         handleRegistryError(error, ctx);
@@ -215,14 +238,17 @@ export function registerDefinitionCommands(program: Command): void {
       }
     });
 
-  // ulu definitions validate <type>
+  // ulu definitions validate [type] --file <path>
+  // ulu definitions validate --file my-agent.agent.yaml   (type inferred)
+  // ulu definitions validate agent --file my-agent.yaml   (type explicit)
   defs
-    .command('validate <type>')
-    .description('Validate YAML without creating a definition')
+    .command('validate [type]')
+    .description('Validate YAML without creating a definition (type auto-detected from filename)')
     .requiredOption('-f, --file <path>', 'Path to YAML file')
-    .action(async (type: string, options, cmd) => {
+    .action(async (typeArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);
+      const type = resolveDefinitionType(typeArg, options.file);
 
       try {
         const yaml = readFileOption(options.file);
@@ -241,6 +267,39 @@ export function registerDefinitionCommands(program: Command): void {
 
         if (!result.valid) {
           process.exit(1);
+        }
+      } catch (error) {
+        handleRegistryError(error, ctx);
+      }
+    });
+
+  // ulu definitions render [type] --file <path>
+  // ulu definitions render --file my-agent.agent.yaml   (type inferred)
+  // ulu definitions render agent --file my-agent.yaml   (type explicit)
+  defs
+    .command('render [type]')
+    .description('Render YAML as markdown preview (type auto-detected from filename)')
+    .requiredOption('-f, --file <path>', 'Path to YAML file')
+    .addOption(renderProfileOption)
+    .action(async (typeArg: string | undefined, options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createRegistryContext(globalOpts);
+      const type = resolveDefinitionType(typeArg, options.file);
+
+      try {
+        const yaml = readFileOption(options.file);
+        const renderProfile = options.renderProfile as 'core' | 'uluops-full' | undefined;
+
+        const result = await withSpinner(
+          ctx,
+          { start: 'Rendering preview...', failure: 'Failed to render preview' },
+          () => ctx.client.render.preview(type as DefinitionType, { yaml, ...(renderProfile && { renderProfile }) })
+        );
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(result.markdown);
         }
       } catch (error) {
         handleRegistryError(error, ctx);

@@ -54,7 +54,6 @@ ulu exec agent code-validator ./src --model sonnet --project my-project
 
   - [Definitions](#definitions) — Workflow definition management
   - [Versions](#versions) — Definition version history
-  - [Render](#render) — Definition rendering
   - [Deps](#deps) — Dependency graphs
   - [Forks](#forks) — Definition forking
   - [Models](#models) — AI model catalog
@@ -502,12 +501,13 @@ Workflow definition management (registry API). Alias: `def`.
 
 ```bash
 ulu definitions list              # List definitions (--type, --status, --search)
-ulu definitions get <type> <name> [version]   # Get definition (--yaml)
+ulu definitions get <type> <name> [version]   # Get definition (--yaml, --rendered)
 ulu definitions create <type> <name>          # Create draft (--file)
 ulu definitions update <type> <name> <ver>    # Update draft (--file)
 ulu definitions publish <type> <name> <ver>   # Publish definition
 ulu definitions deprecate <type> <name> <ver> # Deprecate (--reason, --successor)
-ulu definitions validate <type>               # Validate YAML (--file)
+ulu definitions validate [type]               # Validate YAML (--file, type auto-detected)
+ulu definitions render [type]                 # Render YAML preview (--file, type auto-detected)
 ulu definitions delete <type> <name> <ver>    # Delete draft (--yes)
 ```
 
@@ -521,6 +521,13 @@ ulu definitions list --type agent --status published
 
 # Get a definition (YAML output)
 ulu def get agent code-validator 1.0.0 --yaml
+
+# Get rendered markdown for a published definition
+ulu def get agent code-validator --rendered
+
+# Validate and render a local YAML file (type auto-detected from filename)
+ulu def validate --file my-agent.agent.yaml
+ulu def render --file my-agent.agent.yaml
 
 # Create, validate, and publish a new agent
 ulu def validate agent --file my-agent.yaml
@@ -542,17 +549,6 @@ Definition version history and comparison.
 ```bash
 ulu versions list <type> <name>                  # List version history
 ulu versions diff <type> <name> <from> <to>      # Compare two versions
-```
-
----
-
-### Render
-
-Render definitions to markdown.
-
-```bash
-ulu render get <type> <name> <version>   # Get rendered markdown
-ulu render preview <type>                # Preview YAML as markdown (--file)
 ```
 
 ---

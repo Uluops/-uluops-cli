@@ -16,7 +16,7 @@ import { registerTaxonomyCommands } from './commands/taxonomy.js';
 // Registry commands
 import { registerDefinitionCommands } from './commands/definitions.js';
 import { registerVersionCommands } from './commands/versions.js';
-import { registerRenderCommands } from './commands/render.js';
+// render commands folded into definitions (def get --rendered, def render)
 import { registerDepsCommands } from './commands/deps.js';
 import { registerForkCommands } from './commands/forks.js';
 import { registerModelCommands } from './commands/models.js';
@@ -84,7 +84,6 @@ registerTaxonomyCommands(program);
 // Registry commands
 registerDefinitionCommands(program);
 registerVersionCommands(program);
-registerRenderCommands(program);
 registerDepsCommands(program);
 registerForkCommands(program);
 registerModelCommands(program);
