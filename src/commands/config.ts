@@ -93,7 +93,18 @@ function coerceValue(key: ConfigKey, value: string): string | boolean {
 export function registerConfigCommands(program: Command): void {
   const config = program
     .command('config')
-    .description('Manage CLI configuration and profiles');
+    .description('Manage CLI configuration and profiles')
+    .addHelpText('after', `
+Examples:
+  $ ulu config list
+  $ ulu config set defaultProject ops-sdk
+  $ ulu config get defaultProject
+  $ ulu config profiles
+  $ ulu config use staging
+  $ ulu config path
+
+Valid keys: opsBaseUrl, registryBaseUrl, defaultProject, json, quiet, debug
+`);
 
   // ulu config list
   config

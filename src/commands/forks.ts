@@ -9,7 +9,14 @@ import type { DefinitionType } from '@uluops/registry-sdk';
 export function registerForkCommands(program: Command): void {
   const forks = program
     .command('forks')
-    .description('Manage definition forks');
+    .description('Manage definition forks')
+    .addHelpText('after', `
+Examples:
+  $ ulu forks list agent code-validator 1.0.0
+  $ ulu forks create agent code-validator 1.0.0 --fork-name my-validator
+  $ ulu forks check agent code-validator 1.0.0
+  $ ulu forks lineage agent my-validator 1.0.0
+`);
 
   // ulu forks list <type> <name> <version>
   forks

@@ -4,6 +4,23 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.5.0] - 2026-05-21
+
+### Added
+
+- **Help after error** — every Commander error now shows the full usage, options, and examples. No more guessing the syntax from `missing required argument 'name'`.
+- **Usage examples on all command groups** — `ulu projects`, `ulu runs`, `ulu issues`, `ulu exec`, `ulu def`, `ulu analytics`, `ulu auth`, `ulu config`, `ulu models`, `ulu versions`, `ulu deps`, `ulu forks`, `ulu executions`, `ulu translation`, `ulu completion`, `ulu taxonomy`, and `ulu render` all show examples in `--help` output.
+- **Command aliases** — `ulu p` (projects), `ulu r` (runs), `ulu i` (issues), `ulu a` (analytics), `ulu x` (exec). `ulu def` (definitions) already existed.
+
+### Changed
+
+- **Polished subcommand descriptions** — 14 subcommand descriptions rewritten to guide usage (e.g. "Get a definition" → "Get a definition by type, name, and optional version").
+- **Dotenv tip noise suppressed** — upgraded `@uluops/sdk-core` to 0.10.1 which passes `quiet: true` to dotenv v17, eliminating the `[dotenv@17.2.4] injecting env ... -- tip: ...` output on every invocation.
+
+### Removed
+
+- **Dead `render.ts`** — orphaned command file that was never registered (render functionality lives in `ulu def render` and `ulu def get --rendered`).
+
 ## [0.4.0] - 2026-05-21
 
 ### Changed

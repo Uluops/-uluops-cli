@@ -11,7 +11,7 @@
 
 Unified CLI for UluOps — validation tracking and registry management from a single command. Wraps both the [ops-sdk](https://www.npmjs.com/package/@uluops/ops-sdk) and [registry-sdk](https://www.npmjs.com/package/@uluops/registry-sdk) into an ergonomic terminal interface.
 
-**Current version: 0.4.0** | [Changelog](./CHANGELOG.md)
+**Current version: 0.5.0** | [Changelog](./CHANGELOG.md)
 
 ## Quick Start
 
@@ -46,18 +46,18 @@ ulu exec agent code-validator ./src --model sonnet --project my-project
 - [Command Reference](#command-reference)
   - [Auth](#auth) — Authentication & credential management
   - [Config](#config) — CLI configuration & profiles
-  - [Projects](#projects) — Project lifecycle management
-  - [Runs](#runs) — Validation run management
-  - [Issues](#issues) — Issue tracking & management
-  - [Analytics](#analytics) — Validation analytics & metrics
+  - [Projects](#projects) (`ulu p`) — Project lifecycle management
+  - [Runs](#runs) (`ulu r`) — Validation run management
+  - [Issues](#issues) (`ulu i`) — Issue tracking & management
+  - [Analytics](#analytics) (`ulu a`) — Validation analytics & metrics
   - [Taxonomy](#taxonomy) — Failure taxonomy schema
 
-  - [Definitions](#definitions) — Workflow definition management
+  - [Definitions](#definitions) (`ulu def`) — Definition management
   - [Versions](#versions) — Definition version history
   - [Deps](#deps) — Dependency graphs
   - [Forks](#forks) — Definition forking
   - [Models](#models) — AI model catalog
-  - [Exec](#exec) — Execute agents, commands, and workflows
+  - [Exec](#exec) (`ulu x`) — Execute agents, commands, workflows, and pipelines
   - [Executions](#executions) — Execution tracking
   - [Translation](#translation) — Definition translation & upgrades
   - [Completion](#completion) — Shell completion scripts
@@ -71,11 +71,12 @@ ulu exec agent code-validator ./src --model sonnet --project my-project
 ## Features
 
 - **Unified interface**: Single `ulu` command covers both the validation tracker (ops) and definition registry APIs
+- **Command aliases**: `ulu p` (projects), `ulu r` (runs), `ulu i` (issues), `ulu a` (analytics), `ulu x` (exec), `ulu def` (definitions)
 - **Profile-based configuration**: Multiple environments via named profiles with independent credentials
 - **Flexible authentication**: API key, session token, or email/password — same credential chain as the SDKs
 - **Machine-friendly output**: `--json` flag on every command for scripting and CI/CD integration
 - **Shell completion**: Tab completion for bash, zsh, and fish
-- **Contextual error hints**: Actionable suggestions on auth failures, 404s, rate limits, and network errors
+- **Contextual error hints**: Actionable suggestions on auth failures, 404s, rate limits, and network errors — usage and examples shown on every error
 - **Spinner feedback**: Progress indicators for long operations (suppress with `-q`)
 
 ## Installation
@@ -260,7 +261,7 @@ ulu config path                   # Show config file locations
 
 ### Projects
 
-Project lifecycle management.
+Project lifecycle management. Alias: `p`.
 
 ```bash
 ulu projects list                 # List all projects
@@ -297,7 +298,7 @@ ulu projects restore my-app
 
 ### Runs
 
-Validation run management — save, compare, and archive pipeline results.
+Validation run management — save, compare, and archive pipeline results. Alias: `r`.
 
 ```bash
 ulu runs list <project>           # List runs (--workflow, --limit)
@@ -375,7 +376,7 @@ The JSON file for `ulu runs save` follows this structure:
 
 ### Issues
 
-Issue tracking and management.
+Issue tracking and management. Alias: `i`.
 
 ```bash
 ulu issues list <project>         # List issues with filters
@@ -440,7 +441,7 @@ ulu issues bulk-update --ids id1,id2,id3 --status completed --reason "Batch fix"
 
 ### Analytics
 
-Validation analytics and trend metrics.
+Validation analytics and trend metrics. Alias: `a`.
 
 ```bash
 ulu analytics agents              # Agent performance (avg score, pass rate)
@@ -594,7 +595,7 @@ ulu models sync                   # Sync from providers (admin only)
 
 ### Exec
 
-Execute agents, commands, workflows, and pipelines via the @uluops/core SDK.
+Execute agents, commands, workflows, and pipelines. Alias: `x`.
 
 ```bash
 # Auto-detect definition type and execute

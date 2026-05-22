@@ -184,7 +184,13 @@ function generateFishCompletion(program: Command): string {
 export function registerCompletionCommands(program: Command): void {
   const completion = program
     .command('completion')
-    .description('Generate shell completion scripts');
+    .description('Generate shell completion scripts')
+    .addHelpText('after', `
+Setup:
+  bash:  eval "$(ulu completion bash)"     # add to ~/.bashrc
+  zsh:   eval "$(ulu completion zsh)"      # add to ~/.zshrc
+  fish:  ulu completion fish > ~/.config/fish/completions/ulu.fish
+`);
 
   completion
     .command('bash')

@@ -9,12 +9,18 @@ import type { DefinitionType } from '@uluops/registry-sdk';
 export function registerDepsCommands(program: Command): void {
   const deps = program
     .command('deps')
-    .description('Inspect definition dependencies');
+    .description('Inspect definition dependencies')
+    .addHelpText('after', `
+Examples:
+  $ ulu deps get workflow ship 1.0.0
+  $ ulu deps get workflow ship 1.0.0 --max-depth 2
+  $ ulu deps dependents agent code-validator 1.0.0
+`);
 
   // ulu deps get <type> <name> <version>
   deps
     .command('get <type> <name> <version>')
-    .description('Show dependency graph for a definition')
+    .description('Show what a definition depends on (with cycle detection)')
     .option('-d, --max-depth <number>', 'Maximum traversal depth')
     .action(async (type: string, name: string, version: string, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
@@ -69,7 +75,7 @@ export function registerDepsCommands(program: Command): void {
   // ulu deps dependents <type> <name> <version>
   deps
     .command('dependents <type> <name> <version>')
-    .description('Show definitions that depend on this one')
+    .description('Show what depends on this definition (reverse dependency lookup)')
     .action(async (type: string, name: string, version: string, _, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);

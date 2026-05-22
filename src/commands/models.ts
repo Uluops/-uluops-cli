@@ -10,7 +10,16 @@ import type { ModelTier, ModelStatus } from '@uluops/registry-sdk';
 export function registerModelCommands(program: Command): void {
   const models = program
     .command('models')
-    .description('Browse the model catalog');
+    .description('Browse the model catalog')
+    .addHelpText('after', `
+Examples:
+  $ ulu models list
+  $ ulu models list --provider anthropic --tier premium
+  $ ulu models get anthropic claude-sonnet-4-6-20250514
+  $ ulu models resolve sonnet
+  $ ulu models aliases
+  $ ulu models providers
+`);
 
   // ulu models list
   models
@@ -52,7 +61,7 @@ export function registerModelCommands(program: Command): void {
   // ulu models get <provider> <model-id>
   models
     .command('get <provider> <modelId>')
-    .description('Get model details')
+    .description('Get model details by provider and model ID')
     .action(async (provider: string, modelId: string, _, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);
@@ -133,7 +142,7 @@ export function registerModelCommands(program: Command): void {
   // ulu models resolve <alias>
   models
     .command('resolve <alias>')
-    .description('Resolve a model alias')
+    .description('Resolve a model alias (e.g. sonnet → anthropic/claude-sonnet-4-6-...)')
     .action(async (alias: string, _, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);

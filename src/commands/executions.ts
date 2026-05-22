@@ -9,7 +9,13 @@ import { withSpinner, parseIntOption } from '../utils.js';
 export function registerExecutionCommands(program: Command): void {
   const executions = program
     .command('executions')
-    .description('Track definition execution metrics');
+    .description('Track definition execution metrics')
+    .addHelpText('after', `
+Examples:
+  $ ulu executions stats agent code-validator 1.0.0
+  $ ulu executions stats agent code-validator 1.0.0 --window 1440
+  $ ulu executions record agent code-validator 1.0.0 --source cli
+`);
 
   // ulu executions record <type> <name> <version>
   executions

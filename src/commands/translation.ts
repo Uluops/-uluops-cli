@@ -9,7 +9,13 @@ import { withSpinner, readFileOption } from '../utils.js';
 export function registerTranslationCommands(program: Command): void {
   const translation = program
     .command('translation')
-    .description('Definition translation and upgrade tools');
+    .description('Definition translation and upgrade tools')
+    .addHelpText('after', `
+Examples:
+  $ ulu translation version
+  $ ulu translation retranslate agent code-validator 1.0.0
+  $ ulu translation upgrade agent my-agent --file agent.yaml
+`);
 
   // ulu translation version
   translation

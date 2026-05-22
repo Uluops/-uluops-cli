@@ -114,17 +114,26 @@ async function writeReportFiles(result: AgentResult, opts: Record<string, unknow
 export function registerExecCommands(program: Command): void {
   const exec = program
     .command('exec')
-    .description('Execute agents, commands, workflows, and pipelines via @uluops/core SDK')
+    .alias('x')
+    .description('Execute agents, commands, workflows, and pipelines')
     .option('--local-definitions <dir>', 'Local YAML definitions directory')
     .option('--registry-url <url>', 'Override registry URL')
     .option('--project <name>', 'Project name for result tracking')
-    .option('--no-tracking', 'Disable validation service submission');
+    .option('--no-tracking', 'Disable validation service submission')
+    .addHelpText('after', `
+Examples:
+  $ ulu exec agent code-validator ./src
+  $ ulu exec agent code-validator ./src --model sonnet --project my-project
+  $ ulu exec workflow ship ./src
+  $ ulu exec pipeline foundations ./src
+  $ ulu exec describe code-validator
+`);
 
   // ── exec run ────────────────────────────────────────────────────────────
 
   exec
     .command('run <name> <target>')
-    .description('Execute a definition (auto-detects type)')
+    .description('Execute a definition by name against a target path (auto-detects type)')
     .option('-m, --model <model>', 'Model override for all agents (alias, tier, or provider:modelId)')
     .option('-p, --prompt <text>', 'Operator directive or context for the agent')
     .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
@@ -374,7 +383,7 @@ export function registerExecCommands(program: Command): void {
 
   exec
     .command('describe <name>')
-    .description('Inspect a definition\'s metadata and interface')
+    .description('Show a definition\'s metadata, decision vocabulary, and interface')
     .action(async (name: string, _cmdOpts: Record<string, unknown>, cmd: Command) => {
       const options = getMergedOptions(cmd);
       const ctx = createCoreContext(options);

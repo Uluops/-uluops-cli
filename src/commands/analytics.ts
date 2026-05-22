@@ -9,7 +9,17 @@ import { formatTable, type Column } from '../formatters/table.js';
 export function registerAnalyticsCommands(program: Command): void {
   const analytics = program
     .command('analytics')
-    .description('View validation analytics and metrics');
+    .alias('a')
+    .description('View validation analytics and metrics')
+    .addHelpText('after', `
+Examples:
+  $ ulu analytics agents --project ops-sdk
+  $ ulu analytics hotspots --project ops-sdk --days 7
+  $ ulu analytics burndown --project ops-sdk
+  $ ulu analytics velocity --project ops-sdk
+  $ ulu analytics matrix --project ops-sdk
+  $ ulu analytics full-taxonomy --project ops-sdk
+`);
 
   // ulu analytics agents
   analytics

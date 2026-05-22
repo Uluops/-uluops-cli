@@ -8,7 +8,12 @@ import { withSpinner } from '../utils.js';
 export function registerTaxonomyCommands(program: Command): void {
   const taxonomy = program
     .command('taxonomy')
-    .description('Inspect the failure taxonomy schema');
+    .description('Inspect the failure taxonomy schema')
+    .addHelpText('after', `
+Examples:
+  $ ulu taxonomy get
+  $ ulu taxonomy get --json
+`);
 
   // ulu taxonomy get
   taxonomy

@@ -11,7 +11,15 @@ export function registerDefinitionCommands(program: Command): void {
   const defs = program
     .command('definitions')
     .alias('def')
-    .description('Manage workflow definitions');
+    .description('Manage agent, command, workflow, and pipeline definitions')
+    .addHelpText('after', `
+Examples:
+  $ ulu def list --type agent
+  $ ulu def get agent code-validator
+  $ ulu def get agent code-validator 1.2.0 --rendered
+  $ ulu def publish agent code-validator 1.2.0
+  $ ulu def search "security" --type agent
+`);
 
   const renderProfileOption = new Option(
     '--render-profile <profile>',
@@ -21,7 +29,7 @@ export function registerDefinitionCommands(program: Command): void {
   // ulu definitions list
   defs
     .command('list')
-    .description('List definitions')
+    .description('List definitions with optional type, status, and domain filters')
     .option('-t, --type <type>', 'Filter by type (agent|command|workflow|pipeline)')
     .option('-s, --status <status>', 'Filter by status (draft|published|deprecated|archived)')
     .option('-d, --domain <domain>', 'Filter by domain')
@@ -64,7 +72,7 @@ export function registerDefinitionCommands(program: Command): void {
   // ulu definitions get <type> <name> [version]
   defs
     .command('get <type> <name> [version]')
-    .description('Get a definition')
+    .description('Get a definition by type, name, and optional version')
     .option('--yaml', 'Output raw YAML')
     .option('--rendered', 'Output rendered markdown only')
     .option('--include-runtime', 'Include runtime markdown')
@@ -186,7 +194,7 @@ export function registerDefinitionCommands(program: Command): void {
   // ulu definitions publish <type> <name> <version>
   defs
     .command('publish <type> <name> <version>')
-    .description('Publish a definition')
+    .description('Publish a draft definition to make it available for execution')
     .action(async (type: string, name: string, version: string, _, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);

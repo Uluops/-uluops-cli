@@ -77,7 +77,16 @@ async function readJsonInput(options: { file?: string; stdin?: boolean }): Promi
 export function registerRunCommands(program: Command): void {
   const runs = program
     .command('runs')
-    .description('Manage validation runs');
+    .alias('r')
+    .description('Manage validation runs')
+    .addHelpText('after', `
+Examples:
+  $ ulu runs list ops-sdk
+  $ ulu runs latest ops-sdk
+  $ ulu runs get abc12345
+  $ ulu runs details ops-sdk --run-number 42
+  $ ulu runs save ops-sdk --file results.json
+`);
 
   // ulu runs list <project>
   runs
@@ -114,7 +123,7 @@ export function registerRunCommands(program: Command): void {
   // ulu runs get <runId>
   runs
     .command('get <runId>')
-    .description('Get run by ID')
+    .description('Get run details by ID or UUID')
     .action(async (runId: string, _, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
@@ -339,7 +348,7 @@ export function registerRunCommands(program: Command): void {
   // ulu runs diff <project>
   runs
     .command('diff <project>')
-    .description('Compare two runs')
+    .description('Compare two runs by run number (shows score diff, new/resolved issues)')
     .requiredOption('-b, --base <number>', 'Base run number')
     .requiredOption('-c, --compare <number>', 'Compare run number')
     .action(async (project: string, options, cmd) => {
@@ -477,7 +486,7 @@ export function registerRunCommands(program: Command): void {
   // ulu runs delete <runId>
   runs
     .command('delete <runId>')
-    .description('Delete a run')
+    .description('Delete a run by ID (fails if run has linked issues)')
     .option('-y, --yes', 'Skip confirmation')
     .action(async (runId: string, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;

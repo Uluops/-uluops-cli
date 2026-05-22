@@ -16,7 +16,6 @@ import { registerTaxonomyCommands } from './commands/taxonomy.js';
 // Registry commands
 import { registerDefinitionCommands } from './commands/definitions.js';
 import { registerVersionCommands } from './commands/versions.js';
-// render commands folded into definitions (def get --rendered, def render)
 import { registerDepsCommands } from './commands/deps.js';
 import { registerForkCommands } from './commands/forks.js';
 import { registerModelCommands } from './commands/models.js';
@@ -70,7 +69,8 @@ program
   .option('--timeout <ms>', 'Request timeout in milliseconds (default: 30000)')
   .option('--json', 'Output in JSON format for scripting')
   .option('--debug', 'Enable debug output')
-  .option('-q, --quiet', 'Suppress spinners and non-essential output');
+  .option('-q, --quiet', 'Suppress spinners and non-essential output')
+  .showHelpAfterError(true);
 
 // Ops commands
 registerAuthCommands(program);

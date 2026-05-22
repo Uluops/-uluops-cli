@@ -10,7 +10,15 @@ import type { Status, Priority, Severity, FailureDomain, IssueType } from '@uluo
 export function registerIssueCommands(program: Command): void {
   const issues = program
     .command('issues')
-    .description('Manage validation issues');
+    .alias('i')
+    .description('Manage validation issues')
+    .addHelpText('after', `
+Examples:
+  $ ulu issues list ops-sdk
+  $ ulu issues list ops-sdk --status open --domain EPI
+  $ ulu issues get abc12345-...
+  $ ulu issues close abc12345-... --status completed --reason "Fixed in v2"
+`);
 
   // ulu issues list <project>
   issues
@@ -57,7 +65,7 @@ export function registerIssueCommands(program: Command): void {
   // ulu issues get <id>
   issues
     .command('get <id>')
-    .description('Get issue details')
+    .description('Get issue details by ID')
     .option('--full', 'Include occurrences and notes')
     .action(async (id: string, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
@@ -156,7 +164,7 @@ export function registerIssueCommands(program: Command): void {
   // ulu issues update <id>
   issues
     .command('update <id>')
-    .description('Update issue status')
+    .description('Update issue status (open, completed, deferred, wontfix)')
     .requiredOption('-s, --status <status>', 'New status (open, completed, deferred, wontfix)')
     .option('-r, --reason <text>', 'Reason for status change')
     .action(async (id: string, options, cmd) => {

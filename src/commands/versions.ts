@@ -10,7 +10,12 @@ import type { DefinitionType, VersionDiff, VersionDiffSummary } from '@uluops/re
 export function registerVersionCommands(program: Command): void {
   const versions = program
     .command('versions')
-    .description('Manage definition versions');
+    .description('Manage definition versions')
+    .addHelpText('after', `
+Examples:
+  $ ulu versions list agent code-validator
+  $ ulu versions diff agent code-validator 1.0.0 1.1.0
+`);
 
   // ulu versions list <type> <name>
   versions
@@ -43,7 +48,7 @@ export function registerVersionCommands(program: Command): void {
   // ulu versions diff <type> <name> <from> <to>
   versions
     .command('diff <type> <name> <from> <to>')
-    .description('Compare two versions of a definition')
+    .description('Compare two versions of a definition (shows field-level changes)')
     .action(async (type: string, name: string, from: string, to: string, _, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);

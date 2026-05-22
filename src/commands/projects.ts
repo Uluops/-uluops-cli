@@ -13,7 +13,17 @@ import {
 export function registerProjectCommands(program: Command): void {
   const projects = program
     .command('projects')
-    .description('Manage projects');
+    .alias('p')
+    .description('Manage projects')
+    .addHelpText('after', `
+Examples:
+  $ ulu projects list
+  $ ulu projects get ops-sdk
+  $ ulu projects summary ops-sdk
+  $ ulu projects trends ops-sdk --days 7
+  $ ulu projects create my-project
+  $ ulu projects delete my-project --yes
+`);
 
   // ulu projects list
   projects
@@ -45,7 +55,12 @@ export function registerProjectCommands(program: Command): void {
   // ulu projects get <name>
   projects
     .command('get <name>')
-    .description('Get project details')
+    .description('Get project details by name or ID')
+    .addHelpText('after', `
+Example:
+  $ ulu projects get ops-sdk
+  $ ulu projects get ff066304-...
+`)
     .action(async (name: string, _, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);

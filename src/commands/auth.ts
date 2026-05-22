@@ -85,7 +85,14 @@ function removeCredentials(profile: string): void {
 export function registerAuthCommands(program: Command): void {
   const auth = program
     .command('auth')
-    .description('Authentication and credential management');
+    .description('Authentication and credential management')
+    .addHelpText('after', `
+Examples:
+  $ ulu auth login --email user@example.com --password mypass
+  $ ulu auth whoami
+  $ ulu auth api-keys create --name "CI key"
+  $ ulu auth sessions list
+`);
 
   // ulu auth login
   auth
@@ -430,7 +437,12 @@ export function registerAuthCommands(program: Command): void {
   // ulu auth sessions
   const authSessions = auth
     .command('sessions')
-    .description('Manage your sessions');
+    .description('Manage your sessions')
+    .addHelpText('after', `
+Examples:
+  $ ulu auth sessions list
+  $ ulu auth sessions revoke abc12345
+`);
 
   // ulu auth sessions list
   authSessions
@@ -490,7 +502,13 @@ export function registerAuthCommands(program: Command): void {
   // ulu auth api-keys
   const apiKeys = auth
     .command('api-keys')
-    .description('Manage API keys');
+    .description('Manage API keys')
+    .addHelpText('after', `
+Examples:
+  $ ulu auth api-keys list
+  $ ulu auth api-keys create --name "CI pipeline"
+  $ ulu auth api-keys revoke abc12345
+`);
 
   // ulu auth api-keys list
   apiKeys
