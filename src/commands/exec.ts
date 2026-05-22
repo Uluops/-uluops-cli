@@ -114,7 +114,7 @@ async function writeReportFiles(result: AgentResult, opts: Record<string, unknow
 export function registerExecCommands(program: Command): void {
   const exec = program
     .command('exec')
-    .description('Execute agents, commands, and workflows via @uluops/core SDK')
+    .description('Execute agents, commands, workflows, and pipelines via @uluops/core SDK')
     .option('--local-definitions <dir>', 'Local YAML definitions directory')
     .option('--registry-url <url>', 'Override registry URL')
     .option('--project <name>', 'Project name for result tracking')
@@ -297,6 +297,36 @@ export function registerExecCommands(program: Command): void {
           success: `Workflow execution complete`,
           failure: `Workflow execution failed`,
         }, () => ctx.client.runWorkflow(name, { target, prompt }));
+
+        if (ctx.json) {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          console.log(formatExecutionResult(result));
+        }
+      } catch (error) {
+        handleCoreError(error, ctx);
+      }
+    });
+
+  // ── exec pipeline ──────────────────────────────────────────────────────
+
+  exec
+    .command('pipeline <name> <target>')
+    .description('Execute a multi-stage pipeline')
+    .option('-m, --model <model>', 'Model override for all stages (alias, tier, or provider:modelId)')
+    .option('-p, --prompt <text>', 'Operator directive or context for the agent')
+    .action(async (name: string, target: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
+      const options = getMergedOptions(cmd);
+      const modelOverride = cmdOpts['model'] as string | undefined;
+      const prompt = cmdOpts['prompt'] as string | undefined;
+      const ctx = createCoreContext(options, modelOverride);
+
+      try {
+        const result = await withSpinner(ctx, {
+          start: `Running pipeline ${name} against ${target}...`,
+          success: `Pipeline execution complete`,
+          failure: `Pipeline execution failed`,
+        }, () => ctx.client.runPipeline(name, { target, prompt }));
 
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
