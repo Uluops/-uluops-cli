@@ -43,6 +43,15 @@ process.stderr.on('error', (err) => {
   throw err;
 });
 
+// Handle SIGINT/SIGTERM gracefully (e.g., Ctrl-C during long-running exec)
+process.on('SIGINT', () => {
+  console.error('\nInterrupted');
+  process.exit(130);
+});
+process.on('SIGTERM', () => {
+  process.exit(143);
+});
+
 // Global unhandled rejection handler (defense-in-depth)
 process.on('unhandledRejection', (reason) => {
   const debug = process.argv.includes('--debug');

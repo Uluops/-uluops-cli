@@ -1,75 +1,8 @@
 import { Command } from 'commander';
-import { readFileSync, existsSync } from 'node:fs';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner, exitWithError, getErrorCode, getFlexibleProperty, normalizeKeys, parseIntOption, parseFloatOption, resolveProject, confirmAction } from '../utils.js';
+import { withSpinner, exitWithError, getFlexibleProperty, normalizeKeys, readJsonInput, parseIntOption, parseFloatOption, resolveProject, confirmAction } from '../utils.js';
 import { formatRuns, formatRun } from '../formatters/ops.js';
 import type { SaveRunInput, UpdateRunByNumberInput } from '@uluops/ops-sdk';
-
-/**
- * Read JSON input from file or stdin
- */
-/** Timeout for reading from stdin (30 seconds) */
-const STDIN_TIMEOUT_MS = 30_000;
-
-/** Strip UTF-8 BOM (byte order mark) that some editors prepend */
-function stripBom(content: string): string {
-  return content.charCodeAt(0) === 0xFEFF ? content.slice(1) : content;
-}
-
-async function readJsonInput(options: { file?: string; stdin?: boolean }): Promise<unknown> {
-  if (options.stdin) {
-    // Read from stdin with timeout to prevent indefinite hangs
-    const chunks: Buffer[] = [];
-    let timerId: ReturnType<typeof setTimeout> | undefined;
-    const timeout = new Promise<never>((_, reject) => {
-      timerId = setTimeout(() => reject(new Error('stdin timeout')), STDIN_TIMEOUT_MS);
-    });
-    const read = async () => {
-      for await (const chunk of process.stdin) {
-        chunks.push(chunk as Buffer);
-      }
-    };
-    try {
-      await Promise.race([read(), timeout]);
-    } catch (error) {
-      if (error instanceof Error && error.message === 'stdin timeout') {
-        exitWithError(`No input received on stdin after ${STDIN_TIMEOUT_MS / 1000}s. Pipe data or use --file instead.`);
-      }
-      throw error;
-    } finally {
-      if (timerId) clearTimeout(timerId);
-    }
-    const content = stripBom(Buffer.concat(chunks).toString('utf-8'));
-    try {
-      return JSON.parse(content);
-    } catch {
-      exitWithError('Invalid JSON input from stdin');
-    }
-  }
-
-  if (options.file) {
-    if (!existsSync(options.file)) {
-      exitWithError(`File not found: ${options.file}`);
-    }
-    let content: string;
-    try {
-      content = readFileSync(options.file, 'utf-8');
-    } catch (error) {
-      const code = getErrorCode(error);
-      if (code === 'EISDIR') {
-        exitWithError(`${options.file} is a directory, not a file`);
-      }
-      exitWithError(`Cannot read file: ${options.file}`);
-    }
-    try {
-      return JSON.parse(stripBom(content));
-    } catch {
-      exitWithError(`Invalid JSON in file: ${options.file}`);
-    }
-  }
-
-  exitWithError('Either --file or --stdin is required');
-}
 
 /**
  * Register run commands
