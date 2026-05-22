@@ -33,7 +33,7 @@ ulu issues list my-project --status open --priority critical
 ulu analytics burndown --project my-project --days 30
 
 # Run a validator agent
-ulu exec agent code-validator ./src --model sonnet --project my-project
+ulu exec agent code-validator -t ./src --model sonnet --project my-project
 ```
 
 ## Table of Contents
@@ -602,7 +602,7 @@ Execute agents, commands, workflows, and pipelines. Alias: `x`.
 ulu exec run <name> <target>
 
 # Execute an agent
-ulu exec agent code-validator ./src --model sonnet
+ulu exec agent code-validator -t ./src --model sonnet
 
 # Execute a saved command configuration
 ulu exec command my-command ./src
@@ -655,7 +655,7 @@ ulu exec describe code-validator
 
 ```bash
 # Run code-validator with a specific model
-ulu exec agent code-validator . --model sonnet --project my-project
+ulu exec agent code-validator -t . --model sonnet --project my-project
 
 # Generator: tell the agent what to create
 ulu exec agent aristotle-generator -t ./src \
@@ -666,7 +666,7 @@ ulu exec agent security-analyst -t ./src \
   -p "Focus on the authentication middleware and JWT handling"
 
 # Use local definitions instead of registry
-ulu exec agent my-validator ./src \
+ulu exec agent my-validator -t ./src \
   --local-definitions ./agent-defs \
   --project my-project
 
