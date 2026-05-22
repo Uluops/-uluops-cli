@@ -4,15 +4,32 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.7.2] - 2026-05-21
+## [0.8.0] - 2026-05-22
 
 ### Added
 
 - **`-o, --output <path>` on `def get --rendered` and `def render`** — write rendered output directly to a file instead of stdout (e.g., `ulu def get agent code-validator --rendered --target codex -o code-validator.toml`).
+- **`-c, --concurrency <n>` on `exec agent`** — bounds parallel agent execution (default: 5). Prevents resource exhaustion when running many agents simultaneously.
+- **SIGINT/SIGTERM handlers** — Ctrl-C during long-running exec commands now exits cleanly with code 130 instead of leaving orphaned spinners.
+- **Default 30s HTTP timeout** — ops and registry clients now default to 30 seconds instead of hanging indefinitely when the API is unresponsive. Override with `--timeout`.
+- **Biome linter** — `npm run lint` and `npm run lint:fix` scripts for style consistency enforcement.
+- **19 new tests** — `getErrorCode`, `inferDefinitionType`, `resolveDefinitionType`, `resolveProject`, `redact` boundary, `SubscriptionRequiredError` upgrade box rendering. Suite: 349 → 368.
+
+### Changed
+
+- **`--timeout` on `exec agent` renamed to `--exec-timeout`** — disambiguates from the global `--timeout` (HTTP request timeout) to avoid silent overlap where one flag sets both.
+- **`readJsonInput` and `stripBom` extracted to `utils.ts`** — I/O utilities previously co-located in `runs.ts` are now shared alongside `readFileOption` and `writeFileAtomic`.
+- **Type-safe Commander option reading** — `getMergedOptions` uses per-field `typeof` guards instead of blanket `as ExecOptions`. `buildExecOptions` uses `optString()` helper instead of unguarded `as string` casts.
+- **`runs validate` now validates required fields** — same field guards as `runs save` (project, workflowType) applied before API call.
 
 ### Fixed
 
 - **EPIPE crash on broken pipe** — piping CLI output to `head`, `less`, or a truncated consumer no longer crashes with `Error: write EPIPE`. The CLI exits cleanly.
+- **`writeReportFiles` errors no longer masked** — file I/O failures in `--report`/`--features-list` now show filesystem-specific messages instead of misleading SDK error hints.
+- **`getErrorCode()` replaces unguarded `as NodeJS.ErrnoException`** — 3 catch blocks now use safe extraction with `instanceof` + `'code' in error` guard.
+- **Stale `render.test.ts` deleted** — test file imported a module removed in v0.5.0.
+- **All devDep vulnerabilities resolved** — fresh lockfile eliminates 4 HIGH + 2 MODERATE findings in vitest/vite transitive dependencies.
+- **`.env` permissions hardened to 0600** — was world-readable (0644) on disk.
 
 ## [0.7.1] - 2026-05-21
 

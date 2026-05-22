@@ -11,7 +11,7 @@
 
 Unified CLI for UluOps — validation tracking and registry management from a single command. Wraps both the [ops-sdk](https://www.npmjs.com/package/@uluops/ops-sdk) and [registry-sdk](https://www.npmjs.com/package/@uluops/registry-sdk) into an ergonomic terminal interface.
 
-**Current version: 0.7.2** | [Changelog](./CHANGELOG.md)
+**Current version: 0.8.0** | [Changelog](./CHANGELOG.md)
 
 ## Quick Start
 
@@ -648,7 +648,8 @@ ulu exec describe code-validator
 | `--max-tokens <n>` | Maximum response tokens |
 | `--max-steps <n>` | Maximum tool loop iterations (default: 50) |
 | `--temperature <n>` | Generation temperature 0-1 (default: 0) |
-| `--timeout <ms>` | Execution timeout in milliseconds |
+| `--exec-timeout <ms>` | Execution timeout in milliseconds |
+| `-c, --concurrency <n>` | Max concurrent agents for parallel execution (default: 5) |
 | `--threshold-pass <n>` | Pass threshold score (agents) |
 | `--threshold-warn <n>` | Warning threshold score (agents) |
 | `--report <path>` | Write raw agent output report to file (single agent only) |
