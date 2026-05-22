@@ -33,6 +33,16 @@ import { registerCompletionCommands } from './commands/completion.js';
 import { loadEnvFiles } from '@uluops/ops-sdk';
 loadEnvFiles();
 
+// Handle EPIPE gracefully (e.g., piping to head, or broken pipe)
+process.stdout.on('error', (err) => {
+  if (err.code === 'EPIPE') process.exit(0);
+  throw err;
+});
+process.stderr.on('error', (err) => {
+  if (err.code === 'EPIPE') process.exit(0);
+  throw err;
+});
+
 // Global unhandled rejection handler (defense-in-depth)
 process.on('unhandledRejection', (reason) => {
   const debug = process.argv.includes('--debug');

@@ -1,4 +1,5 @@
 import { Command, Option } from 'commander';
+import { writeFile } from 'node:fs/promises';
 import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
 import { withSpinner, parseIntOption, readFileOption, resolveDefinitionType } from '../utils.js';
 import { formatDefinitions, formatDefinition, formatValidationResult } from '../formatters/registry.js';
@@ -87,6 +88,7 @@ Examples:
     .description('Get a definition by type, name, and optional version')
     .option('--yaml', 'Output raw YAML')
     .option('--rendered', 'Output rendered markdown only')
+    .option('-o, --output <path>', 'Write rendered output to file instead of stdout')
     .option('--include-runtime', 'Include runtime markdown')
     .addOption(renderProfileOption)
     .addOption(targetOption)
@@ -111,7 +113,10 @@ Examples:
             () => ctx.client.render.get(type as DefinitionType, name, version ?? 'latest', Object.keys(renderOpts).length > 0 ? renderOpts : undefined)
           );
 
-          if (ctx.json) {
+          if (options.output) {
+            await writeFile(options.output, result.markdown, 'utf-8');
+            console.log(`Written to ${options.output}`);
+          } else if (ctx.json) {
             console.log(JSON.stringify(result, null, 2));
           } else {
             console.log(result.markdown);
@@ -308,6 +313,7 @@ Examples:
     .command('render [type]')
     .description('Render YAML as markdown preview (type auto-detected from filename)')
     .requiredOption('-f, --file <path>', 'Path to YAML file')
+    .option('-o, --output <path>', 'Write rendered output to file instead of stdout')
     .addOption(renderProfileOption)
     .action(async (typeArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
@@ -324,7 +330,10 @@ Examples:
           () => ctx.client.render.preview(type as DefinitionType, { yaml, ...(renderProfile && { renderProfile }) })
         );
 
-        if (ctx.json) {
+        if (options.output) {
+          await writeFile(options.output, result.markdown, 'utf-8');
+          console.log(`Written to ${options.output}`);
+        } else if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
           console.log(result.markdown);

@@ -4,6 +4,16 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.2] - 2026-05-21
+
+### Added
+
+- **`-o, --output <path>` on `def get --rendered` and `def render`** — write rendered output directly to a file instead of stdout (e.g., `ulu def get agent code-validator --rendered --target codex -o code-validator.toml`).
+
+### Fixed
+
+- **EPIPE crash on broken pipe** — piping CLI output to `head`, `less`, or a truncated consumer no longer crashes with `Error: write EPIPE`. The CLI exits cleanly.
+
 ## [0.7.1] - 2026-05-21
 
 ### Fixed
