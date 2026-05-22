@@ -108,7 +108,20 @@ vi.mock('@uluops/core', () => {
     constructor(message: string, context?: { partialResult?: unknown }) { super(message); this.name = 'WorkflowError'; this.context = context; }
   }
   class PipelineError extends UluOpsError { constructor(message: string) { super(message); this.name = 'PipelineError'; } }
-  class SubscriptionRequiredError extends UluOpsError { constructor(message: string) { super(message); this.name = 'SubscriptionRequiredError'; } }
+  class SubscriptionRequiredError extends UluOpsError {
+    definition?: { name: string; displayName?: string };
+    requiredTier: string;
+    currentTier: string;
+    constructor(message: string, opts?: { definition?: { name: string; displayName?: string }; requiredTier?: string; currentTier?: string }) {
+      super(message);
+      this.name = 'SubscriptionRequiredError';
+      this.definition = opts?.definition;
+      this.requiredTier = opts?.requiredTier ?? 'pro';
+      this.currentTier = opts?.currentTier ?? 'free';
+    }
+    trackedUpgradeUrl(source: string) { return `https://uluops.ai/upgrade?source=${source}`; }
+    toJSON() { return { error: this.message, requiredTier: this.requiredTier, currentTier: this.currentTier }; }
+  }
 
   return {
     UluOpsClient: vi.fn().mockReturnValue({}),
@@ -128,6 +141,7 @@ import {
   SdkApiError, ConfigurationError, ModelNotFoundError, PreflightError,
   ParseError, SubmissionError as CoreSubmissionError,
   ExecutionError, WorkflowError, PipelineError, UluOpsError,
+  SubscriptionRequiredError,
 } from '@uluops/core';
 import {
   createOpsContext,
@@ -228,7 +242,7 @@ describe('createOpsContext', () => {
     );
   });
 
-  it('should not pass timeout when not provided', () => {
+  it('should use default timeout (30s) when not provided', () => {
     mockedLoadOpsConfig.mockReturnValue({
       baseUrl: 'http://localhost:3100',
       debug: false,
@@ -237,7 +251,7 @@ describe('createOpsContext', () => {
 
     createOpsContext({});
     expect(mockedOpsClient).toHaveBeenCalledWith(
-      expect.objectContaining({ timeout: undefined })
+      expect.objectContaining({ timeout: 30000 })
     );
   });
 });
@@ -299,7 +313,7 @@ describe('createRegistryContext', () => {
     );
   });
 
-  it('should not pass timeout when not provided', () => {
+  it('should use default timeout (30s) when not provided', () => {
     mockedLoadOpsConfig.mockReturnValue({
       baseUrl: 'http://localhost:3100',
       debug: false,
@@ -314,7 +328,7 @@ describe('createRegistryContext', () => {
 
     createRegistryContext({});
     expect(mockedRegistryClient).toHaveBeenCalledWith(
-      expect.objectContaining({ timeout: undefined })
+      expect.objectContaining({ timeout: 30000 })
     );
   });
 });
@@ -749,6 +763,38 @@ describe('handleCoreError', () => {
 
     expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('ECONNREFUSED');
+    output.restore();
+  });
+
+  it('should render upgrade box for SubscriptionRequiredError with definition', () => {
+    const output = captureOutput();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const error = new (SubscriptionRequiredError as any)('Subscription required', {
+      definition: { name: 'code-validator', displayName: 'Code Validator' },
+      requiredTier: 'professional',
+      currentTier: 'free',
+    });
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('"Code Validator"');
+    expect(output.stderr()).toContain('professional');
+    expect(output.stderr()).toContain('Upgrade to');
+    expect(output.stderr()).toContain('uluops.ai/upgrade');
+    output.restore();
+  });
+
+  it('should output JSON for SubscriptionRequiredError in json mode', () => {
+    const output = captureOutput();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const error = new (SubscriptionRequiredError as any)('Subscription required', {
+      requiredTier: 'pro',
+      currentTier: 'free',
+    });
+
+    expect(() => handleCoreError(error, { json: true, debug: false })).toThrow('process.exit(1)');
+    const parsed = JSON.parse(output.stderr());
+    expect(parsed.requiredTier).toBe('pro');
+    expect(parsed.currentTier).toBe('free');
     output.restore();
   });
 });

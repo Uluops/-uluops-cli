@@ -604,6 +604,9 @@ ulu exec run <name> <target>
 # Execute an agent
 ulu exec agent code-validator -t ./src --model sonnet
 
+# Execute multiple agents in parallel (default concurrency: 5)
+ulu exec agent code-validator security-analyst test-architect -t ./src
+
 # Execute a saved command configuration
 ulu exec command my-command ./src
 
@@ -748,6 +751,8 @@ ulu projects get my-project --debug
 | `ULUOPS_REGISTRY_URL` | Registry API base URL | `http://localhost:3001/api/v1` |
 | `ULUOPS_AUTH_BASE_URL` | Auth endpoint base URL (for login/register) | Same as `ULUOPS_BASE_URL` |
 | `ULUOPS_DEBUG` | Enable debug logging | `false` |
+| `ANTHROPIC_API_KEY` | API key for AI model execution (required for `ulu exec` commands) | - |
+| `ULUOPS_THINKING_BUDGET` | Token budget for extended thinking (optional) | - |
 
 Create a `.env` file in your project directory:
 

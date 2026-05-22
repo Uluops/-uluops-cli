@@ -314,6 +314,14 @@ Examples:
         if (options.project) input.project = options.project;
         if (options.workflow) input.workflowType = options.workflow;
 
+        // Validate required fields (same guards as save path)
+        if (!input.project) {
+          exitWithError('Missing required field: project (or snake_case: project)');
+        }
+        if (!input.workflowType) {
+          exitWithError('Missing required field: workflowType (or snake_case: workflow_type)');
+        }
+
         const result = await withSpinner(
           ctx,
           { start: 'Validating...', success: 'Validation complete', failure: 'Validation failed' },

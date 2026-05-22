@@ -117,6 +117,9 @@ function requireCredentials(hasCredentials: unknown, profile: string): void {
 /**
  * Create CLI context for ops commands
  */
+/** Default HTTP timeout for CLI commands (30 seconds) */
+const DEFAULT_TIMEOUT_MS = 30_000;
+
 export function createOpsContext(options: GlobalOptions): OpsCliContext {
   const config = loadOpsConfig({
     apiKey: options.apiKey,
@@ -132,7 +135,7 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
 
   requireCredentials(hasCredentials, options.profile ?? 'default');
 
-  const timeout = options.timeout ? parseIntOption(options.timeout, '--timeout') : undefined;
+  const timeout = options.timeout ? parseIntOption(options.timeout, '--timeout') : DEFAULT_TIMEOUT_MS;
 
   let client: OpsClient;
   try {
@@ -183,7 +186,7 @@ export function createRegistryContext(options: GlobalOptions): RegistryCliContex
 
   requireCredentials(hasCredentials, options.profile ?? 'default');
 
-  const timeout = options.timeout ? parseIntOption(options.timeout, '--timeout') : undefined;
+  const timeout = options.timeout ? parseIntOption(options.timeout, '--timeout') : DEFAULT_TIMEOUT_MS;
 
   let client: RegistryClient;
   try {

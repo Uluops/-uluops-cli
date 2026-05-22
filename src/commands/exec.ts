@@ -17,10 +17,31 @@ type ExecOptions = GlobalOptions & CoreExecOptions;
  * Get merged options from the exec parent command and the subcommand
  */
 function getMergedOptions(cmd: Command): ExecOptions {
-  // Commander nests parent options — walk up to get them
+  // Commander nests parent options — walk up to get them.
+  // Each opts() returns Record<string, unknown>; we read fields by name
+  // rather than blindly asserting the merged shape.
   const parentOpts = cmd.parent?.opts() ?? {};
   const grandParentOpts = cmd.parent?.parent?.opts() ?? {};
-  return { ...grandParentOpts, ...parentOpts, ...cmd.opts() } as ExecOptions;
+  const merged = { ...grandParentOpts, ...parentOpts, ...cmd.opts() };
+  return {
+    apiKey: typeof merged.apiKey === 'string' ? merged.apiKey : undefined,
+    profile: typeof merged.profile === 'string' ? merged.profile : undefined,
+    baseUrl: typeof merged.baseUrl === 'string' ? merged.baseUrl : undefined,
+    json: typeof merged.json === 'boolean' ? merged.json : undefined,
+    debug: typeof merged.debug === 'boolean' ? merged.debug : undefined,
+    quiet: typeof merged.quiet === 'boolean' ? merged.quiet : undefined,
+    timeout: typeof merged.timeout === 'string' ? merged.timeout : undefined,
+    localDefinitions: typeof merged.localDefinitions === 'string' ? merged.localDefinitions : undefined,
+    registryUrl: typeof merged.registryUrl === 'string' ? merged.registryUrl : undefined,
+    project: typeof merged.project === 'string' ? merged.project : undefined,
+    tracking: typeof merged.tracking === 'boolean' ? merged.tracking : undefined,
+  } as ExecOptions;
+}
+
+/** Read a string option from Commander's untyped opts record. */
+function optString(opts: Record<string, unknown>, key: string): string | undefined {
+  const v = opts[key];
+  return typeof v === 'string' ? v : undefined;
 }
 
 /**
@@ -30,12 +51,14 @@ function buildExecOptions(opts: Record<string, unknown>): ExecutionOptions | und
   const execOpts: ExecutionOptions = {};
   let hasOptions = false;
 
-  if (opts.model) {
-    execOpts.model = opts.model as string;
+  const model = optString(opts, 'model');
+  if (model) {
+    execOpts.model = model;
     hasOptions = true;
   }
-  if (opts.maxTokens) {
-    execOpts.maxTokens = parseIntOption(opts.maxTokens as string, '--max-tokens');
+  const maxTokens = optString(opts, 'maxTokens');
+  if (maxTokens) {
+    execOpts.maxTokens = parseIntOption(maxTokens, '--max-tokens');
     hasOptions = true;
   }
   if (opts.thresholdPass !== undefined) {
@@ -46,24 +69,28 @@ function buildExecOptions(opts: Record<string, unknown>): ExecutionOptions | und
     execOpts.thresholds = { ...execOpts.thresholds, warn: Number(opts.thresholdWarn) };
     hasOptions = true;
   }
-  if (opts.project) {
-    execOpts.project = opts.project as string;
+  const project = optString(opts, 'project');
+  if (project) {
+    execOpts.project = project;
     hasOptions = true;
   }
   if (opts.tracking === false) {
     execOpts.trackResults = false;
     hasOptions = true;
   }
-  if (opts.temperature !== undefined) {
-    execOpts.temperature = parseFloatOption(opts.temperature as string, '--temperature');
+  const temperature = optString(opts, 'temperature');
+  if (temperature !== undefined) {
+    execOpts.temperature = parseFloatOption(temperature, '--temperature');
     hasOptions = true;
   }
-  if (opts.maxSteps) {
-    execOpts.maxSteps = parseIntOption(opts.maxSteps as string, '--max-steps');
+  const maxSteps = optString(opts, 'maxSteps');
+  if (maxSteps) {
+    execOpts.maxSteps = parseIntOption(maxSteps, '--max-steps');
     hasOptions = true;
   }
-  if (opts.timeout) {
-    execOpts.timeoutMs = parseIntOption(opts.timeout as string, '--timeout');
+  const execTimeout = optString(opts, 'execTimeout');
+  if (execTimeout) {
+    execOpts.timeoutMs = parseIntOption(execTimeout, '--exec-timeout');
     hasOptions = true;
   }
 
@@ -172,7 +199,7 @@ Examples:
     .option('--max-tokens <n>', 'Maximum response tokens')
     .option('--max-steps <n>', 'Maximum tool loop iterations (default: 50)')
     .option('--temperature <n>', 'Generation temperature 0-1 (default: 0)')
-    .option('--timeout <ms>', 'Execution timeout in milliseconds')
+    .option('--exec-timeout <ms>', 'Execution timeout in milliseconds (distinct from global --timeout for HTTP)')
     .option('--threshold-pass <n>', 'Pass threshold score (agents)')
     .option('--threshold-warn <n>', 'Warning threshold score (agents)')
     .option('--report <path>', 'Write raw agent output report to file (single agent only)')
