@@ -235,8 +235,8 @@ Examples:
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
-      // Auto-detect piped stdin
-      if (!options.file && !options.stdin && !process.stdin.isTTY) {
+      // Auto-detect piped stdin (isTTY is false when piping, undefined in non-TTY contexts like tests)
+      if (!options.file && !options.stdin && process.stdin.isTTY === false) {
         options.stdin = true;
       }
       if (!options.file && !options.stdin) {
@@ -298,8 +298,8 @@ Examples:
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
-      // Auto-detect piped stdin
-      if (!options.file && !options.stdin && !process.stdin.isTTY) {
+      // Auto-detect piped stdin (isTTY is false when piping, undefined in non-TTY contexts like tests)
+      if (!options.file && !options.stdin && process.stdin.isTTY === false) {
         options.stdin = true;
       }
       if (!options.file && !options.stdin) {

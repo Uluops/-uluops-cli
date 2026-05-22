@@ -191,22 +191,20 @@ Examples:
         try {
           const startTime = Date.now();
           let timer: ReturnType<typeof setInterval> | undefined;
+          // Update spinner with elapsed time every 5s (long-running feedback)
+          if (!ctx.quiet && !ctx.json) {
+            timer = setInterval(() => {
+              const elapsed = Math.round((Date.now() - startTime) / 1000);
+              process.stderr.write(`\r\x1b[K- Running ${agentName}... ${elapsed}s`);
+            }, 5000);
+          }
           const result = await withSpinner(ctx, {
             start: `Running ${agentName}...`,
             success: `Agent execution complete`,
             failure: `Agent execution failed`,
-          }, async () => {
-            const promise = ctx.client.runAgent(agentName, { target, prompt }, execOpts);
-            // Update spinner with elapsed time every 5s (long-running feedback)
-            if (!ctx.quiet && !ctx.json) {
-              timer = setInterval(() => {
-                const elapsed = Math.round((Date.now() - startTime) / 1000);
-                process.stderr.write(`\r\x1b[K- Running ${agentName}... ${elapsed}s`);
-              }, 5000);
-            }
-            return promise;
+          }, () => ctx.client.runAgent(agentName, { target, prompt }, execOpts)).finally(() => {
+            if (timer) clearInterval(timer);
           });
-          if (timer) clearInterval(timer);
 
           if (ctx.json) {
             console.log(JSON.stringify(result, null, 2));

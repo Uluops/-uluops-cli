@@ -85,10 +85,10 @@ describe('projects create', () => {
 });
 
 describe('projects delete', () => {
-  it('should prompt without --yes', async () => {
+  it('should cancel without --yes in non-interactive mode', async () => {
     const output = captureOutput();
     await expect(parse('projects', 'delete', 'my-proj')).rejects.toThrow('process.exit(0)');
-    expect(output.stdout()).toContain('soft-delete');
+    expect(output.stdout()).toContain('Cancelled');
     output.restore();
   });
 
