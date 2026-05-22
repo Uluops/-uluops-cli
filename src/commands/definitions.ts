@@ -17,6 +17,8 @@ Examples:
   $ ulu def list --type agent
   $ ulu def get agent code-validator
   $ ulu def get agent code-validator 1.2.0 --rendered
+  $ ulu def get agent code-validator --rendered --target opencode
+  $ ulu def get agent code-validator --rendered --target gemini --model gemini-2.5-pro
   $ ulu def publish agent code-validator 1.2.0
   $ ulu def search "security" --type agent
 `);
@@ -25,6 +27,16 @@ Examples:
     '--render-profile <profile>',
     'Render profile for agent definitions'
   ).choices(['core', 'uluops-full']);
+
+  const targetOption = new Option(
+    '--target <harness>',
+    'Target harness for rendering (default: claude-code)'
+  ).choices(['claude-code', 'claude', 'opencode', 'oc', 'codex', 'gemini-cli', 'gemini']);
+
+  const targetModelOption = new Option(
+    '--target-model <model>',
+    'Model override for target harness envelope'
+  );
 
   // ulu definitions list
   defs
@@ -77,6 +89,8 @@ Examples:
     .option('--rendered', 'Output rendered markdown only')
     .option('--include-runtime', 'Include runtime markdown')
     .addOption(renderProfileOption)
+    .addOption(targetOption)
+    .addOption(targetModelOption)
     .action(async (type: string, name: string, version: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);
@@ -85,10 +99,16 @@ Examples:
         if (options.rendered) {
           // Fetch rendered markdown only (replaces ulu render get)
           const renderProfile = options.renderProfile as 'core' | 'uluops-full' | undefined;
+          const target = options.target as string | undefined;
+          const model = options.targetModel as string | undefined;
+          const renderOpts: Record<string, string> = {};
+          if (renderProfile) renderOpts.renderProfile = renderProfile;
+          if (target) renderOpts.target = target;
+          if (model) renderOpts.model = model;
           const result = await withSpinner(
             ctx,
-            { start: 'Rendering...', failure: 'Failed to render definition' },
-            () => ctx.client.render.get(type as DefinitionType, name, version ?? 'latest', renderProfile ? { renderProfile } : undefined)
+            { start: `Rendering${target ? ` for ${target}` : ''}...`, failure: 'Failed to render definition' },
+            () => ctx.client.render.get(type as DefinitionType, name, version ?? 'latest', Object.keys(renderOpts).length > 0 ? renderOpts : undefined)
           );
 
           if (ctx.json) {

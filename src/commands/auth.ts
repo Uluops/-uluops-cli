@@ -9,7 +9,7 @@ import {
   handleOpsError,
   type GlobalOptions,
 } from '../context.js';
-import { withSpinner, writeFileAtomic, exitWithError } from '../utils.js';
+import { withSpinner, writeFileAtomic, exitWithError, promptInput } from '../utils.js';
 import { formatApiKeys } from '../formatters/ops.js';
 
 /**
@@ -104,8 +104,17 @@ Examples:
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createUnauthenticatedContext(globalOpts);
 
-      if (!options.email || !options.password) {
-        console.error('Error: Both --email and --password are required');
+      // Interactive prompts when flags are missing and terminal is available
+      let email = options.email as string | undefined;
+      let password = options.password as string | undefined;
+      if (!email && process.stdin.isTTY) {
+        email = await promptInput('Email: ');
+      }
+      if (!password && process.stdin.isTTY) {
+        password = await promptInput('Password: ', { hidden: true });
+      }
+      if (!email || !password) {
+        console.error('Error: Both email and password are required');
         console.error('Usage: ulu auth login --email <email> --password <password>');
         process.exit(1);
       }
@@ -115,8 +124,8 @@ Examples:
           ctx,
           { start: 'Logging in...', success: 'Login successful', failure: 'Login failed' },
           async () => {
-            const client = new OpsClient({ baseUrl: ctx.baseUrl, debug: ctx.debug, email: options.email, password: options.password });
-            return client.login(options.email, options.password);
+            const client = new OpsClient({ baseUrl: ctx.baseUrl, debug: ctx.debug, email, password });
+            return client.login(email!, password!);
           }
         );
 
@@ -127,7 +136,7 @@ Examples:
             type: 'session',
             sessionToken: result.sessionToken,
             expiresAt: result.expiresAt,
-            email: options.email,
+            email,
           });
         } catch (saveError) {
           const msg = saveError instanceof Error ? saveError.message : String(saveError);

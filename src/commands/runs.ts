@@ -1,7 +1,7 @@
 import { Command } from 'commander';
 import { readFileSync, existsSync } from 'node:fs';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner, exitWithError, getFlexibleProperty, normalizeKeys, parseIntOption, parseFloatOption } from '../utils.js';
+import { withSpinner, exitWithError, getFlexibleProperty, normalizeKeys, parseIntOption, parseFloatOption, resolveProject, confirmAction } from '../utils.js';
 import { formatRuns, formatRun } from '../formatters/ops.js';
 import type { SaveRunInput, UpdateRunByNumberInput } from '@uluops/ops-sdk';
 
@@ -88,14 +88,15 @@ Examples:
   $ ulu runs save ops-sdk --file results.json
 `);
 
-  // ulu runs list <project>
+  // ulu runs list [project]
   runs
-    .command('list <project>')
+    .command('list [project]')
     .description('List runs for a project')
     .option('-w, --workflow <type>', 'Filter by workflow type')
     .option('-l, --limit <number>', 'Maximum number of runs to return', '20')
-    .action(async (project: string, options, cmd) => {
+    .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const project = resolveProject(projectArg, globalOpts);
       const ctx = createOpsContext(globalOpts);
 
       try {
@@ -145,13 +146,14 @@ Examples:
       }
     });
 
-  // ulu runs latest <project>
+  // ulu runs latest [project]
   runs
-    .command('latest <project>')
+    .command('latest [project]')
     .description('Get the latest run for a project')
     .option('-w, --workflow <type>', 'Filter by workflow type')
-    .action(async (project: string, options, cmd) => {
+    .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const project = resolveProject(projectArg, globalOpts);
       const ctx = createOpsContext(globalOpts);
 
       try {
@@ -171,13 +173,14 @@ Examples:
       }
     });
 
-  // ulu runs details <project>
+  // ulu runs details [project]
   runs
-    .command('details <project>')
+    .command('details [project]')
     .description('Get detailed run information including agents and recommendations')
     .option('-n, --number <number>', 'Run number (defaults to latest)')
-    .action(async (project: string, options, cmd) => {
+    .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const project = resolveProject(projectArg, globalOpts);
       const ctx = createOpsContext(globalOpts);
 
       try {
@@ -225,15 +228,19 @@ Examples:
     .command('save')
     .description('Save a validation run')
     .option('-f, --file <path>', 'JSON file containing run data')
-    .option('--stdin', 'Read JSON from stdin')
+    .option('--stdin', 'Read JSON from stdin (auto-detected when piping)')
     .option('-p, --project <name>', 'Override project name in input')
     .option('-w, --workflow <type>', 'Override workflow type in input')
     .action(async (options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
+      // Auto-detect piped stdin
+      if (!options.file && !options.stdin && !process.stdin.isTTY) {
+        options.stdin = true;
+      }
       if (!options.file && !options.stdin) {
-        exitWithError('Either --file or --stdin is required');
+        exitWithError('Either --file or --stdin is required (or pipe data to stdin)');
       }
 
       try {
@@ -284,15 +291,19 @@ Examples:
     .command('validate')
     .description('Validate run input without saving (dry run)')
     .option('-f, --file <path>', 'JSON file containing run data')
-    .option('--stdin', 'Read JSON from stdin')
+    .option('--stdin', 'Read JSON from stdin (auto-detected when piping)')
     .option('-p, --project <name>', 'Override project name in input')
     .option('-w, --workflow <type>', 'Override workflow type in input')
     .action(async (options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
+      // Auto-detect piped stdin
+      if (!options.file && !options.stdin && !process.stdin.isTTY) {
+        options.stdin = true;
+      }
       if (!options.file && !options.stdin) {
-        exitWithError('Either --file or --stdin is required');
+        exitWithError('Either --file or --stdin is required (or pipe data to stdin)');
       }
 
       try {
@@ -345,14 +356,15 @@ Examples:
       }
     });
 
-  // ulu runs diff <project>
+  // ulu runs diff [project]
   runs
-    .command('diff <project>')
+    .command('diff [project]')
     .description('Compare two runs by run number (shows score diff, new/resolved issues)')
     .requiredOption('-b, --base <number>', 'Base run number')
     .requiredOption('-c, --compare <number>', 'Compare run number')
-    .action(async (project: string, options, cmd) => {
+    .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const project = resolveProject(projectArg, globalOpts);
       const ctx = createOpsContext(globalOpts);
 
       try {
@@ -400,16 +412,17 @@ Examples:
       }
     });
 
-  // ulu runs archive <project>
+  // ulu runs archive [project]
   runs
-    .command('archive <project>')
+    .command('archive [project]')
     .description('Archive old runs')
     .option('--before-run <number>', 'Archive runs before this run number')
     .option('--before-date <date>', 'Archive runs before this date (ISO format)')
     .option('--keep-last <number>', 'Keep the last N runs')
     .option('--reason <text>', 'Reason for archiving')
-    .action(async (project: string, options, cmd) => {
+    .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const project = resolveProject(projectArg, globalOpts);
       const ctx = createOpsContext(globalOpts);
 
       if (!options.beforeRun && !options.beforeDate && !options.keepLast) {
@@ -439,17 +452,18 @@ Examples:
       }
     });
 
-  // ulu runs update <project>
+  // ulu runs update [project]
   runs
-    .command('update <project>')
+    .command('update [project]')
     .description('Update run metadata (scores, tokens) by project and run number')
     .requiredOption('-n, --number <number>', 'Run number')
     .option('--score <number>', 'New average score')
     .option('--passed <boolean>', 'All gates passed (true/false)')
     .option('-f, --file <path>', 'JSON file with agent updates')
     .option('--stdin', 'Read agent updates from stdin')
-    .action(async (project: string, options, cmd) => {
+    .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const project = resolveProject(projectArg, globalOpts);
       const ctx = createOpsContext(globalOpts);
 
       try {
@@ -493,9 +507,11 @@ Examples:
       const ctx = createOpsContext(globalOpts);
 
       if (!options.yes) {
-        console.log(`\nThis will permanently delete run: ${runId}`);
-        console.log('To confirm, run again with --yes flag');
-        process.exit(0);
+        const confirmed = await confirmAction(`Permanently delete run ${runId}?`);
+        if (!confirmed) {
+          console.log('Cancelled');
+          process.exit(0);
+        }
       }
 
       try {

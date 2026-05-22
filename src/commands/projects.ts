@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner, parseIntOption } from '../utils.js';
+import { withSpinner, parseIntOption, confirmAction } from '../utils.js';
 import {
   formatProjects,
   formatProject,
@@ -124,9 +124,12 @@ Example:
 
       // Confirm deletion
       if (!options.yes) {
-        console.log(`\nThis will ${options.force ? 'permanently delete' : 'soft-delete'} project: ${name}`);
-        console.log('To confirm, run again with --yes flag');
-        process.exit(0);
+        const action = options.force ? 'permanently delete' : 'soft-delete';
+        const confirmed = await confirmAction(`${action} project "${name}"?`);
+        if (!confirmed) {
+          console.log('Cancelled');
+          process.exit(0);
+        }
       }
 
       try {

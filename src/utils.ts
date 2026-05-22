@@ -1,6 +1,9 @@
 import ora, { type Ora } from 'ora';
 import * as path from 'node:path';
+import { createInterface } from 'node:readline';
 import { readFileSync, existsSync, writeFileSync, renameSync, unlinkSync } from 'node:fs';
+import { join } from 'node:path';
+import { homedir } from 'node:os';
 
 /**
  * Create a spinner for long-running operations
@@ -256,4 +259,90 @@ export function getFlexibleProperty<T, O extends object = object>(
     return record[snakeKey] as T;
   }
   return defaultValue;
+}
+
+/**
+ * Resolve project name from an optional positional arg or the defaultProject config.
+ * Exits with a helpful error if neither is available.
+ */
+export function resolveProject(explicit: string | undefined, globalOpts: { profile?: string }): string {
+  if (explicit) return explicit;
+
+  // Try loading defaultProject from profile config
+  const profilesPath = join(homedir(), '.uluops', 'profiles.json');
+  if (existsSync(profilesPath)) {
+    try {
+      const profiles = JSON.parse(readFileSync(profilesPath, 'utf-8'));
+      const activeProfile = globalOpts.profile ?? profiles._active ?? 'default';
+      const config = profiles[activeProfile];
+      if (config?.defaultProject) return config.defaultProject as string;
+    } catch {
+      // Ignore parse errors
+    }
+  }
+
+  exitWithError(
+    'No project specified.\n' +
+    'Pass a project name as an argument, or set a default:\n' +
+    '  ulu config set defaultProject <name>'
+  );
+}
+
+/**
+ * Prompt the user for input on the terminal.
+ * Returns the entered value (empty string if nothing entered).
+ */
+export function promptInput(question: string, options?: { hidden?: boolean }): Promise<string> {
+  return new Promise((resolve) => {
+    const rl = createInterface({
+      input: process.stdin,
+      output: process.stderr,
+    });
+
+    if (options?.hidden) {
+      // Mask password input
+      process.stderr.write(question);
+      const stdin = process.stdin;
+      const wasRaw = stdin.isRaw;
+      if (stdin.isTTY && stdin.setRawMode) {
+        stdin.setRawMode(true);
+      }
+      let input = '';
+      const onData = (char: Buffer) => {
+        const c = char.toString('utf8');
+        if (c === '\n' || c === '\r' || c === '\u0004') {
+          if (stdin.isTTY && stdin.setRawMode) stdin.setRawMode(wasRaw ?? false);
+          stdin.removeListener('data', onData);
+          process.stderr.write('\n');
+          rl.close();
+          resolve(input);
+        } else if (c === '\u007f' || c === '\b') {
+          // Backspace
+          input = input.slice(0, -1);
+        } else if (c === '\u0003') {
+          // Ctrl+C
+          rl.close();
+          process.exit(130);
+        } else {
+          input += c;
+        }
+      };
+      stdin.on('data', onData);
+    } else {
+      rl.question(question, (answer) => {
+        rl.close();
+        resolve(answer);
+      });
+    }
+  });
+}
+
+/**
+ * Ask for y/n confirmation. Returns true if confirmed.
+ * In non-interactive mode (piped stdin), returns false unless --yes is set.
+ */
+export async function confirmAction(message: string): Promise<boolean> {
+  if (!process.stdin.isTTY) return false;
+  const answer = await promptInput(`${message} [y/N] `);
+  return answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes';
 }

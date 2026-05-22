@@ -185,15 +185,28 @@ Examples:
       const prompt = cmdOpts['prompt'] as string | undefined;
       const agentNames: string[] = names.filter(Boolean);
 
-      // Single agent — original behavior
+      // Single agent — show elapsed time during execution
       if (agentNames.length === 1) {
         const agentName = agentNames[0]!;
         try {
+          const startTime = Date.now();
+          let timer: ReturnType<typeof setInterval> | undefined;
           const result = await withSpinner(ctx, {
-            start: `Running agent ${agentName} against ${target}...`,
+            start: `Running ${agentName}...`,
             success: `Agent execution complete`,
             failure: `Agent execution failed`,
-          }, () => ctx.client.runAgent(agentName, { target, prompt }, execOpts));
+          }, async () => {
+            const promise = ctx.client.runAgent(agentName, { target, prompt }, execOpts);
+            // Update spinner with elapsed time every 5s (long-running feedback)
+            if (!ctx.quiet && !ctx.json) {
+              timer = setInterval(() => {
+                const elapsed = Math.round((Date.now() - startTime) / 1000);
+                process.stderr.write(`\r\x1b[K- Running ${agentName}... ${elapsed}s`);
+              }, 5000);
+            }
+            return promise;
+          });
+          if (timer) clearInterval(timer);
 
           if (ctx.json) {
             console.log(JSON.stringify(result, null, 2));
@@ -208,13 +221,20 @@ Examples:
         return;
       }
 
-      // Multiple agents — run in parallel
+      // Multiple agents — run in parallel with per-agent status
       console.log(`Running ${agentNames.length} agents in parallel against ${target}...\n`);
 
       const results = await Promise.allSettled(
         agentNames.map(name =>
           ctx.client.runAgent(name, { target, prompt }, execOpts)
-            .then(result => ({ name, result }))
+            .then(result => {
+              if (!ctx.json) {
+                const marker = result.decision === 'PASS' || result.decisionCategory === 'positive' ? '\u2713' : '\u2717';
+                const score = result.score !== undefined ? ` ${result.score}` : '';
+                console.log(`  ${marker} ${name}: ${result.decision}${score}`);
+              }
+              return { name, result };
+            })
         ),
       );
 

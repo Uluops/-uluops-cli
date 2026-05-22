@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner, parseIntOption } from '../utils.js';
+import { withSpinner, parseIntOption, resolveProject } from '../utils.js';
 import { formatIssues, formatIssue } from '../formatters/ops.js';
 import type { Status, Priority, Severity, FailureDomain, IssueType } from '@uluops/ops-sdk';
 
@@ -20,27 +20,30 @@ Examples:
   $ ulu issues close abc12345-... --status completed --reason "Fixed in v2"
 `);
 
-  // ulu issues list <project>
+  // ulu issues list [project]
   issues
-    .command('list <project>')
-    .description('List issues for a project')
-    .option('-s, --status <status>', 'Filter by status (open, completed, deferred, wontfix)')
+    .command('list [project]')
+    .description('List issues for a project (defaults to open issues)')
+    .option('-s, --status <status>', 'Filter by status (open, completed, deferred, wontfix)', 'open')
+    .option('--all', 'Show all statuses (overrides --status default)')
     .option('-p, --priority <priority>', 'Filter by priority (critical, suggested, backlog)')
     .option('--severity <severity>', 'Filter by severity (critical, high, medium, low, info)')
     .option('-a, --agent <name>', 'Filter by agent')
     .option('-d, --domain <domain>', 'Filter by failure domain (STR, SEM, PRA, EPI)')
     .option('-l, --limit <number>', 'Maximum number of issues', '50')
     .option('--include-resolved', 'Include resolved issues')
-    .action(async (project: string, options, cmd) => {
+    .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const project = resolveProject(projectArg, globalOpts);
       const ctx = createOpsContext(globalOpts);
 
       try {
+        const statusFilter = options.all ? undefined : options.status;
         const data = await withSpinner(
           ctx,
           { start: 'Fetching issues...', failure: 'Failed to fetch issues' },
           () => ctx.client.issues.listByProject(project, {
-            status: options.status as Status | undefined,
+            status: statusFilter as Status | undefined,
             priority: options.priority as Priority | undefined,
             severity: options.severity as Severity | undefined,
             agent: options.agent,

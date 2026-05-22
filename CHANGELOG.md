@@ -4,6 +4,24 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.7.0] - 2026-05-21
+
+### Added
+
+- **Multi-harness rendering** — `ulu def get --rendered` now accepts `--target` to render definitions for different AI harnesses: `claude-code` (default), `opencode`, `codex`, `gemini-cli` (with aliases `claude`, `oc`, `gemini`).
+- **Target model override** — `--target-model` sets the model in the rendered output envelope (e.g., `--target opencode --target-model gpt-5.3-turbo`).
+
+## [0.6.0] - 2026-05-21
+
+### Added
+
+- **Default project fallback** — commands that take a `<project>` argument (`runs list`, `runs latest`, `runs details`, `runs diff`, `runs archive`, `runs update`, `issues list`) now fall back to `defaultProject` from config when the argument is omitted. Set it once with `ulu config set defaultProject <name>`.
+- **Interactive auth login** — `ulu auth login` now prompts for email and password when flags are omitted and a terminal is available. Password input is masked.
+- **`--all` flag on `issues list`** — issue list now defaults to `--status open`. Use `--all` to show all statuses.
+- **Interactive delete confirmations** — `ulu projects delete` and `ulu runs delete` now prompt for y/n confirmation instead of requiring `--yes`. The `--yes` flag still works for CI/scripting.
+- **Exec elapsed time feedback** — single-agent `exec agent` runs show elapsed seconds in the spinner every 5s. Parallel agent runs print per-agent results as they complete.
+- **Auto-detect stdin** — `ulu runs save` and `ulu runs validate` auto-detect piped input, no `--stdin` flag needed. `cat results.json | ulu runs save` just works.
+
 ## [0.5.0] - 2026-05-21
 
 ### Added
