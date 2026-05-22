@@ -4,6 +4,16 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.3.0] - 2026-05-21
+
+### Added
+
+- **`ulu exec pipeline` subcommand** — execute multi-stage pipelines from the CLI, mirroring the `exec workflow` pattern. Supports `-m`/`--model` and `-p`/`--prompt` flags.
+
+### Dependencies
+
+- `@uluops/core` — requires v0.15.0+ for `runPipeline()` support
+
 ## [0.2.1] - 2026-05-21
 
 ### Fixed

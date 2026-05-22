@@ -11,7 +11,7 @@
 
 Unified CLI for UluOps — validation tracking and registry management from a single command. Wraps both the [ops-sdk](https://www.npmjs.com/package/@uluops/ops-sdk) and [registry-sdk](https://www.npmjs.com/package/@uluops/registry-sdk) into an ergonomic terminal interface.
 
-**Current version: 0.2.1** | [Changelog](./CHANGELOG.md)
+**Current version: 0.3.0** | [Changelog](./CHANGELOG.md)
 
 ## Quick Start
 
@@ -598,7 +598,7 @@ ulu models sync                   # Sync from providers (admin only)
 
 ### Exec
 
-Execute agents, commands, and workflows via the @uluops/core SDK.
+Execute agents, commands, workflows, and pipelines via the @uluops/core SDK.
 
 ```bash
 # Auto-detect definition type and execute
@@ -612,6 +612,9 @@ ulu exec command my-command ./src
 
 # Execute a multi-phase workflow
 ulu exec workflow post-implementation ./
+
+# Execute a multi-stage pipeline
+ulu exec pipeline foundations ./ --project my-project
 
 # List available definitions
 ulu exec list                          # All definitions
