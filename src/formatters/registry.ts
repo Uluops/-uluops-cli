@@ -33,7 +33,9 @@ export function formatDefinitions(definitions: DefinitionListItem[]): string {
  * Format a single definition
  */
 export function formatDefinition(def: Definition): string {
-  return formatKeyValue({
+  const lines: string[] = [];
+
+  lines.push(formatKeyValue({
     name: def.name,
     type: def.type,
     version: def.version,
@@ -52,7 +54,53 @@ export function formatDefinition(def: Definition): string {
     createdAt: formatDisplayDate(def.createdAt),
     updatedAt: formatDisplayDate(def.updatedAt),
     publishedAt: def.publishedAt ? formatDisplayDate(def.publishedAt) : undefined,
-  });
+  }));
+
+  // Safety analysis
+  lines.push('');
+  if (!def.riskProfile) {
+    if (def.status === 'published') {
+      lines.push('No risk signals. Deep analysis pending.');
+    }
+  } else {
+    const profile = def.riskProfile;
+    const caps = profile.sync?.capabilities;
+    const signals = profile.sync?.signals;
+
+    // Capabilities (neutral metadata)
+    if (caps?.tools?.length) {
+      lines.push(`Tools: ${caps.tools.join(', ')}`);
+    }
+    if (caps?.maxTokens !== undefined) lines.push(`Max tokens: ${String(caps.maxTokens)}`);
+    if (caps?.temperature !== undefined) lines.push(`Temperature: ${String(caps.temperature)}`);
+
+    // Risk signals
+    if (!signals?.length) {
+      lines.push('No risk signals.');
+    } else {
+      lines.push('');
+      lines.push('\u26A0\uFE0F  Risk Signals:');
+      for (const signal of signals) {
+        lines.push(`  ${signal.severity.toUpperCase()}   ${signal.title}`);
+        lines.push(`         ${signal.detail}`);
+      }
+      lines.push('');
+      lines.push(`Risk Level: ${profile.aggregateRiskLevel.toUpperCase()}`);
+    }
+
+    // Analyzer info
+    const scannedAt = profile.sync?.scannedAt;
+    const version = profile.sync?.version;
+    if (scannedAt) {
+      const dateStr = scannedAt.split('T')[0];
+      lines.push(`Last analyzed: ${dateStr}${version ? ` (analyzer v${version})` : ''}`);
+    }
+    if (!profile.deep) {
+      lines.push('Deep analysis pending.');
+    }
+  }
+
+  return lines.join('\n');
 }
 
 /**

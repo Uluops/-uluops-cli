@@ -217,6 +217,24 @@ Examples:
       if (agentNames.length === 1) {
         const agentName = agentNames[0]!;
         try {
+          // Pre-execution safety check — show warning for flagged definitions
+          if (!ctx.quiet && !ctx.json) {
+            try {
+              const details = await ctx.client.describe(agentName);
+              if (details.riskProfile) {
+                const profile = details.riskProfile;
+                const signals = (profile.sync as Record<string, unknown>)?.signals as Array<Record<string, unknown>> | undefined;
+                const level = profile.aggregateRiskLevel as string;
+                if (signals?.length && (level === 'medium' || level === 'high')) {
+                  const firstSignal = signals[0]!;
+                  console.error(`\n  \u26A0\uFE0F  Risk signal: ${firstSignal.title as string}\n`);
+                }
+              }
+            } catch {
+              // Non-fatal — proceed with execution even if describe fails
+            }
+          }
+
           const startTime = Date.now();
           let timer: ReturnType<typeof setInterval> | undefined;
           // Update spinner with elapsed time every 5s (long-running feedback)
