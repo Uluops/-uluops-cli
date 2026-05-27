@@ -331,6 +331,99 @@ describe('exec describe', () => {
   });
 });
 
+// ── Safety warnings ─────────────────────────────────────────────────────
+
+describe('exec agent safety warnings', () => {
+  beforeEach(() => {
+    // Non-quiet, non-json context so safety warnings are shown
+    mockedCreateCoreContext.mockReturnValue({
+      client: mockClient as unknown as CoreCliContext['client'],
+      json: false,
+      debug: false,
+      quiet: false,
+    });
+  });
+
+  it('shows risk warning for medium/high definitions', async () => {
+    mockClient.describe.mockResolvedValue({
+      name: 'risky-agent',
+      riskProfile: {
+        sync: {
+          signals: [{ title: 'Prompt contains shell exploitation pattern' }],
+        },
+        aggregateRiskLevel: 'high',
+      },
+    });
+    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'risky-agent' }));
+    await parse('exec', 'agent', '-t', './src', 'risky-agent');
+    expect(output.stderr()).toContain('Risk signal');
+    expect(output.stderr()).toContain('shell exploitation');
+  });
+
+  it('shows no warning for clean definitions', async () => {
+    mockClient.describe.mockResolvedValue({
+      name: 'clean-agent',
+      riskProfile: {
+        sync: { signals: [] },
+        aggregateRiskLevel: 'none',
+      },
+    });
+    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'clean-agent' }));
+    await parse('exec', 'agent', '-t', './src', 'clean-agent');
+    expect(output.stderr()).not.toContain('Risk signal');
+  });
+
+  it('shows runtime advisory for shell-capable agent targeting sensitive path', async () => {
+    mockClient.describe.mockResolvedValue({
+      name: 'shell-agent',
+      riskProfile: {
+        sync: {
+          signals: [],
+          capabilities: { tools: ['bash', 'read'] },
+        },
+        aggregateRiskLevel: 'none',
+      },
+    });
+    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'shell-agent' }));
+    await parse('exec', 'agent', '-t', '/Users/me/.ssh', 'shell-agent');
+    expect(output.stderr()).toContain('Advisory');
+    expect(output.stderr()).toContain('sensitive path');
+  });
+
+  it('shows no advisory for shell-capable agent targeting normal path', async () => {
+    mockClient.describe.mockResolvedValue({
+      name: 'shell-agent',
+      riskProfile: {
+        sync: {
+          signals: [],
+          capabilities: { tools: ['bash', 'read'] },
+        },
+        aggregateRiskLevel: 'none',
+      },
+    });
+    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'shell-agent' }));
+    await parse('exec', 'agent', '-t', './src', 'shell-agent');
+    expect(output.stderr()).not.toContain('Advisory');
+  });
+
+  it('--no-safety-warnings suppresses both risk warning and advisory', async () => {
+    mockClient.describe.mockResolvedValue({
+      name: 'risky-shell-agent',
+      riskProfile: {
+        sync: {
+          signals: [{ title: 'Prompt contains injection' }],
+          capabilities: { tools: ['bash'] },
+        },
+        aggregateRiskLevel: 'high',
+      },
+    });
+    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'risky-shell-agent' }));
+    await parse('exec', '--no-safety-warnings', 'agent', '-t', '/Users/me/.ssh', 'risky-shell-agent');
+    expect(output.stderr()).not.toContain('Risk signal');
+    expect(output.stderr()).not.toContain('Advisory');
+  });
+});
+
 // ── Parent options ───────────────────────────────────────────────────────
 
 describe('parent options', () => {

@@ -11,7 +11,7 @@ import {
 } from '../formatters/core.js';
 import type { ExecutionOptions, DefinitionType, AgentResult } from '@uluops/core';
 
-type ExecOptions = GlobalOptions & CoreExecOptions & { noSafetyWarnings?: boolean };
+type ExecOptions = GlobalOptions & CoreExecOptions & { safetyWarnings?: boolean };
 
 /**
  * Get merged options from the exec parent command and the subcommand
@@ -35,7 +35,7 @@ function getMergedOptions(cmd: Command): ExecOptions {
     registryUrl: typeof merged.registryUrl === 'string' ? merged.registryUrl : undefined,
     project: typeof merged.project === 'string' ? merged.project : undefined,
     tracking: typeof merged.tracking === 'boolean' ? merged.tracking : undefined,
-    noSafetyWarnings: typeof merged.noSafetyWarnings === 'boolean' ? merged.noSafetyWarnings : undefined,
+    safetyWarnings: typeof merged.safetyWarnings === 'boolean' ? merged.safetyWarnings : undefined,
   } as ExecOptions;
 }
 
@@ -220,8 +220,8 @@ Examples:
         const agentName = agentNames[0]!;
         try {
           // Pre-execution safety check — show warning for flagged definitions
-          const suppressWarnings = (options as ExecOptions).noSafetyWarnings;
-          if (!ctx.quiet && !ctx.json && !suppressWarnings) {
+          const safetyWarnings = (options as ExecOptions).safetyWarnings;
+          if (!ctx.quiet && !ctx.json && safetyWarnings !== false) {
             try {
               const details = await ctx.client.describe(agentName);
               if (details.riskProfile) {
