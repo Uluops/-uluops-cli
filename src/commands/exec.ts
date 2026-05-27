@@ -11,7 +11,7 @@ import {
 } from '../formatters/core.js';
 import type { ExecutionOptions, DefinitionType, AgentResult } from '@uluops/core';
 
-type ExecOptions = GlobalOptions & CoreExecOptions;
+type ExecOptions = GlobalOptions & CoreExecOptions & { noSafetyWarnings?: boolean };
 
 /**
  * Get merged options from the exec parent command and the subcommand
@@ -35,6 +35,7 @@ function getMergedOptions(cmd: Command): ExecOptions {
     registryUrl: typeof merged.registryUrl === 'string' ? merged.registryUrl : undefined,
     project: typeof merged.project === 'string' ? merged.project : undefined,
     tracking: typeof merged.tracking === 'boolean' ? merged.tracking : undefined,
+    noSafetyWarnings: typeof merged.noSafetyWarnings === 'boolean' ? merged.noSafetyWarnings : undefined,
   } as ExecOptions;
 }
 
@@ -147,6 +148,7 @@ export function registerExecCommands(program: Command): void {
     .option('--registry-url <url>', 'Override registry URL')
     .option('--project <name>', 'Project name for result tracking')
     .option('--no-tracking', 'Disable validation service submission')
+    .option('--no-safety-warnings', 'Suppress risk warnings and runtime advisories')
     .addHelpText('after', `
 Examples:
   $ ulu exec agent code-validator ./src
@@ -218,16 +220,39 @@ Examples:
         const agentName = agentNames[0]!;
         try {
           // Pre-execution safety check — show warning for flagged definitions
-          if (!ctx.quiet && !ctx.json) {
+          const suppressWarnings = (options as ExecOptions).noSafetyWarnings;
+          if (!ctx.quiet && !ctx.json && !suppressWarnings) {
             try {
               const details = await ctx.client.describe(agentName);
               if (details.riskProfile) {
                 const profile = details.riskProfile;
-                const signals = (profile.sync as Record<string, unknown>)?.signals as Array<Record<string, unknown>> | undefined;
+                const sync = profile.sync as Record<string, unknown> | undefined;
+                const signals = sync?.signals as Array<Record<string, unknown>> | undefined;
                 const level = profile.aggregateRiskLevel as string;
                 if (signals?.length && (level === 'medium' || level === 'high')) {
                   const firstSignal = signals[0]!;
                   console.error(`\n  \u26A0\uFE0F  Risk signal: ${firstSignal.title as string}\n`);
+                }
+
+                // Runtime advisory: shell-capable agent targeting sensitive paths (R6)
+                const caps = sync?.capabilities as Record<string, unknown> | undefined;
+                const tools = caps?.tools as string[] | undefined;
+                const hasShell = tools?.some((t: string) => /^bash$/i.test(t));
+                if (hasShell) {
+                  const resolvedTarget = resolve(target);
+                  const sensitivePatterns = [
+                    /[/\\]\.ssh\b/,
+                    /[/\\]\.aws\b/,
+                    /[/\\]\.gnupg\b/,
+                    /[/\\]\.kube\b/,
+                    /[/\\]\.docker\b/,
+                    /^\/etc\b/,
+                    /[/\\]\.env\b/,
+                  ];
+                  const isSensitive = sensitivePatterns.some((p) => p.test(resolvedTarget));
+                  if (isSensitive) {
+                    console.error(`  \u{1F6E1}\uFE0F  Advisory: shell-capable agent targeting sensitive path (${target})\n`);
+                  }
                 }
               }
             } catch {

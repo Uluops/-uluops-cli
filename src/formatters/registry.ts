@@ -56,6 +56,30 @@ export function formatDefinition(def: Definition): string {
     publishedAt: def.publishedAt ? formatDisplayDate(def.publishedAt) : undefined,
   }));
 
+  // Provenance
+  if (def.provenance) {
+    lines.push('');
+    const prov = def.provenance;
+    lines.push(`Authorship: ${prov.authorshipType}`);
+    if (prov.contributors?.length) {
+      for (const c of prov.contributors) {
+        const name = c.name || c.id;
+        const role = c.role;
+        const type = c.type;
+        lines.push(`  ${type === 'agent' ? '\u{1F916}' : '\u{1F464}'} ${name} (${role})`);
+      }
+    }
+    if (prov.dialecticRounds !== undefined && prov.dialecticRounds > 0) {
+      lines.push(`Dialectic rounds: ${String(prov.dialecticRounds)}`);
+    }
+  }
+
+  // Fork lineage
+  if (def.forkedFromId) {
+    lines.push('');
+    lines.push(`Forked from: ${def.forkedFromId}`);
+  }
+
   // Safety analysis
   lines.push('');
   if (!def.riskProfile) {
