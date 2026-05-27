@@ -4,6 +4,12 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.10.1] - 2026-05-27
+
+### Fixed
+
+- **`file:` dependencies replaced with npm version ranges** — `@uluops/core`, `@uluops/ops-sdk`, `@uluops/registry-sdk`, and `@uluops/sdk-core` were using local `file:` references that broke when installed from npm.
+
 ## [0.10.0] - 2026-05-27
 
 ### Added
