@@ -4,6 +4,15 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.10.0] - 2026-05-27
+
+### Added
+
+- **Risk profile display in `ulu def get`** — definitions with safety scan results now show risk level, signal count, and scanner version in the output.
+- **Runtime advisory on `exec agent`** — when executing an agent with elevated risk signals, the CLI displays a warning before execution begins.
+- **`--no-safety-warnings` flag on `exec agent`** — suppresses runtime safety advisories for trusted definitions or CI environments.
+- **Provenance display** — `ulu def get` now shows authorship provenance metadata (author, co-authors, model attribution) when available.
+
 ## [0.8.0] - 2026-05-22
 
 ### Added
