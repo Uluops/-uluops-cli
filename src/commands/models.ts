@@ -164,30 +164,4 @@ Examples:
       }
     });
 
-  // ulu models sync (admin)
-  models
-    .command('sync')
-    .description('Sync models from providers (admin only)')
-    .action(async (_, cmd) => {
-      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const ctx = createRegistryContext(globalOpts);
-
-      try {
-        const result = await withSpinner(
-          ctx,
-          { start: 'Syncing models...', success: 'Models synced', failure: 'Failed to sync models' },
-          () => ctx.client.models.sync()
-        );
-
-        if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
-        } else {
-          console.log(`Providers: +${result.providersAdded} added, ~${result.providersUpdated} updated`);
-          console.log(`Models:    +${result.modelsAdded} added, ~${result.modelsUpdated} updated`);
-          if (result.duration) console.log(`Duration: ${result.duration}`);
-        }
-      } catch (error) {
-        handleRegistryError(error, ctx);
-      }
-    });
 }
