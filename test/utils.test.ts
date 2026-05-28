@@ -535,17 +535,17 @@ describe('resolveDefinitionType', () => {
 
 describe('resolveProject', () => {
   it('returns explicit project when provided', () => {
-    expect(resolveProject('my-project', {})).toBe('my-project');
+    expect(resolveProject('my-project')).toBe('my-project');
   });
 
   it('exits with helpful error when no project available', () => {
     const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
     const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    resolveProject(undefined, { profile: 'nonexistent' });
+    resolveProject(undefined);
     expect(mockExit).toHaveBeenCalledWith(1);
     expect(mockError).toHaveBeenCalledWith(expect.stringContaining('No project specified'));
-    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('ulu config set defaultProject'));
+    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('--project'));
 
     mockExit.mockRestore();
     mockError.mockRestore();

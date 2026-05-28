@@ -4,6 +4,17 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.10.2] - 2026-05-27
+
+### Removed
+
+- **`ulu config` command** — profile-based configuration (`config list`, `config set`, `config get`, `config unset`, `config profiles`, `config use`, `config path`) has been removed. The feature was structurally complete but mostly hollow — only `defaultProject` was consumed at runtime, while `opsBaseUrl`, `registryBaseUrl`, `json`, `quiet`, and `debug` stored in profiles had no effect on CLI behavior. Use environment variables and CLI flags instead.
+- **`defaultProject` profile fallback** — `resolveProject` no longer reads `~/.uluops/profiles.json`. Pass `--project <name>` explicitly.
+
+### Fixed
+
+- **Removed stale `models sync` test** — test referenced a subcommand that was removed from the implementation but not the test suite.
+
 ## [0.10.1] - 2026-05-27
 
 ### Fixed

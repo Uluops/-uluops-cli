@@ -2,8 +2,6 @@ import ora, { type Ora } from 'ora';
 import * as path from 'node:path';
 import { createInterface } from 'node:readline';
 import { readFileSync, existsSync, writeFileSync, renameSync, unlinkSync } from 'node:fs';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
 
 /**
  * Create a spinner for long-running operations
@@ -266,29 +264,15 @@ export function getFlexibleProperty<T, O extends object = object>(
 }
 
 /**
- * Resolve project name from an optional positional arg or the defaultProject config.
- * Exits with a helpful error if neither is available.
+ * Resolve project name from an explicit argument.
+ * Exits with a helpful error if not provided.
  */
-export function resolveProject(explicit: string | undefined, globalOpts: { profile?: string }): string {
+export function resolveProject(explicit: string | undefined): string {
   if (explicit) return explicit;
-
-  // Try loading defaultProject from profile config
-  const profilesPath = join(homedir(), '.uluops', 'profiles.json');
-  if (existsSync(profilesPath)) {
-    try {
-      const profiles = JSON.parse(readFileSync(profilesPath, 'utf-8'));
-      const activeProfile = globalOpts.profile ?? profiles._active ?? 'default';
-      const config = profiles[activeProfile];
-      if (config?.defaultProject) return config.defaultProject as string;
-    } catch {
-      // Ignore parse errors
-    }
-  }
 
   exitWithError(
     'No project specified.\n' +
-    'Pass a project name as an argument, or set a default:\n' +
-    '  ulu config set defaultProject <name>'
+    'Pass a project name with --project <name>.'
   );
 }
 

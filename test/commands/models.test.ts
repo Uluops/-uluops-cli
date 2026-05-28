@@ -109,18 +109,6 @@ describe('models resolve', () => {
   });
 });
 
-describe('models sync', () => {
-  it('should sync models', async () => {
-    mockClient.models.sync.mockResolvedValue({ providersAdded: 3, providersUpdated: 2, modelsAdded: 10, modelsUpdated: 5, duration: '1.2s' });
-    const output = captureOutput();
-    await parse('models', 'sync');
-    expect(output.stdout()).toContain('Providers: +3 added, ~2 updated');
-    expect(output.stdout()).toContain('Models:    +10 added, ~5 updated');
-    expect(output.stdout()).toContain('Duration: 1.2s');
-    output.restore();
-  });
-});
-
 describe('error handling', () => {
   it('should delegate to handleRegistryError on failure', async () => {
     const error = new Error('Registry fail');

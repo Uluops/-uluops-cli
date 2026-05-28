@@ -11,7 +11,7 @@
 
 Unified CLI for UluOps — validation tracking and registry management from a single command. Wraps both the [ops-sdk](https://www.npmjs.com/package/@uluops/ops-sdk) and [registry-sdk](https://www.npmjs.com/package/@uluops/registry-sdk) into an ergonomic terminal interface.
 
-**Current version: 0.10.1** | [Changelog](./CHANGELOG.md)
+**Current version: 0.10.2** | [Changelog](./CHANGELOG.md)
 
 ## Quick Start
 
@@ -41,11 +41,10 @@ ulu exec agent code-validator -t ./src --model sonnet --project my-project
 - [Features](#features)
 - [Installation](#installation)
 - [Authentication](#authentication)
-- [Configuration](#configuration)
+- [Configuration](#configuration) — Config files & environment
 - [Global Options](#global-options)
 - [Command Reference](#command-reference)
   - [Auth](#auth) — Authentication & credential management
-  - [Config](#config) — CLI configuration & profiles
   - [Projects](#projects) (`ulu p`) — Project lifecycle management
   - [Runs](#runs) (`ulu r`) — Validation run management
   - [Issues](#issues) (`ulu i`) — Issue tracking & management
@@ -72,7 +71,6 @@ ulu exec agent code-validator -t ./src --model sonnet --project my-project
 
 - **Unified interface**: Single `ulu` command covers both the validation tracker (ops) and definition registry APIs
 - **Command aliases**: `ulu p` (projects), `ulu r` (runs), `ulu i` (issues), `ulu a` (analytics), `ulu x` (exec), `ulu def` (definitions)
-- **Profile-based configuration**: Multiple environments via named profiles with independent credentials
 - **Flexible authentication**: API key, session token, or email/password — same credential chain as the SDKs
 - **Machine-friendly output**: `--json` flag on every command for scripting and CI/CD integration
 - **Shell completion**: Tab completion for bash, zsh, and fish
@@ -143,50 +141,10 @@ The CLI resolves credentials in this order:
 
 ## Configuration
 
-### Config Files
-
 | File | Purpose |
 |------|---------|
-| `~/.uluops/profiles.json` | Profile settings (base URLs, default project, output preferences) |
 | `~/.uluops/credentials.json` | Credentials per profile (API keys, session tokens) |
 | `./.env` | Project-level environment overrides |
-
-### Profiles
-
-Profiles let you maintain separate configurations for different environments:
-
-```bash
-# Set config values on the default profile
-ulu config set opsBaseUrl https://api.uluops.com/api/v1
-ulu config set defaultProject my-project
-
-# Create and switch to a new profile
-ulu config use staging
-ulu config set opsBaseUrl https://staging-api.uluops.com/api/v1
-
-# Switch back
-ulu config use default
-
-# Use a profile for a single command
-ulu projects list --profile staging
-
-# View current config
-ulu config list
-
-# List all profiles
-ulu config profiles
-```
-
-### Config Keys
-
-| Key | Description | Default |
-|-----|-------------|---------|
-| `opsBaseUrl` | Validation tracker API URL | `http://localhost:3100/api/v1` |
-| `registryBaseUrl` | Registry API URL | `http://localhost:3001/api/v1` |
-| `defaultProject` | Default project for commands that accept `<project>` | - |
-| `json` | Always output JSON | `false` |
-| `quiet` | Suppress spinners | `false` |
-| `debug` | Enable debug output | `false` |
 
 ## Global Options
 
@@ -239,22 +197,6 @@ ulu auth login --email user@example.com --password mypassword
 
 # Check who you are
 ulu auth whoami
-```
-
----
-
-### Config
-
-CLI configuration and profile management.
-
-```bash
-ulu config list                   # Show resolved config for active profile
-ulu config get <key>              # Get a config value
-ulu config set <key> <value>      # Set a config value
-ulu config unset <key>            # Remove a config value
-ulu config profiles               # List all profiles
-ulu config use <profile>          # Switch active profile
-ulu config path                   # Show config file locations
 ```
 
 ---
@@ -588,7 +530,6 @@ ulu models get <provider> <id>    # Get model details
 ulu models providers              # List providers
 ulu models aliases                # List model aliases
 ulu models resolve <alias>        # Resolve alias to concrete model
-ulu models sync                   # Sync from providers (admin only)
 ```
 
 ---
@@ -786,16 +727,13 @@ All errors include the HTTP status code and server error code when available. Us
 # Verify your credentials are set
 echo $ULUOPS_API_KEY
 ulu auth whoami
-
-# Check which profile is active
-ulu config list
 ```
 
 ### "Connection refused" errors
 
 ```bash
 # Check the configured base URL
-ulu config get opsBaseUrl
+echo $ULUOPS_BASE_URL
 
 # Test server connectivity
 curl http://localhost:3100/api/v1/health
@@ -804,11 +742,8 @@ curl http://localhost:3100/api/v1/health
 ### Commands targeting the wrong environment
 
 ```bash
-# Check active profile
-ulu config profiles
-
 # Override for a single command
-ulu projects list --profile production --base-url https://api.uluops.com/api/v1
+ulu projects list --base-url https://api.uluops.com/api/v1
 ```
 
 ### Shell completion not working

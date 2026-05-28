@@ -26,7 +26,6 @@ import { registerTranslationCommands } from './commands/translation.js';
 import { registerExecCommands } from './commands/exec.js';
 
 // Infrastructure commands
-import { registerConfigCommands } from './commands/config.js';
 import { registerCompletionCommands } from './commands/completion.js';
 
 // Load .env files early so all SDK contexts see them
@@ -113,7 +112,6 @@ registerTranslationCommands(program);
 registerExecCommands(program);
 
 // Infrastructure commands
-registerConfigCommands(program);
 registerCompletionCommands(program);
 
 // Default action when no command is provided

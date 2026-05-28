@@ -34,7 +34,7 @@ Examples:
     .option('--include-resolved', 'Include resolved issues')
     .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const project = resolveProject(projectArg, globalOpts);
+      const project = resolveProject(projectArg);
       const ctx = createOpsContext(globalOpts);
 
       try {

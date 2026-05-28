@@ -29,7 +29,7 @@ Examples:
     .option('-l, --limit <number>', 'Maximum number of runs to return', '20')
     .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const project = resolveProject(projectArg, globalOpts);
+      const project = resolveProject(projectArg);
       const ctx = createOpsContext(globalOpts);
 
       try {
@@ -86,7 +86,7 @@ Examples:
     .option('-w, --workflow <type>', 'Filter by workflow type')
     .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const project = resolveProject(projectArg, globalOpts);
+      const project = resolveProject(projectArg);
       const ctx = createOpsContext(globalOpts);
 
       try {
@@ -113,7 +113,7 @@ Examples:
     .option('-n, --number <number>', 'Run number (defaults to latest)')
     .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const project = resolveProject(projectArg, globalOpts);
+      const project = resolveProject(projectArg);
       const ctx = createOpsContext(globalOpts);
 
       try {
@@ -305,7 +305,7 @@ Examples:
     .requiredOption('-c, --compare <number>', 'Compare run number')
     .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const project = resolveProject(projectArg, globalOpts);
+      const project = resolveProject(projectArg);
       const ctx = createOpsContext(globalOpts);
 
       try {
@@ -363,7 +363,7 @@ Examples:
     .option('--reason <text>', 'Reason for archiving')
     .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const project = resolveProject(projectArg, globalOpts);
+      const project = resolveProject(projectArg);
       const ctx = createOpsContext(globalOpts);
 
       if (!options.beforeRun && !options.beforeDate && !options.keepLast) {
@@ -404,7 +404,7 @@ Examples:
     .option('--stdin', 'Read agent updates from stdin')
     .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const project = resolveProject(projectArg, globalOpts);
+      const project = resolveProject(projectArg);
       const ctx = createOpsContext(globalOpts);
 
       try {
