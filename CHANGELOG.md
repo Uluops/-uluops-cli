@@ -4,6 +4,12 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.11.0] - 2026-05-27
+
+### Added
+
+- **`ulu languages` command** (alias: `ulu lang`) — browse definition language schemas. `ulu lang` lists all 4 languages with current versions. `ulu lang adl` shows metadata for a specific language. `ulu lang adl --json` returns full schema content. `ulu lang adl -o schema.json` writes the JSON Schema to a file.
+
 ## [0.10.2] - 2026-05-27
 
 ### Removed

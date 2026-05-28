@@ -21,6 +21,7 @@ import { registerForkCommands } from './commands/forks.js';
 import { registerModelCommands } from './commands/models.js';
 import { registerExecutionCommands } from './commands/executions.js';
 import { registerTranslationCommands } from './commands/translation.js';
+import { registerLanguageCommands } from './commands/languages.js';
 
 // Core SDK commands
 import { registerExecCommands } from './commands/exec.js';
@@ -107,6 +108,7 @@ registerForkCommands(program);
 registerModelCommands(program);
 registerExecutionCommands(program);
 registerTranslationCommands(program);
+registerLanguageCommands(program);
 
 // Core SDK commands
 registerExecCommands(program);

@@ -11,7 +11,7 @@
 
 Unified CLI for UluOps — validation tracking and registry management from a single command. Wraps both the [ops-sdk](https://www.npmjs.com/package/@uluops/ops-sdk) and [registry-sdk](https://www.npmjs.com/package/@uluops/registry-sdk) into an ergonomic terminal interface.
 
-**Current version: 0.10.2** | [Changelog](./CHANGELOG.md)
+**Current version: 0.11.0** | [Changelog](./CHANGELOG.md)
 
 ## Quick Start
 
@@ -55,6 +55,7 @@ ulu exec agent code-validator -t ./src --model sonnet --project my-project
   - [Versions](#versions) — Definition version history
   - [Deps](#deps) — Dependency graphs
   - [Forks](#forks) — Definition forking
+  - [Languages](#languages) (`ulu lang`) — Definition language schemas
   - [Models](#models) — AI model catalog
   - [Exec](#exec) (`ulu x`) — Execute agents, commands, workflows, and pipelines
   - [Executions](#executions) — Execution tracking
@@ -516,6 +517,19 @@ ulu forks list <type> <name> <version>       # List forks
 ulu forks create <type> <name> <version>     # Fork definition (--fork-name)
 ulu forks check <type> <name> <version>      # Check if forkable
 ulu forks lineage <type> <name> <version>    # Show fork ancestry chain
+```
+
+---
+
+### Languages
+
+Definition language schemas. Alias: `lang`.
+
+```bash
+ulu lang                          # List all languages with versions
+ulu lang adl                      # Get ADL metadata
+ulu lang adl --json               # Full output with JSON Schema content
+ulu lang adl -o adl-schema.json   # Write JSON Schema to file
 ```
 
 ---
