@@ -97,7 +97,10 @@ describe('definitions create', () => {
 
 describe('definitions publish', () => {
   it('should publish definition', async () => {
-    mockClient.definitions.publish.mockResolvedValue(createDefinition({ name: 'my-agent', status: 'published' }));
+    mockClient.definitions.publish.mockResolvedValue({
+      definition: createDefinition({ name: 'my-agent', status: 'published' }),
+      warnings: [],
+    });
     const output = captureOutput();
     await parse('definitions', 'publish', 'agent', 'my-agent', '1.0.0');
     expect(mockClient.definitions.publish).toHaveBeenCalledWith('agent', 'my-agent', '1.0.0');

@@ -4,6 +4,25 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.0] - 2026-06-01
+
+### Changed
+
+- Bumps `@uluops/sdk-core` to `0.11.0`, `@uluops/ops-sdk` to `3.0.0`, `@uluops/registry-sdk`
+  to `0.30.0`, `@uluops/core` to `0.18.0` (all exact pins). Aligns with the sdk-core
+  schema-removal cascade.
+
+### Fixed
+
+- `ulu definitions publish` now correctly destructures the `PublishResult` (registry-sdk
+  0.29.0 changed the return type from `Definition` to `{ definition, warnings }`).
+  Surfaces non-fatal publish warnings instead of crashing with `Cannot read properties of
+  undefined`.
+- `ulu forks lineage` was reading `result.chain` and `result.current` (untyped) through
+  the typed `ForkLineage` interface, which only declares `{ isFork, fork, source }`.
+  Refactored to use the `asFlexibleResponse` cast it already had imported, with explicit
+  inner types for the legacy `chain`/`current` shape.
+
 ## [0.11.0] - 2026-05-27
 
 ### Added

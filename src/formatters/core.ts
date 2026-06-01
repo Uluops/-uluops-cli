@@ -3,13 +3,13 @@
  */
 import type {
   AgentResult,
-  ExecutionResult,
-  Recommendation,
   DefinitionSummary,
   DefinitionType,
+  ExecutionResult,
+  Recommendation,
 } from '@uluops/core';
-import { formatTable, formatKeyValue, type Column } from './table.js';
 import { truncate } from '../utils.js';
+import { type Column, formatKeyValue, formatTable } from './table.js';
 
 /**
  * Format an agent execution result
@@ -39,10 +39,26 @@ export function formatAgentResult(result: AgentResult): string {
   if (result.categories && result.categories.length > 0) {
     lines.push('');
     lines.push('Categories:');
-    const catColumns: Column<{ name: string; score: number; maxScore: number; findings: number }>[] = [
+    const catColumns: Column<{
+      name: string;
+      score: number;
+      maxScore: number;
+      findings: number;
+    }>[] = [
       { header: 'CATEGORY', accessor: 'name', width: 30 },
-      { header: 'SCORE', accessor: (c: { score: number; maxScore: number }) => `${c.score}/${c.maxScore}`, width: 10, align: 'right' },
-      { header: 'FINDINGS', accessor: (c: { findings: number }) => String(c.findings), width: 10, align: 'right' },
+      {
+        header: 'SCORE',
+        accessor: (c: { score: number; maxScore: number }) =>
+          `${c.score}/${c.maxScore}`,
+        width: 10,
+        align: 'right',
+      },
+      {
+        header: 'FINDINGS',
+        accessor: (c: { findings: number }) => String(c.findings),
+        width: 10,
+        align: 'right',
+      },
     ];
     const catData = result.categories.map((c) => ({
       name: c.name,
@@ -65,12 +81,18 @@ export function formatAgentResult(result: AgentResult): string {
   lines.push(`  Input: ${result.metrics.inputTokens.toLocaleString()}`);
   lines.push(`  Output: ${result.metrics.outputTokens.toLocaleString()}`);
   if (result.metrics.cacheCreationTokens) {
-    lines.push(`  Cache write: ${result.metrics.cacheCreationTokens.toLocaleString()}`);
+    lines.push(
+      `  Cache write: ${result.metrics.cacheCreationTokens.toLocaleString()}`,
+    );
   }
   if (result.metrics.cacheReadTokens) {
-    lines.push(`  Cache read: ${result.metrics.cacheReadTokens.toLocaleString()}`);
+    lines.push(
+      `  Cache read: ${result.metrics.cacheReadTokens.toLocaleString()}`,
+    );
   }
-  lines.push(`  Total effective: ${result.metrics.totalEffectiveTokens.toLocaleString()}`);
+  lines.push(
+    `  Total effective: ${result.metrics.totalEffectiveTokens.toLocaleString()}`,
+  );
   if (result.metrics.costUsd !== undefined) {
     lines.push(`  Estimated cost: $${result.metrics.costUsd.toFixed(4)}`);
   }
@@ -105,12 +127,18 @@ export function formatExecutionResult(result: ExecutionResult): string {
   lines.push(`  Input: ${result.metrics.inputTokens.toLocaleString()}`);
   lines.push(`  Output: ${result.metrics.outputTokens.toLocaleString()}`);
   if (result.metrics.cacheCreationTokens) {
-    lines.push(`  Cache write: ${result.metrics.cacheCreationTokens.toLocaleString()}`);
+    lines.push(
+      `  Cache write: ${result.metrics.cacheCreationTokens.toLocaleString()}`,
+    );
   }
   if (result.metrics.cacheReadTokens) {
-    lines.push(`  Cache read: ${result.metrics.cacheReadTokens.toLocaleString()}`);
+    lines.push(
+      `  Cache read: ${result.metrics.cacheReadTokens.toLocaleString()}`,
+    );
   }
-  lines.push(`  Total effective: ${result.metrics.totalEffectiveTokens.toLocaleString()}`);
+  lines.push(
+    `  Total effective: ${result.metrics.totalEffectiveTokens.toLocaleString()}`,
+  );
   if (result.metrics.costUsd !== undefined) {
     lines.push(`  Estimated cost: $${result.metrics.costUsd.toFixed(4)}`);
   }
@@ -159,7 +187,11 @@ export function formatDefinitionList(items: DefinitionSummary[]): string {
     { header: 'TYPE', accessor: 'type', width: 10 },
     { header: 'VERSION', accessor: 'version', width: 10 },
     { header: 'DOMAIN', accessor: 'domain', width: 12 },
-    { header: 'DESCRIPTION', accessor: (d) => truncate(d.description, 40), width: 42 },
+    {
+      header: 'DESCRIPTION',
+      accessor: (d) => truncate(d.description, 40),
+      width: 42,
+    },
   ];
   return formatTable(items, columns);
 }
@@ -176,12 +208,14 @@ export function formatDefinitionDetails(details: {
 }): string {
   const lines: string[] = [];
 
-  lines.push(formatKeyValue({
-    Name: details.name,
-    Type: details.type,
-    Version: details.version,
-    Hash: details.hash,
-  }));
+  lines.push(
+    formatKeyValue({
+      Name: details.name,
+      Type: details.type,
+      Version: details.version,
+      Hash: details.hash,
+    }),
+  );
 
   if (details.interface && typeof details.interface === 'object') {
     lines.push('');
@@ -210,7 +244,8 @@ function groupBy<T>(items: T[], key: (item: T) => string): Record<string, T[]> {
   const groups: Record<string, T[]> = {};
   for (const item of items) {
     const k = key(item);
-    (groups[k] ??= []).push(item);
+    groups[k] ??= [];
+    groups[k].push(item);
   }
   return groups;
 }
