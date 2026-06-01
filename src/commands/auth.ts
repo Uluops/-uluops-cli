@@ -1,16 +1,21 @@
-import { Command } from 'commander';
-import { mkdirSync, existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { OpsClient } from '@uluops/ops-sdk';
+import type { Command } from 'commander';
 import {
   createOpsContext,
   createUnauthenticatedContext,
-  handleOpsError,
   type GlobalOptions,
+  handleOpsError,
 } from '../context.js';
-import { withSpinner, writeFileAtomic, exitWithError, promptInput } from '../utils.js';
 import { formatApiKeys } from '../formatters/ops.js';
+import {
+  exitWithError,
+  promptInput,
+  withSpinner,
+  writeFileAtomic,
+} from '../utils.js';
 
 /**
  * Config file paths
@@ -31,7 +36,7 @@ function saveCredentials(
     sessionToken?: string;
     expiresAt?: string;
     email?: string;
-  }
+  },
 ): void {
   const configDir = join(homedir(), CONFIG_PATHS.GLOBAL_DIR);
   const credPath = join(homedir(), CONFIG_PATHS.CREDENTIALS);
@@ -86,13 +91,16 @@ export function registerAuthCommands(program: Command): void {
   const auth = program
     .command('auth')
     .description('Authentication and credential management')
-    .addHelpText('after', `
+    .addHelpText(
+      'after',
+      `
 Examples:
   $ ulu auth login --email user@example.com --password mypass
   $ ulu auth whoami
   $ ulu auth api-keys create --name "CI key"
   $ ulu auth sessions list
-`);
+`,
+    );
 
   // ulu auth login
   auth
@@ -115,18 +123,29 @@ Examples:
       }
       if (!email || !password) {
         console.error('Error: Both email and password are required');
-        console.error('Usage: ulu auth login --email <email> --password <password>');
+        console.error(
+          'Usage: ulu auth login --email <email> --password <password>',
+        );
         process.exit(1);
       }
 
       try {
         const result = await withSpinner(
           ctx,
-          { start: 'Logging in...', success: 'Login successful', failure: 'Login failed' },
+          {
+            start: 'Logging in...',
+            success: 'Login successful',
+            failure: 'Login failed',
+          },
           async () => {
-            const client = new OpsClient({ baseUrl: ctx.baseUrl, debug: ctx.debug, email, password });
+            const client = new OpsClient({
+              baseUrl: ctx.baseUrl,
+              debug: ctx.debug,
+              email,
+              password,
+            });
             return client.login(email!, password!);
-          }
+          },
         );
 
         // Save credentials
@@ -139,11 +158,12 @@ Examples:
             email,
           });
         } catch (saveError) {
-          const msg = saveError instanceof Error ? saveError.message : String(saveError);
+          const msg =
+            saveError instanceof Error ? saveError.message : String(saveError);
           if (msg.includes('EACCES') || msg.includes('permission denied')) {
             exitWithError(
               `Cannot save credentials: permission denied.\n` +
-                'Check file permissions on ~/.uluops/credentials.json'
+                'Check file permissions on ~/.uluops/credentials.json',
             );
           }
           exitWithError(`Failed to save credentials: ${msg}`);
@@ -157,9 +177,14 @@ Examples:
         }
       } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
-        if (message.includes('No credentials configured') || message.includes('credentials')) {
+        if (
+          message.includes('No credentials configured') ||
+          message.includes('credentials')
+        ) {
           console.error('Error: Invalid email or password.');
-          console.error('\nHint: Check your email and password, then try again.');
+          console.error(
+            '\nHint: Check your email and password, then try again.',
+          );
           process.exit(1);
         }
         handleOpsError(error, ctx);
@@ -185,19 +210,30 @@ Examples:
           const stored = JSON.parse(readFileSync(credPath, 'utf-8'));
           const creds = stored[profile];
           if (creds) {
-            const { loadConfig: loadOpsConfig } = await import('@uluops/ops-sdk');
-            const config = loadOpsConfig({ baseUrl: globalOpts.baseUrl, profile, debug: globalOpts.debug });
+            const { loadConfig: loadOpsConfig } = await import(
+              '@uluops/ops-sdk'
+            );
+            const config = loadOpsConfig({
+              baseUrl: globalOpts.baseUrl,
+              profile,
+              debug: globalOpts.debug,
+            });
             const client = new OpsClient({
               apiKey: creds.type === 'api_key' ? creds.apiKey : undefined,
-              sessionToken: creds.type === 'session' ? creds.sessionToken : undefined,
+              sessionToken:
+                creds.type === 'session' ? creds.sessionToken : undefined,
               baseUrl: config.baseUrl,
               debug,
             });
             const spinnerCtx = { json, debug, quiet: false };
             const result = await withSpinner(
               spinnerCtx,
-              { start: 'Logging out...', success: 'Logged out', failure: 'Logout failed' },
-              () => client.logout()
+              {
+                start: 'Logging out...',
+                success: 'Logged out',
+                failure: 'Logout failed',
+              },
+              () => client.logout(),
             );
             sessionsRevoked = result.sessionsRevoked;
           }
@@ -210,7 +246,9 @@ Examples:
       removeCredentials(profile);
 
       if (json) {
-        console.log(JSON.stringify({ success: true, profile, sessionsRevoked }, null, 2));
+        console.log(
+          JSON.stringify({ success: true, profile, sessionsRevoked }, null, 2),
+        );
       } else {
         if (sessionsRevoked > 0) {
           console.log(`Revoked ${sessionsRevoked} server session(s)`);
@@ -230,8 +268,11 @@ Examples:
       try {
         const user = await withSpinner(
           ctx,
-          { start: 'Fetching user info...', failure: 'Failed to fetch user info' },
-          () => ctx.client.auth.getMe()
+          {
+            start: 'Fetching user info...',
+            failure: 'Failed to fetch user info',
+          },
+          () => ctx.client.auth.getMe(),
         );
 
         if (ctx.json) {
@@ -262,11 +303,18 @@ Examples:
       try {
         const result = await withSpinner(
           ctx,
-          { start: 'Registering...', success: 'Registration successful', failure: 'Registration failed' },
+          {
+            start: 'Registering...',
+            success: 'Registration successful',
+            failure: 'Registration failed',
+          },
           async () => {
             const client = new OpsClient({ baseUrl: ctx.baseUrl });
-            return client.auth.register({ email: options.email, password: options.password });
-          }
+            return client.auth.register({
+              email: options.email,
+              password: options.password,
+            });
+          },
         );
 
         if (ctx.json) {
@@ -292,11 +340,15 @@ Examples:
       try {
         const result = await withSpinner(
           ctx,
-          { start: 'Sending reset email...', success: 'Reset email sent', failure: 'Failed to send reset email' },
+          {
+            start: 'Sending reset email...',
+            success: 'Reset email sent',
+            failure: 'Failed to send reset email',
+          },
           async () => {
             const client = new OpsClient({ baseUrl: ctx.baseUrl });
             return client.auth.forgotPassword(options.email);
-          }
+          },
         );
 
         if (ctx.json) {
@@ -322,11 +374,18 @@ Examples:
       try {
         const result = await withSpinner(
           ctx,
-          { start: 'Resetting password...', success: 'Password reset', failure: 'Failed to reset password' },
+          {
+            start: 'Resetting password...',
+            success: 'Password reset',
+            failure: 'Failed to reset password',
+          },
           async () => {
             const client = new OpsClient({ baseUrl: ctx.baseUrl });
-            return client.auth.resetPassword({ token: options.token, password: options.password });
-          }
+            return client.auth.resetPassword({
+              token: options.token,
+              password: options.password,
+            });
+          },
         );
 
         if (ctx.json) {
@@ -352,11 +411,16 @@ Examples:
       try {
         const result = await withSpinner(
           ctx,
-          { start: 'Changing password...', success: 'Password changed', failure: 'Failed to change password' },
-          () => ctx.client.auth.changePassword({
-            currentPassword: options.current,
-            newPassword: options.newPassword,
-          })
+          {
+            start: 'Changing password...',
+            success: 'Password changed',
+            failure: 'Failed to change password',
+          },
+          () =>
+            ctx.client.auth.changePassword({
+              currentPassword: options.current,
+              newPassword: options.newPassword,
+            }),
         );
 
         if (ctx.json) {
@@ -381,7 +445,7 @@ Examples:
         const data = await withSpinner(
           ctx,
           { start: 'Fetching profile...', failure: 'Failed to fetch profile' },
-          () => ctx.client.auth.getProfile()
+          () => ctx.client.auth.getProfile(),
         );
 
         if (ctx.json) {
@@ -429,8 +493,12 @@ Examples:
       try {
         const data = await withSpinner(
           ctx,
-          { start: 'Updating profile...', success: 'Profile updated', failure: 'Failed to update profile' },
-          () => ctx.client.auth.updateProfile(input)
+          {
+            start: 'Updating profile...',
+            success: 'Profile updated',
+            failure: 'Failed to update profile',
+          },
+          () => ctx.client.auth.updateProfile(input),
         );
 
         if (ctx.json) {
@@ -447,11 +515,14 @@ Examples:
   const authSessions = auth
     .command('sessions')
     .description('Manage your sessions')
-    .addHelpText('after', `
+    .addHelpText(
+      'after',
+      `
 Examples:
   $ ulu auth sessions list
   $ ulu auth sessions revoke abc12345
-`);
+`,
+    );
 
   // ulu auth sessions list
   authSessions
@@ -464,8 +535,11 @@ Examples:
       try {
         const sessions = await withSpinner(
           ctx,
-          { start: 'Fetching sessions...', failure: 'Failed to fetch sessions' },
-          () => ctx.client.auth.listSessions()
+          {
+            start: 'Fetching sessions...',
+            failure: 'Failed to fetch sessions',
+          },
+          () => ctx.client.auth.listSessions(),
         );
 
         if (ctx.json) {
@@ -475,7 +549,9 @@ Examples:
         } else {
           console.log(`Active sessions: ${sessions.length}\n`);
           for (const s of sessions) {
-            console.log(`  ${s.id.slice(0, 8)}  ${s.ipAddress ?? '-'}  ${s.createdAt}`);
+            console.log(
+              `  ${s.id.slice(0, 8)}  ${s.ipAddress ?? '-'}  ${s.createdAt}`,
+            );
           }
         }
       } catch (error) {
@@ -494,8 +570,12 @@ Examples:
       try {
         await withSpinner(
           ctx,
-          { start: 'Revoking session...', success: 'Session revoked', failure: 'Failed to revoke session' },
-          () => ctx.client.auth.revokeSession(sessionId)
+          {
+            start: 'Revoking session...',
+            success: 'Session revoked',
+            failure: 'Failed to revoke session',
+          },
+          () => ctx.client.auth.revokeSession(sessionId),
         );
 
         if (ctx.json) {
@@ -512,12 +592,15 @@ Examples:
   const apiKeys = auth
     .command('api-keys')
     .description('Manage API keys')
-    .addHelpText('after', `
+    .addHelpText(
+      'after',
+      `
 Examples:
   $ ulu auth api-keys list
   $ ulu auth api-keys create --name "CI pipeline"
   $ ulu auth api-keys revoke abc12345
-`);
+`,
+    );
 
   // ulu auth api-keys list
   apiKeys
@@ -530,8 +613,11 @@ Examples:
       try {
         const keys = await withSpinner(
           ctx,
-          { start: 'Fetching API keys...', failure: 'Failed to fetch API keys' },
-          () => ctx.client.auth.listApiKeys()
+          {
+            start: 'Fetching API keys...',
+            failure: 'Failed to fetch API keys',
+          },
+          () => ctx.client.auth.listApiKeys(),
         );
 
         if (ctx.json) {
@@ -559,18 +645,25 @@ Examples:
       try {
         const result = await withSpinner(
           ctx,
-          { start: 'Creating API key...', success: 'API key created', failure: 'Failed to create API key' },
-          () => ctx.client.auth.createApiKey({
-            name: options.name,
-            expiresAt: options.expires,
-          })
+          {
+            start: 'Creating API key...',
+            success: 'API key created',
+            failure: 'Failed to create API key',
+          },
+          () =>
+            ctx.client.auth.createApiKey({
+              name: options.name,
+              expiresAt: options.expires,
+            }),
         );
 
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
           console.log('\n' + '='.repeat(60));
-          console.log('IMPORTANT: Save this key now - it will not be shown again!');
+          console.log(
+            'IMPORTANT: Save this key now - it will not be shown again!',
+          );
           console.log('='.repeat(60));
           console.log(`\nAPI Key: ${result.key}`);
           console.log(`Key ID: ${result.apiKey.id}`);
@@ -593,8 +686,12 @@ Examples:
       try {
         await withSpinner(
           ctx,
-          { start: 'Revoking API key...', success: 'API key revoked', failure: 'Failed to revoke API key' },
-          () => ctx.client.auth.revokeApiKey(keyId)
+          {
+            start: 'Revoking API key...',
+            success: 'API key revoked',
+            failure: 'Failed to revoke API key',
+          },
+          () => ctx.client.auth.revokeApiKey(keyId),
         );
 
         if (ctx.json) {

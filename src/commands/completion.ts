@@ -1,10 +1,17 @@
-import { Command } from 'commander';
+import type { Command } from 'commander';
 
 /**
  * Walk a Commander program tree and extract all command paths
  */
-function getCommandTree(cmd: Command, prefix = ''): Array<{ path: string; description: string; subcommands: string[] }> {
-  const results: Array<{ path: string; description: string; subcommands: string[] }> = [];
+function getCommandTree(
+  cmd: Command,
+  prefix = '',
+): Array<{ path: string; description: string; subcommands: string[] }> {
+  const results: Array<{
+    path: string;
+    description: string;
+    subcommands: string[];
+  }> = [];
 
   for (const sub of cmd.commands) {
     const fullPath = prefix ? `${prefix} ${sub.name()}` : sub.name();
@@ -34,7 +41,9 @@ function generateBashCompletion(program: Command): string {
   const cases: string[] = [];
   for (const entry of tree) {
     if (entry.subcommands.length > 0) {
-      cases.push(`    ${entry.path}) COMPREPLY=($(compgen -W "${entry.subcommands.join(' ')}" -- "$cur")) ;;`);
+      cases.push(
+        `    ${entry.path}) COMPREPLY=($(compgen -W "${entry.subcommands.join(' ')}" -- "$cur")) ;;`,
+      );
     }
   }
 
@@ -72,7 +81,9 @@ complete -o default -F _ulu_completions ulu
  */
 function generateZshCompletion(program: Command): string {
   const tree = getCommandTree(program);
-  const topLevel = program.commands.map((c) => `'${c.name()}:${(c.description() || '').replace(/'/g, "''")}'`).join('\n      ');
+  const topLevel = program.commands
+    .map((c) => `'${c.name()}:${(c.description() || '').replace(/'/g, "''")}'`)
+    .join('\n      ');
 
   // Build subcmd functions
   const functions: string[] = [];
@@ -81,12 +92,17 @@ function generateZshCompletion(program: Command): string {
       const fnName = `_ulu_${entry.path.replace(/ /g, '_')}`;
       const subTree = tree.filter((t) => {
         const parent = entry.path;
-        return t.path.startsWith(parent + ' ') && !t.path.slice(parent.length + 1).includes(' ');
+        return (
+          t.path.startsWith(parent + ' ') &&
+          !t.path.slice(parent.length + 1).includes(' ')
+        );
       });
-      const subArgs = subTree.map((s) => {
-        const name = s.path.split(' ').pop() ?? s.path;
-        return `'${name}:${s.description.replace(/'/g, "''")}'`;
-      }).join('\n      ');
+      const subArgs = subTree
+        .map((s) => {
+          const name = s.path.split(' ').pop() ?? s.path;
+          return `'${name}:${s.description.replace(/'/g, "''")}'`;
+        })
+        .join('\n      ');
 
       functions.push(`${fnName}() {
   local -a subcmds
@@ -122,10 +138,13 @@ _ulu() {
     cmd) _describe 'command' subcmds ;;
     args)
       case "\${words[1]}" in
-${program.commands.map((c) => {
+${program.commands
+  .map((c) => {
     const subs = c.commands.map((s: Command) => s.name()).join(' ');
     return subs ? `        ${c.name()}) compadd ${subs} ;;` : '';
-  }).filter(Boolean).join('\n')}
+  })
+  .filter(Boolean)
+  .join('\n')}
         *) _default ;;
       esac
     ;;
@@ -152,7 +171,9 @@ function generateFishCompletion(program: Command): string {
   // Top-level commands
   for (const cmd of program.commands) {
     const desc = (cmd.description() || '').replace(/'/g, "\\'");
-    lines.push(`complete -c ulu -n '__fish_use_subcommand' -a '${cmd.name()}' -d '${desc}'`);
+    lines.push(
+      `complete -c ulu -n '__fish_use_subcommand' -a '${cmd.name()}' -d '${desc}'`,
+    );
   }
   lines.push('');
 
@@ -160,13 +181,15 @@ function generateFishCompletion(program: Command): string {
   for (const cmd of program.commands) {
     for (const sub of cmd.commands) {
       const desc = (sub.description() || '').replace(/'/g, "\\'");
-      lines.push(`complete -c ulu -n '__fish_seen_subcommand_from ${cmd.name()}' -a '${sub.name()}' -d '${desc}'`);
+      lines.push(
+        `complete -c ulu -n '__fish_seen_subcommand_from ${cmd.name()}' -a '${sub.name()}' -d '${desc}'`,
+      );
     }
   }
 
   // Global options
   lines.push('');
-  lines.push("# Global options");
+  lines.push('# Global options');
   lines.push("complete -c ulu -l api-key -d 'API key'");
   lines.push("complete -c ulu -l profile -d 'Config profile'");
   lines.push("complete -c ulu -l base-url -d 'API base URL'");
@@ -185,12 +208,15 @@ export function registerCompletionCommands(program: Command): void {
   const completion = program
     .command('completion')
     .description('Generate shell completion scripts')
-    .addHelpText('after', `
+    .addHelpText(
+      'after',
+      `
 Setup:
   bash:  eval "$(ulu completion bash)"     # add to ~/.bashrc
   zsh:   eval "$(ulu completion zsh)"      # add to ~/.zshrc
   fish:  ulu completion fish > ~/.config/fish/completions/ulu.fish
-`);
+`,
+    );
 
   completion
     .command('bash')

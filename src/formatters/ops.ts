@@ -1,9 +1,9 @@
 /**
  * Formatters for ops-sdk types (projects, runs, issues)
  */
-import type { Project, Run, Issue, PublicApiKey } from '@uluops/ops-sdk';
-import { formatTable, formatKeyValue, type Column } from './table.js';
+import type { Issue, Project, PublicApiKey, Run } from '@uluops/ops-sdk';
 import { formatDisplayDate, truncate } from '../utils.js';
+import { type Column, formatKeyValue, formatTable } from './table.js';
 
 /**
  * Format a list of projects as table
@@ -12,7 +12,11 @@ export function formatProjects(projects: Project[]): string {
   const columns: Column<Project>[] = [
     { header: 'NAME', accessor: 'name', width: 30 },
     { header: 'ID', accessor: (p) => p.id.slice(0, 8), width: 10 },
-    { header: 'CREATED', accessor: (p) => formatDisplayDate(p.createdAt), width: 20 },
+    {
+      header: 'CREATED',
+      accessor: (p) => formatDisplayDate(p.createdAt),
+      width: 20,
+    },
   ];
   return formatTable(projects, columns);
 }
@@ -33,7 +37,10 @@ export function formatProject(project: Project): string {
  * Format project summary
  */
 export function formatProjectSummary(response: unknown): string {
-  const data = response as { project?: Project; stats?: Record<string, unknown> };
+  const data = response as {
+    project?: Project;
+    stats?: Record<string, unknown>;
+  };
   const stats = (data.stats ?? data) as Record<string, unknown>;
   const project = data.project;
 
@@ -54,7 +61,9 @@ export function formatProjectSummary(response: unknown): string {
   );
 
   if (stats.latestRunDate) {
-    lines.push(`  Latest: #${stats.latestRunNumber} on ${formatDisplayDate(stats.latestRunDate as string)}`);
+    lines.push(
+      `  Latest: #${stats.latestRunNumber} on ${formatDisplayDate(stats.latestRunDate as string)}`,
+    );
   }
 
   return lines.join('\n');
@@ -63,13 +72,39 @@ export function formatProjectSummary(response: unknown): string {
 /**
  * Format a list of runs as table
  */
-export function formatRuns(runs: Array<{ runNumber: number; workflowType: string; averageScore?: number | null; allGatesPassed: boolean; createdAt: string }>): string {
-  const columns: Column<typeof runs[number]>[] = [
-    { header: '#', accessor: (r) => String(r.runNumber), width: 5, align: 'right' },
+export function formatRuns(
+  runs: Array<{
+    runNumber: number;
+    workflowType: string;
+    averageScore?: number | null;
+    allGatesPassed: boolean;
+    createdAt: string;
+  }>,
+): string {
+  const columns: Column<(typeof runs)[number]>[] = [
+    {
+      header: '#',
+      accessor: (r) => String(r.runNumber),
+      width: 5,
+      align: 'right',
+    },
     { header: 'WORKFLOW', accessor: 'workflowType', width: 20 },
-    { header: 'SCORE', accessor: (r) => r.averageScore?.toFixed(1) ?? '-', width: 7, align: 'right' },
-    { header: 'PASSED', accessor: (r) => r.allGatesPassed ? 'Yes' : 'No', width: 7 },
-    { header: 'CREATED', accessor: (r) => formatDisplayDate(r.createdAt), width: 20 },
+    {
+      header: 'SCORE',
+      accessor: (r) => r.averageScore?.toFixed(1) ?? '-',
+      width: 7,
+      align: 'right',
+    },
+    {
+      header: 'PASSED',
+      accessor: (r) => (r.allGatesPassed ? 'Yes' : 'No'),
+      width: 7,
+    },
+    {
+      header: 'CREATED',
+      accessor: (r) => formatDisplayDate(r.createdAt),
+      width: 20,
+    },
   ];
   return formatTable(runs, columns);
 }
@@ -129,8 +164,17 @@ export function formatApiKeys(keys: PublicApiKey[]): string {
   const columns: Column<PublicApiKey>[] = [
     { header: 'ID', accessor: (k) => k.id.slice(0, 8), width: 10 },
     { header: 'NAME', accessor: (k) => k.name ?? '(unnamed)', width: 20 },
-    { header: 'LAST USED', accessor: (k) => k.lastUsedAt ? formatDisplayDate(k.lastUsedAt) : 'Never', width: 20 },
-    { header: 'EXPIRES', accessor: (k) => k.expiresAt ? formatDisplayDate(k.expiresAt) : 'Never', width: 20 },
+    {
+      header: 'LAST USED',
+      accessor: (k) =>
+        k.lastUsedAt ? formatDisplayDate(k.lastUsedAt) : 'Never',
+      width: 20,
+    },
+    {
+      header: 'EXPIRES',
+      accessor: (k) => (k.expiresAt ? formatDisplayDate(k.expiresAt) : 'Never'),
+      width: 20,
+    },
   ];
   return formatTable(keys, columns);
 }

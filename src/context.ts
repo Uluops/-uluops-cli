@@ -1,25 +1,29 @@
-import { OpsClient, loadConfig as loadOpsConfig, OpsApiError } from '@uluops/ops-sdk';
-import { RegistryClient } from '@uluops/registry-sdk';
-import { RegistryApiError } from '@uluops/registry-sdk/errors';
-import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
+import { existsSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
+import type { UluOpsConfig } from '@uluops/core';
 import {
-  UluOpsClient,
-  UluOpsError,
   ConfigurationError,
   ExecutionError,
   ModelNotFoundError,
-  PreflightError,
   ParseError,
-  SubmissionError,
-  WorkflowError,
   PipelineError,
+  PreflightError,
   SdkApiError,
+  SubmissionError,
   SubscriptionRequiredError,
+  UluOpsClient,
+  UluOpsError,
+  WorkflowError,
 } from '@uluops/core';
-import type { UluOpsConfig } from '@uluops/core';
-import { existsSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
-import { homedir } from 'node:os';
+import {
+  loadConfig as loadOpsConfig,
+  OpsApiError,
+  OpsClient,
+} from '@uluops/ops-sdk';
+import { RegistryClient } from '@uluops/registry-sdk';
+import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
+import { RegistryApiError } from '@uluops/registry-sdk/errors';
 import { exitWithError, parseIntOption } from './utils.js';
 
 /**
@@ -104,13 +108,13 @@ function requireCredentials(hasCredentials: unknown, profile: string): void {
   if (isSessionExpired(profile)) {
     exitWithError(
       `Session expired for profile "${profile}".\n` +
-        'Run "ulu auth login" to re-authenticate.'
+        'Run "ulu auth login" to re-authenticate.',
     );
   }
   exitWithError(
     'No credentials found.\n' +
       'Set ULUOPS_API_KEY environment variable, use --api-key flag,\n' +
-      'or run "ulu auth login" to authenticate.'
+      'or run "ulu auth login" to authenticate.',
   );
 }
 
@@ -135,7 +139,9 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
 
   requireCredentials(hasCredentials, options.profile ?? 'default');
 
-  const timeout = options.timeout ? parseIntOption(options.timeout, '--timeout') : DEFAULT_TIMEOUT_MS;
+  const timeout = options.timeout
+    ? parseIntOption(options.timeout, '--timeout')
+    : DEFAULT_TIMEOUT_MS;
 
   let client: OpsClient;
   try {
@@ -163,7 +169,9 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
 /**
  * Create CLI context for registry commands
  */
-export function createRegistryContext(options: GlobalOptions): RegistryCliContext {
+export function createRegistryContext(
+  options: GlobalOptions,
+): RegistryCliContext {
   // Load ops config to get authBaseUrl (ops API URL for login/refresh)
   const opsConfig = loadOpsConfig({
     baseUrl: options.baseUrl,
@@ -186,7 +194,9 @@ export function createRegistryContext(options: GlobalOptions): RegistryCliContex
 
   requireCredentials(hasCredentials, options.profile ?? 'default');
 
-  const timeout = options.timeout ? parseIntOption(options.timeout, '--timeout') : DEFAULT_TIMEOUT_MS;
+  const timeout = options.timeout
+    ? parseIntOption(options.timeout, '--timeout')
+    : DEFAULT_TIMEOUT_MS;
 
   let client: RegistryClient;
   try {
@@ -215,7 +225,12 @@ export function createRegistryContext(options: GlobalOptions): RegistryCliContex
 /**
  * Create context without requiring credentials (for commands like login)
  */
-export function createUnauthenticatedContext(options: GlobalOptions): { baseUrl: string; json: boolean; debug: boolean; quiet: boolean } {
+export function createUnauthenticatedContext(options: GlobalOptions): {
+  baseUrl: string;
+  json: boolean;
+  debug: boolean;
+  quiet: boolean;
+} {
   const config = loadOpsConfig({
     baseUrl: options.baseUrl,
     profile: options.profile,
@@ -233,7 +248,10 @@ export function createUnauthenticatedContext(options: GlobalOptions): { baseUrl:
 /**
  * Create CLI context for core SDK commands (exec)
  */
-export function createCoreContext(options: GlobalOptions & CoreExecOptions, modelOverride?: string): CoreCliContext {
+export function createCoreContext(
+  options: GlobalOptions & CoreExecOptions,
+  modelOverride?: string,
+): CoreCliContext {
   // Resolve API key from global options or env
   const opsConfig = loadOpsConfig({
     apiKey: options.apiKey,
@@ -251,7 +269,9 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions, mode
   }
 
   const thinkingBudgetEnv = process.env['ULUOPS_THINKING_BUDGET'];
-  const thinkingBudget = thinkingBudgetEnv ? parseInt(thinkingBudgetEnv, 10) : undefined;
+  const thinkingBudget = thinkingBudgetEnv
+    ? parseInt(thinkingBudgetEnv, 10)
+    : undefined;
   const config: UluOpsConfig = {
     apiKey,
     localDefinitions: options.localDefinitions,
@@ -259,7 +279,9 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions, mode
     defaultProject: options.project,
     submissionUrl: process.env['ULUOPS_SUBMISSION_URL'] ?? opsConfig.baseUrl,
     debug: options.debug,
-    ...(thinkingBudget !== undefined && !Number.isNaN(thinkingBudget) ? { defaultThinkingBudget: thinkingBudget } : {}),
+    ...(thinkingBudget !== undefined && !Number.isNaN(thinkingBudget)
+      ? { defaultThinkingBudget: thinkingBudget }
+      : {}),
   };
 
   if (modelOverride) {
@@ -270,7 +292,9 @@ export function createCoreContext(options: GlobalOptions & CoreExecOptions, mode
     config.registryUrl = options.registryUrl;
   }
 
-  const timeout = options.timeout ? parseIntOption(options.timeout, '--timeout') : undefined;
+  const timeout = options.timeout
+    ? parseIntOption(options.timeout, '--timeout')
+    : undefined;
   if (timeout !== undefined) {
     config.timeout = timeout;
   }
@@ -316,7 +340,7 @@ interface ErrorHintOverrides {
 function printApiErrorDetails(
   error: ApiErrorLike,
   ctx: { json: boolean; debug: boolean },
-  hints: ErrorHintOverrides = {}
+  hints: ErrorHintOverrides = {},
 ): void {
   if (ctx.json) {
     console.error(JSON.stringify(error.toJSON(), null, 2));
@@ -325,20 +349,36 @@ function printApiErrorDetails(
 
     if (error.code === 'UNAUTHORIZED' || error.statusCode === 401) {
       console.error('\nHint: Your credentials may be invalid or expired.');
-      console.error(hints.unauthorized ?? 'Run "ulu auth login" or check your ULUOPS_API_KEY.');
+      console.error(
+        hints.unauthorized ??
+          'Run "ulu auth login" or check your ULUOPS_API_KEY.',
+      );
     } else if (error.code === 'NOT_FOUND' || error.statusCode === 404) {
-      console.error(`\nHint: ${hints.notFound ?? 'The resource was not found. Check the name or ID.'}`);
+      console.error(
+        `\nHint: ${hints.notFound ?? 'The resource was not found. Check the name or ID.'}`,
+      );
     } else if (error.code === 'VALIDATION_ERROR' || error.statusCode === 400) {
-      console.error(`\nHint: ${hints.validation ?? 'Invalid input. Check the command arguments.'}`);
-    } else if (error.code === 'SUBSCRIPTION_REQUIRED' || error.statusCode === 402) {
+      console.error(
+        `\nHint: ${hints.validation ?? 'Invalid input. Check the command arguments.'}`,
+      );
+    } else if (
+      error.code === 'SUBSCRIPTION_REQUIRED' ||
+      error.statusCode === 402
+    ) {
       const details = error.details as Record<string, unknown> | undefined;
       const requiredTier = details?.requiredTier as string | undefined;
       const upgradeUrl = details?.upgradeUrl as string | undefined;
       const sep = upgradeUrl?.includes('?') ? '&' : '?';
-      const trackedUrl = upgradeUrl ? `${upgradeUrl}${sep}source=cli` : undefined;
+      const trackedUrl = upgradeUrl
+        ? `${upgradeUrl}${sep}source=cli`
+        : undefined;
       console.error('');
       console.error('┌─────────────────────────────────────────────────┐');
-      console.error(`│  Subscription required${requiredTier ? `: ${requiredTier} tier or higher` : ''}`.padEnd(50) + '│');
+      console.error(
+        `│  Subscription required${requiredTier ? `: ${requiredTier} tier or higher` : ''}`.padEnd(
+          50,
+        ) + '│',
+      );
       console.error('│                                                 │');
       if (trackedUrl) {
         console.error(`│  Upgrade: ${trackedUrl}`.padEnd(50) + '│');
@@ -346,12 +386,19 @@ function printApiErrorDetails(
       console.error('└─────────────────────────────────────────────────┘');
     } else if (error.code === 'RATE_LIMITED' || error.statusCode === 429) {
       console.error('\nHint: Rate limited. Wait a moment and try again.');
-    } else if (error.code === 'SERVICE_UNAVAILABLE' || error.statusCode === 503) {
+    } else if (
+      error.code === 'SERVICE_UNAVAILABLE' ||
+      error.statusCode === 503
+    ) {
       const retryAfter = (error.details as Record<string, unknown>)?.retryAfter;
       if (retryAfter) {
-        console.error(`\nHint: Service unavailable. Try again in ${retryAfter} seconds.`);
+        console.error(
+          `\nHint: Service unavailable. Try again in ${retryAfter} seconds.`,
+        );
       } else {
-        console.error('\nHint: Service unavailable. Try again in a few moments.');
+        console.error(
+          '\nHint: Service unavailable. Try again in a few moments.',
+        );
       }
     }
 
@@ -368,7 +415,10 @@ function printApiErrorDetails(
 /**
  * Handle ops errors consistently
  */
-export function handleOpsError(error: unknown, ctx: Pick<OpsCliContext, 'json' | 'debug'>): never {
+export function handleOpsError(
+  error: unknown,
+  ctx: Pick<OpsCliContext, 'json' | 'debug'>,
+): never {
   if (error instanceof OpsApiError) {
     printApiErrorDetails(error, ctx);
     process.exit(1);
@@ -380,11 +430,15 @@ export function handleOpsError(error: unknown, ctx: Pick<OpsCliContext, 'json' |
 /**
  * Handle registry errors consistently
  */
-export function handleRegistryError(error: unknown, ctx: Pick<RegistryCliContext, 'json' | 'debug'>): never {
+export function handleRegistryError(
+  error: unknown,
+  ctx: Pick<RegistryCliContext, 'json' | 'debug'>,
+): never {
   if (error instanceof RegistryApiError) {
     printApiErrorDetails(error, ctx, {
       unauthorized: 'Check your ULUOPS_API_KEY or session token.',
-      notFound: 'The resource was not found. Check the type, name, and version.',
+      notFound:
+        'The resource was not found. Check the type, name, and version.',
       validation: 'Invalid input. Check the command arguments or YAML file.',
     });
     process.exit(1);
@@ -396,7 +450,10 @@ export function handleRegistryError(error: unknown, ctx: Pick<RegistryCliContext
 /**
  * Handle core SDK errors consistently
  */
-export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json' | 'debug'>): never {
+export function handleCoreError(
+  error: unknown,
+  ctx: Pick<CoreCliContext, 'json' | 'debug'>,
+): never {
   if (error instanceof SubscriptionRequiredError) {
     if (ctx.json) {
       console.error(JSON.stringify(error.toJSON(), null, 2));
@@ -405,10 +462,16 @@ export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json'
         ? `"${error.definition.displayName ?? error.definition.name}"`
         : 'this definition';
       const trackedUrl = error.trackedUpgradeUrl('cli');
-      console.error(`Error: ${defLabel} requires ${error.requiredTier} tier or higher (current: ${error.currentTier})`);
+      console.error(
+        `Error: ${defLabel} requires ${error.requiredTier} tier or higher (current: ${error.currentTier})`,
+      );
       console.error('');
       console.error('┌─────────────────────────────────────────────────┐');
-      console.error(`│  Upgrade to ${error.requiredTier} to access this content`.padEnd(50) + '│');
+      console.error(
+        `│  Upgrade to ${error.requiredTier} to access this content`.padEnd(
+          50,
+        ) + '│',
+      );
       console.error('│                                                 │');
       if (trackedUrl) {
         console.error(`│  ${trackedUrl}`.padEnd(50) + '│');
@@ -419,32 +482,34 @@ export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json'
   }
 
   if (error instanceof SdkApiError) {
-    printApiErrorDetails(
-      error as ApiErrorLike,
-      ctx,
-      {
-        unauthorized: 'Check your ULUOPS_API_KEY environment variable.',
-        notFound: 'The definition was not found. Check the name and version.',
-        validation: 'Invalid request. Check the command arguments.',
-      },
-    );
+    printApiErrorDetails(error as ApiErrorLike, ctx, {
+      unauthorized: 'Check your ULUOPS_API_KEY environment variable.',
+      notFound: 'The definition was not found. Check the name and version.',
+      validation: 'Invalid request. Check the command arguments.',
+    });
     process.exit(1);
   }
 
   if (error instanceof ConfigurationError) {
     console.error(`Error: ${error.message}`);
-    console.error('\nHint: Check ULUOPS_API_KEY and ANTHROPIC_API_KEY environment variables.');
+    console.error(
+      '\nHint: Check ULUOPS_API_KEY and ANTHROPIC_API_KEY environment variables.',
+    );
     process.exit(1);
   }
 
   if (error instanceof ModelNotFoundError) {
     console.error(`Error: ${error.message}`);
-    console.error('\nHint: Use --model with a known alias (haiku, sonnet, opus) or provider:modelId format.');
+    console.error(
+      '\nHint: Use --model with a known alias (haiku, sonnet, opus) or provider:modelId format.',
+    );
     process.exit(1);
   }
 
   if (error instanceof PreflightError) {
-    console.error(`Error: Pre-flight check "${error.check}" failed: ${error.message}`);
+    console.error(
+      `Error: Pre-flight check "${error.check}" failed: ${error.message}`,
+    );
     if (ctx.debug && error.details) {
       console.error('\nDetails:', JSON.stringify(error.details, null, 2));
     }
@@ -456,7 +521,9 @@ export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json'
     if (ctx.debug) {
       console.error('\nContent preview:', error.contentPreview);
     } else {
-      console.error('\nHint: Run with --debug to see the raw output that failed to parse.');
+      console.error(
+        '\nHint: Run with --debug to see the raw output that failed to parse.',
+      );
     }
     process.exit(1);
   }
@@ -471,9 +538,14 @@ export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json'
 
   if (error instanceof ExecutionError) {
     console.error(`Error: ${error.message}`);
-    console.error('\nHint: Check that the target path exists and the agent definition is valid.');
+    console.error(
+      '\nHint: Check that the target path exists and the agent definition is valid.',
+    );
     if (ctx.debug && error.partialResult) {
-      console.error('\nPartial result:', JSON.stringify(error.partialResult, null, 2));
+      console.error(
+        '\nPartial result:',
+        JSON.stringify(error.partialResult, null, 2),
+      );
     }
     process.exit(1);
   }
@@ -481,7 +553,10 @@ export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json'
   if (error instanceof WorkflowError) {
     console.error(`Error: ${error.message}`);
     if (ctx.debug && error.context?.partialResult) {
-      console.error('\nPartial result:', JSON.stringify(error.context.partialResult, null, 2));
+      console.error(
+        '\nPartial result:',
+        JSON.stringify(error.context.partialResult, null, 2),
+      );
     }
     process.exit(1);
   }
@@ -502,7 +577,10 @@ export function handleCoreError(error: unknown, ctx: Pick<CoreCliContext, 'json'
 /**
  * Handle generic/network errors
  */
-function handleGenericError(error: unknown, ctx: { json: boolean; debug: boolean }): never {
+function handleGenericError(
+  error: unknown,
+  ctx: { json: boolean; debug: boolean },
+): never {
   if (ctx.json) {
     console.error(JSON.stringify({ error: String(error) }));
   } else {
@@ -510,7 +588,9 @@ function handleGenericError(error: unknown, ctx: { json: boolean; debug: boolean
     console.error(`Error: ${message}`);
 
     if (message.includes('ECONNREFUSED') || message.includes('network')) {
-      console.error('\nHint: Cannot connect to the API. Check if the server is running.');
+      console.error(
+        '\nHint: Cannot connect to the API. Check if the server is running.',
+      );
     }
 
     if (ctx.debug && error instanceof Error && error.stack) {

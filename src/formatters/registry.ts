@@ -2,18 +2,18 @@
  * Formatters for registry-sdk types (definitions, models)
  */
 import type {
+  AliasResolution,
   Definition,
   DefinitionListItem,
   Model,
   ModelAlias,
-  AliasResolution,
-  VersionListItem,
+  ValidationResult,
   VersionDiff,
   VersionDiffSummary,
-  ValidationResult,
+  VersionListItem,
 } from '@uluops/registry-sdk';
-import { formatTable, formatKeyValue, type Column } from './table.js';
 import { formatDisplayDate, truncate } from '../utils.js';
+import { type Column, formatKeyValue, formatTable } from './table.js';
 
 /**
  * Format a list of definitions as table
@@ -35,26 +35,30 @@ export function formatDefinitions(definitions: DefinitionListItem[]): string {
 export function formatDefinition(def: Definition): string {
   const lines: string[] = [];
 
-  lines.push(formatKeyValue({
-    name: def.name,
-    type: def.type,
-    version: def.version,
-    status: def.status,
-    displayName: def.displayName,
-    description: def.description ? truncate(def.description, 60) : undefined,
-    domain: def.domain,
-    subdomain: def.subdomain,
-    agentType: def.agentType,
-    visibility: def.visibility,
-    tier: def.tier,
-    tags: def.tags?.join(', '),
-    executionCount: def.executionCount,
-    forkCount: def.forkCount,
-    starCount: def.starCount,
-    createdAt: formatDisplayDate(def.createdAt),
-    updatedAt: formatDisplayDate(def.updatedAt),
-    publishedAt: def.publishedAt ? formatDisplayDate(def.publishedAt) : undefined,
-  }));
+  lines.push(
+    formatKeyValue({
+      name: def.name,
+      type: def.type,
+      version: def.version,
+      status: def.status,
+      displayName: def.displayName,
+      description: def.description ? truncate(def.description, 60) : undefined,
+      domain: def.domain,
+      subdomain: def.subdomain,
+      agentType: def.agentType,
+      visibility: def.visibility,
+      tier: def.tier,
+      tags: def.tags?.join(', '),
+      executionCount: def.executionCount,
+      forkCount: def.forkCount,
+      starCount: def.starCount,
+      createdAt: formatDisplayDate(def.createdAt),
+      updatedAt: formatDisplayDate(def.updatedAt),
+      publishedAt: def.publishedAt
+        ? formatDisplayDate(def.publishedAt)
+        : undefined,
+    }),
+  );
 
   // Provenance
   if (def.provenance) {
@@ -66,7 +70,9 @@ export function formatDefinition(def: Definition): string {
         const name = c.name || c.id;
         const role = c.role;
         const type = c.type;
-        lines.push(`  ${type === 'agent' ? '\u{1F916}' : '\u{1F464}'} ${name} (${role})`);
+        lines.push(
+          `  ${type === 'agent' ? '\u{1F916}' : '\u{1F464}'} ${name} (${role})`,
+        );
       }
     }
     if (prov.dialecticRounds !== undefined && prov.dialecticRounds > 0) {
@@ -95,8 +101,10 @@ export function formatDefinition(def: Definition): string {
     if (caps?.tools?.length) {
       lines.push(`Tools: ${caps.tools.join(', ')}`);
     }
-    if (caps?.maxTokens !== undefined) lines.push(`Max tokens: ${String(caps.maxTokens)}`);
-    if (caps?.temperature !== undefined) lines.push(`Temperature: ${String(caps.temperature)}`);
+    if (caps?.maxTokens !== undefined)
+      lines.push(`Max tokens: ${String(caps.maxTokens)}`);
+    if (caps?.temperature !== undefined)
+      lines.push(`Temperature: ${String(caps.temperature)}`);
 
     // Risk signals
     if (!signals?.length) {
@@ -117,7 +125,9 @@ export function formatDefinition(def: Definition): string {
     const version = profile.sync?.version;
     if (scannedAt) {
       const dateStr = scannedAt.split('T')[0];
-      lines.push(`Last analyzed: ${dateStr}${version ? ` (analyzer v${version})` : ''}`);
+      lines.push(
+        `Last analyzed: ${dateStr}${version ? ` (analyzer v${version})` : ''}`,
+      );
     }
     if (!profile.deep) {
       lines.push('Deep analysis pending.');
@@ -153,7 +163,9 @@ export function formatModel(model: Model): string {
     provider: model.provider,
     modelId: model.modelId,
     displayName: model.displayName,
-    description: model.description ? truncate(model.description, 60) : undefined,
+    description: model.description
+      ? truncate(model.description, 60)
+      : undefined,
     tier: model.tier,
     status: model.status,
     capabilities: capabilities || 'none',
@@ -173,7 +185,11 @@ export function formatAliases(aliases: ModelAlias[]): string {
     { header: 'PROVIDER', accessor: 'provider', width: 12 },
     { header: 'MODEL', accessor: 'modelId', width: 25 },
     { header: 'SCOPE', accessor: 'scope', width: 8 },
-    { header: 'DEPRECATED', accessor: (a: ModelAlias) => a.deprecated ? 'Yes' : 'No', width: 10 },
+    {
+      header: 'DEPRECATED',
+      accessor: (a: ModelAlias) => (a.deprecated ? 'Yes' : 'No'),
+      width: 10,
+    },
   ];
   return formatTable(aliases, columns);
 }
@@ -186,10 +202,7 @@ export function formatAliasResolution(resolution: AliasResolution): string {
     return `Alias "${resolution.alias}" not found`;
   }
 
-  const lines = [
-    `Alias: ${resolution.alias}`,
-    `Target: ${resolution.target}`,
-  ];
+  const lines = [`Alias: ${resolution.alias}`, `Target: ${resolution.target}`];
 
   if (resolution.model) {
     lines.push('', 'Model Details:', formatModel(resolution.model));
@@ -204,11 +217,23 @@ export function formatAliasResolution(resolution: AliasResolution): string {
 export function formatVersions(versions: VersionListItem[]): string {
   const columns: Column<VersionListItem>[] = [
     { header: 'VERSION', accessor: 'version', width: 12 },
-    { header: 'HASH', accessor: (v: VersionListItem) => {
-      return v.hash ? v.hash.replace('sha256:', '').slice(0, 8) : '';
-    }, width: 10 },
-    { header: 'CHANGE', accessor: (v: VersionListItem) => v.changeSummary || '', width: 24 },
-    { header: 'CREATED', accessor: (v: VersionListItem) => formatDisplayDate(v.createdAt), width: 20 },
+    {
+      header: 'HASH',
+      accessor: (v: VersionListItem) => {
+        return v.hash ? v.hash.replace('sha256:', '').slice(0, 8) : '';
+      },
+      width: 10,
+    },
+    {
+      header: 'CHANGE',
+      accessor: (v: VersionListItem) => v.changeSummary || '',
+      width: 24,
+    },
+    {
+      header: 'CREATED',
+      accessor: (v: VersionListItem) => formatDisplayDate(v.createdAt),
+      width: 20,
+    },
   ];
   return formatTable(versions, columns);
 }
@@ -216,11 +241,10 @@ export function formatVersions(versions: VersionListItem[]): string {
 /**
  * Format version diff
  */
-export function formatVersionDiff(diff: VersionDiff | VersionDiffSummary): string {
-  const lines = [
-    `From: ${diff.fromVersion} -> To: ${diff.toVersion}`,
-    '',
-  ];
+export function formatVersionDiff(
+  diff: VersionDiff | VersionDiffSummary,
+): string {
+  const lines = [`From: ${diff.fromVersion} -> To: ${diff.toVersion}`, ''];
 
   if (!diff.hasChanges) {
     lines.push('No changes');
@@ -231,17 +255,20 @@ export function formatVersionDiff(diff: VersionDiff | VersionDiffSummary): strin
   if ('fromYaml' in diff) {
     const fromLines = diff.fromYaml.split('\n');
     const toLines = diff.toYaml.split('\n');
-    const added = toLines.filter(l => !fromLines.includes(l)).length;
-    const removed = fromLines.filter(l => !toLines.includes(l)).length;
+    const added = toLines.filter((l) => !fromLines.includes(l)).length;
+    const removed = fromLines.filter((l) => !toLines.includes(l)).length;
     lines.push('YAML changes:');
     lines.push(`  + ${added} lines added`);
     lines.push(`  - ${removed} lines removed`);
   } else {
     // Summary diff — section-level changes
     lines.push(`Lines: ${diff.fromLineCount} -> ${diff.toLineCount}`);
-    if (diff.sectionsAdded.length > 0) lines.push(`Added: ${diff.sectionsAdded.join(', ')}`);
-    if (diff.sectionsRemoved.length > 0) lines.push(`Removed: ${diff.sectionsRemoved.join(', ')}`);
-    if (diff.sectionsModified.length > 0) lines.push(`Modified: ${diff.sectionsModified.join(', ')}`);
+    if (diff.sectionsAdded.length > 0)
+      lines.push(`Added: ${diff.sectionsAdded.join(', ')}`);
+    if (diff.sectionsRemoved.length > 0)
+      lines.push(`Removed: ${diff.sectionsRemoved.join(', ')}`);
+    if (diff.sectionsModified.length > 0)
+      lines.push(`Modified: ${diff.sectionsModified.join(', ')}`);
   }
 
   return lines.join('\n');

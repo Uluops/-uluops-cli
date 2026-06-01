@@ -1,7 +1,11 @@
-import { Command } from 'commander';
 import type { DefinitionType } from '@uluops/registry-sdk';
-import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
-import { withSpinner, readFileOption } from '../utils.js';
+import type { Command } from 'commander';
+import {
+  createRegistryContext,
+  type GlobalOptions,
+  handleRegistryError,
+} from '../context.js';
+import { readFileOption, withSpinner } from '../utils.js';
 
 /**
  * Register translation commands
@@ -10,12 +14,15 @@ export function registerTranslationCommands(program: Command): void {
   const translation = program
     .command('translation')
     .description('Definition translation and upgrade tools')
-    .addHelpText('after', `
+    .addHelpText(
+      'after',
+      `
 Examples:
   $ ulu translation version
   $ ulu translation retranslate agent code-validator 1.0.0
   $ ulu translation upgrade agent my-agent --file agent.yaml
-`);
+`,
+    );
 
   // ulu translation version
   translation
@@ -28,8 +35,11 @@ Examples:
       try {
         const info = await withSpinner(
           ctx,
-          { start: 'Fetching translator version...', failure: 'Failed to fetch translator version' },
-          () => ctx.client.translation.getVersion()
+          {
+            start: 'Fetching translator version...',
+            failure: 'Failed to fetch translator version',
+          },
+          () => ctx.client.translation.getVersion(),
         );
 
         if (ctx.json) {
@@ -48,30 +58,48 @@ Examples:
   translation
     .command('retranslate <type> <name> <version>')
     .description('Re-translate a definition with latest translator')
-    .option('--new-version', 'Create a new patch version instead of updating in-place')
-    .action(async (type: string, name: string, version: string, options, cmd) => {
-      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const ctx = createRegistryContext(globalOpts);
+    .option(
+      '--new-version',
+      'Create a new patch version instead of updating in-place',
+    )
+    .action(
+      async (type: string, name: string, version: string, options, cmd) => {
+        const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+        const ctx = createRegistryContext(globalOpts);
 
-      try {
-        const result = await withSpinner(
-          ctx,
-          { start: 'Re-translating...', success: 'Re-translation complete', failure: 'Failed to re-translate' },
-          () => ctx.client.translation.retranslate(type as DefinitionType, name, version, {
-            createNewVersion: options.newVersion ?? false,
-          })
-        );
+        try {
+          const result = await withSpinner(
+            ctx,
+            {
+              start: 'Re-translating...',
+              success: 'Re-translation complete',
+              failure: 'Failed to re-translate',
+            },
+            () =>
+              ctx.client.translation.retranslate(
+                type as DefinitionType,
+                name,
+                version,
+                {
+                  createNewVersion: options.newVersion ?? false,
+                },
+              ),
+          );
 
-        if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
-        } else {
-          console.log(`Re-translated: ${result.type}/${result.name}@${result.version}`);
-          if (result.translatorVersion) console.log(`Translator: ${result.translatorVersion}`);
+          if (ctx.json) {
+            console.log(JSON.stringify(result, null, 2));
+          } else {
+            console.log(
+              `Re-translated: ${result.type}/${result.name}@${result.version}`,
+            );
+            if (result.translatorVersion)
+              console.log(`Translator: ${result.translatorVersion}`);
+          }
+        } catch (error) {
+          handleRegistryError(error, ctx);
         }
-      } catch (error) {
-        handleRegistryError(error, ctx);
-      }
-    });
+      },
+    );
 
   // ulu translation upgrade <type> <name>
   translation
@@ -86,8 +114,17 @@ Examples:
         const yaml = readFileOption(options.file);
         const result = await withSpinner(
           ctx,
-          { start: 'Upgrading definition...', success: 'Upgrade complete', failure: 'Failed to upgrade' },
-          () => ctx.client.translation.upgradeDefinition(type as DefinitionType, name, { yaml })
+          {
+            start: 'Upgrading definition...',
+            success: 'Upgrade complete',
+            failure: 'Failed to upgrade',
+          },
+          () =>
+            ctx.client.translation.upgradeDefinition(
+              type as DefinitionType,
+              name,
+              { yaml },
+            ),
         );
 
         if (ctx.json) {

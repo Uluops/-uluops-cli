@@ -1,11 +1,15 @@
-import { Command } from 'commander';
-import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner, parseIntOption, confirmAction } from '../utils.js';
+import type { Command } from 'commander';
 import {
-  formatProjects,
+  createOpsContext,
+  type GlobalOptions,
+  handleOpsError,
+} from '../context.js';
+import {
   formatProject,
   formatProjectSummary,
+  formatProjects,
 } from '../formatters/ops.js';
+import { confirmAction, parseIntOption, withSpinner } from '../utils.js';
 
 /**
  * Register project commands
@@ -15,7 +19,9 @@ export function registerProjectCommands(program: Command): void {
     .command('projects')
     .alias('p')
     .description('Manage projects')
-    .addHelpText('after', `
+    .addHelpText(
+      'after',
+      `
 Examples:
   $ ulu projects list
   $ ulu projects get ops-sdk
@@ -23,7 +29,8 @@ Examples:
   $ ulu projects trends ops-sdk --days 7
   $ ulu projects create my-project
   $ ulu projects delete my-project --yes
-`);
+`,
+    );
 
   // ulu projects list
   projects
@@ -36,8 +43,11 @@ Examples:
       try {
         const data = await withSpinner(
           ctx,
-          { start: 'Fetching projects...', failure: 'Failed to fetch projects' },
-          () => ctx.client.projects.list()
+          {
+            start: 'Fetching projects...',
+            failure: 'Failed to fetch projects',
+          },
+          () => ctx.client.projects.list(),
         );
 
         if (ctx.json) {
@@ -56,11 +66,14 @@ Examples:
   projects
     .command('get <name>')
     .description('Get project details by name or ID')
-    .addHelpText('after', `
+    .addHelpText(
+      'after',
+      `
 Example:
   $ ulu projects get ops-sdk
   $ ulu projects get ff066304-...
-`)
+`,
+    )
     .action(async (name: string, _, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
@@ -69,7 +82,7 @@ Example:
         const project = await withSpinner(
           ctx,
           { start: 'Fetching project...', failure: 'Failed to fetch project' },
-          () => ctx.client.projects.get(name)
+          () => ctx.client.projects.get(name),
         );
 
         if (!project || !project.id) {
@@ -98,8 +111,12 @@ Example:
       try {
         const project = await withSpinner(
           ctx,
-          { start: 'Creating project...', success: 'Project created', failure: 'Failed to create project' },
-          () => ctx.client.projects.create({ name })
+          {
+            start: 'Creating project...',
+            success: 'Project created',
+            failure: 'Failed to create project',
+          },
+          () => ctx.client.projects.create({ name }),
         );
 
         if (ctx.json) {
@@ -136,19 +153,41 @@ Example:
         if (options.force) {
           await withSpinner(
             ctx,
-            { start: 'Deleting project...', success: 'Project permanently deleted', failure: 'Failed to delete project' },
-            () => ctx.client.projects.delete(name, { confirm: true, confirmationPhrase: name })
+            {
+              start: 'Deleting project...',
+              success: 'Project permanently deleted',
+              failure: 'Failed to delete project',
+            },
+            () =>
+              ctx.client.projects.delete(name, {
+                confirm: true,
+                confirmationPhrase: name,
+              }),
           );
         } else {
           await withSpinner(
             ctx,
-            { start: 'Deleting project...', success: 'Project soft-deleted', failure: 'Failed to delete project' },
-            () => ctx.client.projects.softDelete(name, { confirm: true, confirmationPhrase: name })
+            {
+              start: 'Deleting project...',
+              success: 'Project soft-deleted',
+              failure: 'Failed to delete project',
+            },
+            () =>
+              ctx.client.projects.softDelete(name, {
+                confirm: true,
+                confirmationPhrase: name,
+              }),
           );
         }
 
         if (ctx.json) {
-          console.log(JSON.stringify({ success: true, name, hardDelete: !!options.force }, null, 2));
+          console.log(
+            JSON.stringify(
+              { success: true, name, hardDelete: !!options.force },
+              null,
+              2,
+            ),
+          );
         } else if (!options.force) {
           console.log('Use "ulu projects restore" to recover this project');
         }
@@ -168,8 +207,12 @@ Example:
       try {
         const project = await withSpinner(
           ctx,
-          { start: 'Restoring project...', success: 'Project restored', failure: 'Failed to restore project' },
-          () => ctx.client.projects.restore(name)
+          {
+            start: 'Restoring project...',
+            success: 'Project restored',
+            failure: 'Failed to restore project',
+          },
+          () => ctx.client.projects.restore(name),
         );
 
         if (ctx.json) {
@@ -194,7 +237,7 @@ Example:
         const summary = await withSpinner(
           ctx,
           { start: 'Fetching summary...', failure: 'Failed to fetch summary' },
-          () => ctx.client.projects.getSummary(name)
+          () => ctx.client.projects.getSummary(name),
         );
 
         if (ctx.json) {
@@ -220,7 +263,10 @@ Example:
         const trends = await withSpinner(
           ctx,
           { start: 'Fetching trends...', failure: 'Failed to fetch trends' },
-          () => ctx.client.projects.getTrends(name, { days: parseIntOption(options.days, '--days') })
+          () =>
+            ctx.client.projects.getTrends(name, {
+              days: parseIntOption(options.days, '--days'),
+            }),
         );
 
         if (ctx.json) {
@@ -231,10 +277,14 @@ Example:
           console.log(`Issue trends for ${name} (last ${trends.days} days):\n`);
           for (const point of trends.daily.slice(-10)) {
             const bar = '#'.repeat(Math.min(point.total, 50));
-            console.log(`${point.date}: ${bar} ${point.total} total (+${point.new} new, -${point.resolved} resolved)`);
+            console.log(
+              `${point.date}: ${bar} ${point.total} total (+${point.new} new, -${point.resolved} resolved)`,
+            );
           }
           if (trends.daily.length > 10) {
-            console.log(`\n... showing last 10 of ${trends.daily.length} data points`);
+            console.log(
+              `\n... showing last 10 of ${trends.daily.length} data points`,
+            );
           }
         }
       } catch (error) {
@@ -254,8 +304,16 @@ Example:
       try {
         const project = await withSpinner(
           ctx,
-          { start: 'Renaming project...', success: 'Project renamed', failure: 'Failed to rename project' },
-          () => ctx.client.projects.rename({ oldName: name, newName: options.newName })
+          {
+            start: 'Renaming project...',
+            success: 'Project renamed',
+            failure: 'Failed to rename project',
+          },
+          () =>
+            ctx.client.projects.rename({
+              oldName: name,
+              newName: options.newName,
+            }),
         );
 
         if (ctx.json) {
@@ -273,13 +331,19 @@ Example:
     .command('bulk-update-issues <name>')
     .description('Batch update issue statuses for a project')
     .requiredOption('--ids <ids>', 'Comma-separated issue IDs')
-    .requiredOption('-s, --status <status>', 'New status (open, completed, deferred, wontfix)')
+    .requiredOption(
+      '-s, --status <status>',
+      'New status (open, completed, deferred, wontfix)',
+    )
     .option('-r, --reason <reason>', 'Reason for status change')
     .action(async (name: string, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
-      const issueIds = (options.ids as string).split(',').map((id: string) => id.trim()).filter(Boolean);
+      const issueIds = (options.ids as string)
+        .split(',')
+        .map((id: string) => id.trim())
+        .filter(Boolean);
       const updates = issueIds.map((id: string) => ({
         issueId: id,
         status: options.status,
@@ -289,8 +353,12 @@ Example:
       try {
         const results = await withSpinner(
           ctx,
-          { start: `Updating ${updates.length} issues...`, success: 'Issues updated', failure: 'Failed to update issues' },
-          () => ctx.client.projects.bulkUpdateIssueStatus(name, updates)
+          {
+            start: `Updating ${updates.length} issues...`,
+            success: 'Issues updated',
+            failure: 'Failed to update issues',
+          },
+          () => ctx.client.projects.bulkUpdateIssueStatus(name, updates),
         );
 
         if (ctx.json) {
@@ -307,30 +375,49 @@ Example:
   projects
     .command('merge-issues <name>')
     .description('Merge duplicate issues into a target issue')
-    .requiredOption('-t, --target <id>', 'Target issue ID (issues merge into this)')
+    .requiredOption(
+      '-t, --target <id>',
+      'Target issue ID (issues merge into this)',
+    )
     .requiredOption('-s, --sources <ids>', 'Comma-separated source issue IDs')
-    .option('--strategy <strategy>', 'Merge strategy (keep_target, keep_highest_priority)', 'keep_target')
+    .option(
+      '--strategy <strategy>',
+      'Merge strategy (keep_target, keep_highest_priority)',
+      'keep_target',
+    )
     .action(async (name: string, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
-      const sourceIds = (options.sources as string).split(',').map((id: string) => id.trim()).filter(Boolean);
+      const sourceIds = (options.sources as string)
+        .split(',')
+        .map((id: string) => id.trim())
+        .filter(Boolean);
 
       try {
         const result = await withSpinner(
           ctx,
-          { start: 'Merging issues...', success: 'Issues merged', failure: 'Failed to merge issues' },
-          () => ctx.client.projects.mergeIssues(name, {
-            targetIssueId: options.target,
-            sourceIssueIds: sourceIds,
-            strategy: options.strategy as 'keep_target' | 'keep_highest_priority',
-          })
+          {
+            start: 'Merging issues...',
+            success: 'Issues merged',
+            failure: 'Failed to merge issues',
+          },
+          () =>
+            ctx.client.projects.mergeIssues(name, {
+              targetIssueId: options.target,
+              sourceIssueIds: sourceIds,
+              strategy: options.strategy as
+                | 'keep_target'
+                | 'keep_highest_priority',
+            }),
         );
 
         if (ctx.json) {
           console.log(JSON.stringify(result, null, 2));
         } else {
-          console.log(`Merged ${result.mergedCount} issues into ${result.targetIssueId.slice(0, 8)}`);
+          console.log(
+            `Merged ${result.mergedCount} issues into ${result.targetIssueId.slice(0, 8)}`,
+          );
           console.log(`Migrated ${result.migratedOccurrences} occurrences`);
         }
       } catch (error) {

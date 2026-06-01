@@ -1,7 +1,13 @@
-import ora, { type Ora } from 'ora';
+import {
+  existsSync,
+  readFileSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import * as path from 'node:path';
 import { createInterface } from 'node:readline';
-import { readFileSync, existsSync, writeFileSync, renameSync, unlinkSync } from 'node:fs';
+import ora, { type Ora } from 'ora';
 
 /**
  * Create a spinner for long-running operations
@@ -31,9 +37,9 @@ export interface WithSpinnerOptions {
 export async function withSpinner<T>(
   ctx: { quiet: boolean; json?: boolean },
   options: WithSpinnerOptions,
-  fn: () => Promise<T>
+  fn: () => Promise<T>,
 ): Promise<T> {
-  const spinner = (ctx.quiet || ctx.json) ? null : createSpinner(options.start);
+  const spinner = ctx.quiet || ctx.json ? null : createSpinner(options.start);
 
   try {
     spinner?.start();
@@ -49,7 +55,9 @@ export async function withSpinner<T>(
 /**
  * Format a date for human-readable CLI display
  */
-export function formatDisplayDate(date: string | Date | undefined | null): string {
+export function formatDisplayDate(
+  date: string | Date | undefined | null,
+): string {
   if (!date) return 'N/A';
   const d = typeof date === 'string' ? new Date(date) : date;
   return d.toLocaleString();
@@ -97,7 +105,9 @@ export function redact(value: string, showLast = 4): string {
 export function readFileOption(filePath: string): string {
   if (!existsSync(filePath)) {
     console.error(`Error: File not found: ${filePath}`);
-    console.error('\nHint: Check the path passed to --file. Use an absolute path or a path relative to the current directory.');
+    console.error(
+      '\nHint: Check the path passed to --file. Use an absolute path or a path relative to the current directory.',
+    );
     process.exit(1);
   }
   try {
@@ -106,12 +116,16 @@ export function readFileOption(filePath: string): string {
     const code = getErrorCode(error);
     if (code === 'EISDIR') {
       console.error(`Error: ${filePath} is a directory, not a file`);
-      console.error('\nHint: The --file option requires a path to a YAML file, not a directory.');
+      console.error(
+        '\nHint: The --file option requires a path to a YAML file, not a directory.',
+      );
       process.exit(1);
     }
     if (code === 'EACCES') {
       console.error(`Error: Permission denied: ${filePath}`);
-      console.error('\nHint: Check file permissions. Run "chmod +r" on the file if needed.');
+      console.error(
+        '\nHint: Check file permissions. Run "chmod +r" on the file if needed.',
+      );
       process.exit(1);
     }
     exitWithError(`Cannot read file: ${filePath}`);
@@ -128,7 +142,11 @@ export function writeFileAtomic(filePath: string, content: string): void {
     writeFileSync(tmpPath, content, { mode: 0o600 });
     renameSync(tmpPath, filePath);
   } catch (error) {
-    try { unlinkSync(tmpPath); } catch { /* tmp may not exist */ }
+    try {
+      unlinkSync(tmpPath);
+    } catch {
+      /* tmp may not exist */
+    }
     throw error;
   }
 }
@@ -176,14 +194,19 @@ export function inferDefinitionType(filePath: string): string | null {
  * Resolve definition type from an explicit value or by inferring from filename.
  * Exits with a helpful error if neither is available.
  */
-export function resolveDefinitionType(explicit: string | undefined, filePath: string | undefined): string {
+export function resolveDefinitionType(
+  explicit: string | undefined,
+  filePath: string | undefined,
+): string {
   if (explicit) return explicit;
   if (filePath) {
     const inferred = inferDefinitionType(filePath);
     if (inferred) return inferred;
   }
   console.error('Error: Could not determine definition type.');
-  console.error('\nHint: Either pass the type as an argument or use a filename like my-agent.agent.yaml');
+  console.error(
+    '\nHint: Either pass the type as an argument or use a filename like my-agent.agent.yaml',
+  );
   console.error('Valid types: agent, command, workflow, pipeline');
   process.exit(1);
 }
@@ -226,7 +249,9 @@ export function normalizeKeys(input: unknown): unknown {
   }
   if (input !== null && typeof input === 'object') {
     const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(input as Record<string, unknown>)) {
+    for (const [key, value] of Object.entries(
+      input as Record<string, unknown>,
+    )) {
       result[toCamelCase(key)] = normalizeKeys(value);
     }
     return result;
@@ -248,7 +273,7 @@ export function normalizeKeys(input: unknown): unknown {
 export function getFlexibleProperty<T, O extends object = object>(
   obj: O,
   camelCaseKey: string,
-  defaultValue: T
+  defaultValue: T,
 ): T {
   const record = obj as Record<string, unknown>;
   // Try camelCase first
@@ -271,8 +296,7 @@ export function resolveProject(explicit: string | undefined): string {
   if (explicit) return explicit;
 
   exitWithError(
-    'No project specified.\n' +
-    'Pass a project name with --project <name>.'
+    'No project specified.\n' + 'Pass a project name with --project <name>.',
   );
 }
 
@@ -280,7 +304,10 @@ export function resolveProject(explicit: string | undefined): string {
  * Prompt the user for input on the terminal.
  * Returns the entered value (empty string if nothing entered).
  */
-export function promptInput(question: string, options?: { hidden?: boolean }): Promise<string> {
+export function promptInput(
+  question: string,
+  options?: { hidden?: boolean },
+): Promise<string> {
   return new Promise((resolve) => {
     const rl = createInterface({
       input: process.stdin,
@@ -299,7 +326,8 @@ export function promptInput(question: string, options?: { hidden?: boolean }): P
       const onData = (char: Buffer) => {
         const c = char.toString('utf8');
         if (c === '\n' || c === '\r' || c === '\u0004') {
-          if (stdin.isTTY && stdin.setRawMode) stdin.setRawMode(wasRaw ?? false);
+          if (stdin.isTTY && stdin.setRawMode)
+            stdin.setRawMode(wasRaw ?? false);
           stdin.removeListener('data', onData);
           process.stderr.write('\n');
           rl.close();
@@ -340,19 +368,25 @@ const STDIN_TIMEOUT_MS = 30_000;
 
 /** Strip UTF-8 BOM (byte order mark) that some editors prepend */
 export function stripBom(content: string): string {
-  return content.charCodeAt(0) === 0xFEFF ? content.slice(1) : content;
+  return content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
 }
 
 /**
  * Read JSON input from a file or stdin.
  * Handles BOM stripping, stdin timeout, and user-friendly error messages.
  */
-export async function readJsonInput(options: { file?: string; stdin?: boolean }): Promise<unknown> {
+export async function readJsonInput(options: {
+  file?: string;
+  stdin?: boolean;
+}): Promise<unknown> {
   if (options.stdin) {
     const chunks: Buffer[] = [];
     let timerId: ReturnType<typeof setTimeout> | undefined;
     const timeout = new Promise<never>((_, reject) => {
-      timerId = setTimeout(() => reject(new Error('stdin timeout')), STDIN_TIMEOUT_MS);
+      timerId = setTimeout(
+        () => reject(new Error('stdin timeout')),
+        STDIN_TIMEOUT_MS,
+      );
     });
     const read = async () => {
       for await (const chunk of process.stdin) {
@@ -363,7 +397,9 @@ export async function readJsonInput(options: { file?: string; stdin?: boolean })
       await Promise.race([read(), timeout]);
     } catch (error) {
       if (error instanceof Error && error.message === 'stdin timeout') {
-        exitWithError(`No input received on stdin after ${STDIN_TIMEOUT_MS / 1000}s. Pipe data or use --file instead.`);
+        exitWithError(
+          `No input received on stdin after ${STDIN_TIMEOUT_MS / 1000}s. Pipe data or use --file instead.`,
+        );
       }
       throw error;
     } finally {

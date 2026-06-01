@@ -1,36 +1,31 @@
 #!/usr/bin/env node
-import { Command } from 'commander';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-
-// Ops commands
-import { registerAuthCommands } from './commands/auth.js';
-import { registerProjectCommands } from './commands/projects.js';
-import { registerRunCommands } from './commands/runs.js';
-import { registerIssueCommands } from './commands/issues.js';
-import { registerAnalyticsCommands } from './commands/analytics.js';
-
-import { registerTaxonomyCommands } from './commands/taxonomy.js';
-
-// Registry commands
-import { registerDefinitionCommands } from './commands/definitions.js';
-import { registerVersionCommands } from './commands/versions.js';
-import { registerDepsCommands } from './commands/deps.js';
-import { registerForkCommands } from './commands/forks.js';
-import { registerModelCommands } from './commands/models.js';
-import { registerExecutionCommands } from './commands/executions.js';
-import { registerTranslationCommands } from './commands/translation.js';
-import { registerLanguageCommands } from './commands/languages.js';
-
-// Core SDK commands
-import { registerExecCommands } from './commands/exec.js';
-
-// Infrastructure commands
-import { registerCompletionCommands } from './commands/completion.js';
-
+import { fileURLToPath } from 'node:url';
 // Load .env files early so all SDK contexts see them
 import { loadEnvFiles } from '@uluops/ops-sdk';
+import { Command } from 'commander';
+import { registerAnalyticsCommands } from './commands/analytics.js';
+// Ops commands
+import { registerAuthCommands } from './commands/auth.js';
+// Infrastructure commands
+import { registerCompletionCommands } from './commands/completion.js';
+// Registry commands
+import { registerDefinitionCommands } from './commands/definitions.js';
+import { registerDepsCommands } from './commands/deps.js';
+// Core SDK commands
+import { registerExecCommands } from './commands/exec.js';
+import { registerExecutionCommands } from './commands/executions.js';
+import { registerForkCommands } from './commands/forks.js';
+import { registerIssueCommands } from './commands/issues.js';
+import { registerLanguageCommands } from './commands/languages.js';
+import { registerModelCommands } from './commands/models.js';
+import { registerProjectCommands } from './commands/projects.js';
+import { registerRunCommands } from './commands/runs.js';
+import { registerTaxonomyCommands } from './commands/taxonomy.js';
+import { registerTranslationCommands } from './commands/translation.js';
+import { registerVersionCommands } from './commands/versions.js';
+
 loadEnvFiles();
 
 // Handle EPIPE gracefully (e.g., piping to head, or broken pipe)

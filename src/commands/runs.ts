@@ -1,8 +1,22 @@
-import { Command } from 'commander';
-import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
-import { withSpinner, exitWithError, getFlexibleProperty, normalizeKeys, readJsonInput, parseIntOption, parseFloatOption, resolveProject, confirmAction } from '../utils.js';
-import { formatRuns, formatRun } from '../formatters/ops.js';
 import type { SaveRunInput, UpdateRunByNumberInput } from '@uluops/ops-sdk';
+import type { Command } from 'commander';
+import {
+  createOpsContext,
+  type GlobalOptions,
+  handleOpsError,
+} from '../context.js';
+import { formatRun, formatRuns } from '../formatters/ops.js';
+import {
+  confirmAction,
+  exitWithError,
+  getFlexibleProperty,
+  normalizeKeys,
+  parseFloatOption,
+  parseIntOption,
+  readJsonInput,
+  resolveProject,
+  withSpinner,
+} from '../utils.js';
 
 /**
  * Register run commands
@@ -12,14 +26,17 @@ export function registerRunCommands(program: Command): void {
     .command('runs')
     .alias('r')
     .description('Manage validation runs')
-    .addHelpText('after', `
+    .addHelpText(
+      'after',
+      `
 Examples:
   $ ulu runs list ops-sdk
   $ ulu runs latest ops-sdk
   $ ulu runs get abc12345
   $ ulu runs details ops-sdk --run-number 42
   $ ulu runs save ops-sdk --file results.json
-`);
+`,
+    );
 
   // ulu runs list [project]
   runs
@@ -36,10 +53,11 @@ Examples:
         const data = await withSpinner(
           ctx,
           { start: 'Fetching runs...', failure: 'Failed to fetch runs' },
-          () => ctx.client.runs.listByProject(project, {
-            workflowType: options.workflow,
-            limit: parseIntOption(options.limit, '--limit'),
-          })
+          () =>
+            ctx.client.runs.listByProject(project, {
+              workflowType: options.workflow,
+              limit: parseIntOption(options.limit, '--limit'),
+            }),
         );
 
         if (ctx.json) {
@@ -66,7 +84,7 @@ Examples:
         const run = await withSpinner(
           ctx,
           { start: 'Fetching run...', failure: 'Failed to fetch run' },
-          () => ctx.client.runs.get(runId)
+          () => ctx.client.runs.get(runId),
         );
 
         if (ctx.json) {
@@ -92,8 +110,11 @@ Examples:
       try {
         const run = await withSpinner(
           ctx,
-          { start: 'Fetching latest run...', failure: 'Failed to fetch latest run' },
-          () => ctx.client.runs.getLatest(project, options.workflow)
+          {
+            start: 'Fetching latest run...',
+            failure: 'Failed to fetch latest run',
+          },
+          () => ctx.client.runs.getLatest(project, options.workflow),
         );
 
         if (ctx.json) {
@@ -109,7 +130,9 @@ Examples:
   // ulu runs details [project]
   runs
     .command('details [project]')
-    .description('Get detailed run information including agents and recommendations')
+    .description(
+      'Get detailed run information including agents and recommendations',
+    )
     .option('-n, --number <number>', 'Run number (defaults to latest)')
     .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
@@ -117,17 +140,24 @@ Examples:
       const ctx = createOpsContext(globalOpts);
 
       try {
-        const runNumber = options.number ? parseIntOption(options.number, '--number') : undefined;
+        const runNumber = options.number
+          ? parseIntOption(options.number, '--number')
+          : undefined;
         const details = await withSpinner(
           ctx,
-          { start: 'Fetching run details...', failure: 'Failed to fetch run details' },
-          () => ctx.client.runs.getDetails(project, runNumber)
+          {
+            start: 'Fetching run details...',
+            failure: 'Failed to fetch run details',
+          },
+          () => ctx.client.runs.getDetails(project, runNumber),
         );
 
         if (ctx.json) {
           console.log(JSON.stringify(details, null, 2));
         } else {
-          console.log(`Run #${details.run.runNumber} - ${details.run.workflowType}`);
+          console.log(
+            `Run #${details.run.runNumber} - ${details.run.workflowType}`,
+          );
           console.log(`Score: ${details.run.averageScore?.toFixed(1) ?? '-'}`);
           console.log(`Passed: ${details.run.allGatesPassed ? 'Yes' : 'No'}`);
           console.log('');
@@ -136,7 +166,9 @@ Examples:
             console.log('Agents:');
             for (const v of details.agents) {
               const marker = v.decision === 'PASS' ? '\u2713' : '\u2717';
-              console.log(`  ${marker} ${v.name}: ${v.score}/${v.maxScore ?? 100} (${v.decision})`);
+              console.log(
+                `  ${marker} ${v.name}: ${v.score}/${v.maxScore ?? 100} (${v.decision})`,
+              );
             }
           }
 
@@ -147,7 +179,9 @@ Examples:
               console.log(`    ${r.priority} from ${r.agent}`);
             }
             if (details.recommendations.length > 10) {
-              console.log(`\n  ... and ${details.recommendations.length - 10} more`);
+              console.log(
+                `\n  ... and ${details.recommendations.length - 10} more`,
+              );
             }
           }
         }
@@ -173,12 +207,16 @@ Examples:
         options.stdin = true;
       }
       if (!options.file && !options.stdin) {
-        exitWithError('Either --file or --stdin is required (or pipe data to stdin)');
+        exitWithError(
+          'Either --file or --stdin is required (or pipe data to stdin)',
+        );
       }
 
       try {
         // Read, normalize (snake_case → camelCase), and parse input
-        const input = normalizeKeys(await readJsonInput(options)) as SaveRunInput;
+        const input = normalizeKeys(
+          await readJsonInput(options),
+        ) as SaveRunInput;
 
         // Apply overrides
         if (options.project) input.project = options.project;
@@ -186,10 +224,14 @@ Examples:
 
         // Validate required fields
         if (!input.project) {
-          exitWithError('Missing required field: project (or snake_case: project)');
+          exitWithError(
+            'Missing required field: project (or snake_case: project)',
+          );
         }
         if (!input.workflowType) {
-          exitWithError('Missing required field: workflowType (or snake_case: workflow_type)');
+          exitWithError(
+            'Missing required field: workflowType (or snake_case: workflow_type)',
+          );
         }
         if (!Array.isArray(input.agents)) {
           exitWithError('Missing required field: agents (must be an array)');
@@ -197,8 +239,12 @@ Examples:
 
         const result = await withSpinner(
           ctx,
-          { start: 'Saving run...', success: 'Run saved', failure: 'Failed to save run' },
-          () => ctx.client.runs.save(input)
+          {
+            start: 'Saving run...',
+            success: 'Run saved',
+            failure: 'Failed to save run',
+          },
+          () => ctx.client.runs.save(input),
         );
 
         if (ctx.json) {
@@ -207,11 +253,19 @@ Examples:
           console.log(`Run #${result.run.runNumber} saved successfully`);
           console.log('');
           console.log('Correlation:');
-          console.log(`  New issues: ${getFlexibleProperty(result.correlation, 'newIssues', 0)}`);
-          console.log(`  Recurring: ${getFlexibleProperty(result.correlation, 'recurringIssues', 0)}`);
-          console.log(`  Regressions: ${getFlexibleProperty(result.correlation, 'regressions', 0)}`);
+          console.log(
+            `  New issues: ${getFlexibleProperty(result.correlation, 'newIssues', 0)}`,
+          );
+          console.log(
+            `  Recurring: ${getFlexibleProperty(result.correlation, 'recurringIssues', 0)}`,
+          );
+          console.log(
+            `  Regressions: ${getFlexibleProperty(result.correlation, 'regressions', 0)}`,
+          );
           if (result.deduplicated) {
-            console.log('\n(Deduplicated: run with same idempotency key already existed)');
+            console.log(
+              '\n(Deduplicated: run with same idempotency key already existed)',
+            );
           }
         }
       } catch (error) {
@@ -236,12 +290,16 @@ Examples:
         options.stdin = true;
       }
       if (!options.file && !options.stdin) {
-        exitWithError('Either --file or --stdin is required (or pipe data to stdin)');
+        exitWithError(
+          'Either --file or --stdin is required (or pipe data to stdin)',
+        );
       }
 
       try {
         // Read, normalize (snake_case → camelCase), and parse input
-        const input = normalizeKeys(await readJsonInput(options)) as SaveRunInput;
+        const input = normalizeKeys(
+          await readJsonInput(options),
+        ) as SaveRunInput;
 
         // Apply overrides
         if (options.project) input.project = options.project;
@@ -249,16 +307,24 @@ Examples:
 
         // Validate required fields (same guards as save path)
         if (!input.project) {
-          exitWithError('Missing required field: project (or snake_case: project)');
+          exitWithError(
+            'Missing required field: project (or snake_case: project)',
+          );
         }
         if (!input.workflowType) {
-          exitWithError('Missing required field: workflowType (or snake_case: workflow_type)');
+          exitWithError(
+            'Missing required field: workflowType (or snake_case: workflow_type)',
+          );
         }
 
         const result = await withSpinner(
           ctx,
-          { start: 'Validating...', success: 'Validation complete', failure: 'Validation failed' },
-          () => ctx.client.runs.validate(input)
+          {
+            start: 'Validating...',
+            success: 'Validation complete',
+            failure: 'Validation failed',
+          },
+          () => ctx.client.runs.validate(input),
         );
 
         if (ctx.json) {
@@ -266,9 +332,19 @@ Examples:
         } else {
           const wouldCreate = getFlexibleProperty(result, 'wouldCreate', false);
           const wouldUpdate = getFlexibleProperty(result, 'wouldUpdate', false);
-          const wouldRegress = getFlexibleProperty(result, 'wouldRegress', false);
-          const validationErrors = getFlexibleProperty<string[]>(result, 'validationErrors', []);
-          const preview = getFlexibleProperty<Record<string, unknown> | undefined>(result, 'preview', undefined);
+          const wouldRegress = getFlexibleProperty(
+            result,
+            'wouldRegress',
+            false,
+          );
+          const validationErrors = getFlexibleProperty<string[]>(
+            result,
+            'validationErrors',
+            [],
+          );
+          const preview = getFlexibleProperty<
+            Record<string, unknown> | undefined
+          >(result, 'preview', undefined);
 
           console.log('Validation Preview:');
           console.log(`  Would create: ${wouldCreate ? 'Yes' : 'No'}`);
@@ -283,9 +359,21 @@ Examples:
           }
 
           if (preview) {
-            const newIssues = getFlexibleProperty<unknown[]>(preview, 'newIssues', []);
-            const recurringIssues = getFlexibleProperty<unknown[]>(preview, 'recurringIssues', []);
-            const regressions = getFlexibleProperty<unknown[]>(preview, 'regressions', []);
+            const newIssues = getFlexibleProperty<unknown[]>(
+              preview,
+              'newIssues',
+              [],
+            );
+            const recurringIssues = getFlexibleProperty<unknown[]>(
+              preview,
+              'recurringIssues',
+              [],
+            );
+            const regressions = getFlexibleProperty<unknown[]>(
+              preview,
+              'regressions',
+              [],
+            );
             console.log('\nCorrelation Preview:');
             console.log(`  New issues: ${newIssues.length}`);
             console.log(`  Recurring: ${recurringIssues.length}`);
@@ -300,7 +388,9 @@ Examples:
   // ulu runs diff [project]
   runs
     .command('diff [project]')
-    .description('Compare two runs by run number (shows score diff, new/resolved issues)')
+    .description(
+      'Compare two runs by run number (shows score diff, new/resolved issues)',
+    )
     .requiredOption('-b, --base <number>', 'Base run number')
     .requiredOption('-c, --compare <number>', 'Compare run number')
     .action(async (projectArg: string | undefined, options, cmd) => {
@@ -312,11 +402,12 @@ Examples:
         const result = await withSpinner(
           ctx,
           { start: 'Comparing runs...', failure: 'Failed to compare runs' },
-          () => ctx.client.runs.diff({
-            project,
-            baseRun: parseIntOption(options.base, '--base'),
-            compareRun: parseIntOption(options.compare, '--compare'),
-          })
+          () =>
+            ctx.client.runs.diff({
+              project,
+              baseRun: parseIntOption(options.base, '--base'),
+              compareRun: parseIntOption(options.compare, '--compare'),
+            }),
         );
 
         if (ctx.json) {
@@ -358,7 +449,10 @@ Examples:
     .command('archive [project]')
     .description('Archive old runs')
     .option('--before-run <number>', 'Archive runs before this run number')
-    .option('--before-date <date>', 'Archive runs before this date (ISO format)')
+    .option(
+      '--before-date <date>',
+      'Archive runs before this date (ISO format)',
+    )
     .option('--keep-last <number>', 'Keep the last N runs')
     .option('--reason <text>', 'Reason for archiving')
     .action(async (projectArg: string | undefined, options, cmd) => {
@@ -367,20 +461,31 @@ Examples:
       const ctx = createOpsContext(globalOpts);
 
       if (!options.beforeRun && !options.beforeDate && !options.keepLast) {
-        exitWithError('One of --before-run, --before-date, or --keep-last is required');
+        exitWithError(
+          'One of --before-run, --before-date, or --keep-last is required',
+        );
       }
 
       try {
         const result = await withSpinner(
           ctx,
-          { start: 'Archiving runs...', success: 'Runs archived', failure: 'Failed to archive runs' },
-          () => ctx.client.runs.archive({
-            project,
-            beforeRunNumber: options.beforeRun ? parseIntOption(options.beforeRun, '--before-run') : undefined,
-            beforeDate: options.beforeDate,
-            keepLast: options.keepLast ? parseIntOption(options.keepLast, '--keep-last') : undefined,
-            reason: options.reason,
-          })
+          {
+            start: 'Archiving runs...',
+            success: 'Runs archived',
+            failure: 'Failed to archive runs',
+          },
+          () =>
+            ctx.client.runs.archive({
+              project,
+              beforeRunNumber: options.beforeRun
+                ? parseIntOption(options.beforeRun, '--before-run')
+                : undefined,
+              beforeDate: options.beforeDate,
+              keepLast: options.keepLast
+                ? parseIntOption(options.keepLast, '--keep-last')
+                : undefined,
+              reason: options.reason,
+            }),
         );
 
         if (ctx.json) {
@@ -396,7 +501,9 @@ Examples:
   // ulu runs update [project]
   runs
     .command('update [project]')
-    .description('Update run metadata (scores, tokens) by project and run number')
+    .description(
+      'Update run metadata (scores, tokens) by project and run number',
+    )
     .requiredOption('-n, --number <number>', 'Run number')
     .option('--score <number>', 'New average score')
     .option('--passed <boolean>', 'All gates passed (true/false)')
@@ -413,19 +520,26 @@ Examples:
           runNumber: parseIntOption(options.number, '--number'),
         };
 
-        if (options.score !== undefined) input.averageScore = parseFloatOption(options.score, '--score');
-        if (options.passed !== undefined) input.allGatesPassed = options.passed === 'true';
+        if (options.score !== undefined)
+          input.averageScore = parseFloatOption(options.score, '--score');
+        if (options.passed !== undefined)
+          input.allGatesPassed = options.passed === 'true';
 
         // Read agent updates from file/stdin if provided
         if (options.file || options.stdin) {
-          const data = await readJsonInput(options) as { agents?: unknown[] };
-          if (data.agents) input.agents = data.agents as UpdateRunByNumberInput['agents'];
+          const data = (await readJsonInput(options)) as { agents?: unknown[] };
+          if (data.agents)
+            input.agents = data.agents as UpdateRunByNumberInput['agents'];
         }
 
         const run = await withSpinner(
           ctx,
-          { start: 'Updating run...', success: 'Run updated', failure: 'Failed to update run' },
-          () => ctx.client.runs.update(input)
+          {
+            start: 'Updating run...',
+            success: 'Run updated',
+            failure: 'Failed to update run',
+          },
+          () => ctx.client.runs.update(input),
         );
 
         if (ctx.json) {
@@ -448,7 +562,9 @@ Examples:
       const ctx = createOpsContext(globalOpts);
 
       if (!options.yes) {
-        const confirmed = await confirmAction(`Permanently delete run ${runId}?`);
+        const confirmed = await confirmAction(
+          `Permanently delete run ${runId}?`,
+        );
         if (!confirmed) {
           console.log('Cancelled');
           process.exit(0);
@@ -458,8 +574,12 @@ Examples:
       try {
         await withSpinner(
           ctx,
-          { start: 'Deleting run...', success: 'Run deleted', failure: 'Failed to delete run' },
-          () => ctx.client.runs.delete(runId)
+          {
+            start: 'Deleting run...',
+            success: 'Run deleted',
+            failure: 'Failed to delete run',
+          },
+          () => ctx.client.runs.delete(runId),
         );
 
         if (ctx.json) {

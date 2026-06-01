@@ -1,8 +1,17 @@
-import { Command } from 'commander';
-import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
+import type { ModelStatus, ModelTier } from '@uluops/registry-sdk';
+import type { Command } from 'commander';
+import {
+  createRegistryContext,
+  type GlobalOptions,
+  handleRegistryError,
+} from '../context.js';
+import {
+  formatAliases,
+  formatAliasResolution,
+  formatModel,
+  formatModels,
+} from '../formatters/registry.js';
 import { withSpinner } from '../utils.js';
-import { formatModels, formatModel, formatAliases, formatAliasResolution } from '../formatters/registry.js';
-import type { ModelTier, ModelStatus } from '@uluops/registry-sdk';
 
 /**
  * Register model commands
@@ -11,7 +20,9 @@ export function registerModelCommands(program: Command): void {
   const models = program
     .command('models')
     .description('Browse the model catalog')
-    .addHelpText('after', `
+    .addHelpText(
+      'after',
+      `
 Examples:
   $ ulu models list
   $ ulu models list --provider anthropic --tier premium
@@ -19,7 +30,8 @@ Examples:
   $ ulu models resolve sonnet
   $ ulu models aliases
   $ ulu models providers
-`);
+`,
+    );
 
   // ulu models list
   models
@@ -27,8 +39,14 @@ Examples:
     .description('List available models')
     .option('-p, --provider <provider>', 'Filter by provider')
     .option('-t, --tier <tier>', 'Filter by tier (free|standard|premium)')
-    .option('-s, --status <status>', 'Filter by status (available|deprecated|preview)')
-    .option('-c, --capability <cap>', 'Filter by capability (vision|tools|streaming|extendedThinking)')
+    .option(
+      '-s, --status <status>',
+      'Filter by status (available|deprecated|preview)',
+    )
+    .option(
+      '-c, --capability <cap>',
+      'Filter by capability (vision|tools|streaming|extendedThinking)',
+    )
     .action(async (options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);
@@ -37,12 +55,13 @@ Examples:
         const result = await withSpinner(
           ctx,
           { start: 'Fetching models...', failure: 'Failed to fetch models' },
-          () => ctx.client.models.list({
-            provider: options.provider,
-            tier: options.tier as ModelTier | undefined,
-            status: options.status as ModelStatus | undefined,
-            capability: options.capability,
-          })
+          () =>
+            ctx.client.models.list({
+              provider: options.provider,
+              tier: options.tier as ModelTier | undefined,
+              status: options.status as ModelStatus | undefined,
+              capability: options.capability,
+            }),
         );
 
         if (ctx.json) {
@@ -70,7 +89,7 @@ Examples:
         const model = await withSpinner(
           ctx,
           { start: 'Fetching model...', failure: 'Failed to fetch model' },
-          () => ctx.client.models.get(provider, modelId)
+          () => ctx.client.models.get(provider, modelId),
         );
 
         if (ctx.json) {
@@ -94,8 +113,11 @@ Examples:
       try {
         const result = await withSpinner(
           ctx,
-          { start: 'Fetching providers...', failure: 'Failed to fetch providers' },
-          () => ctx.client.models.listProviders()
+          {
+            start: 'Fetching providers...',
+            failure: 'Failed to fetch providers',
+          },
+          () => ctx.client.models.listProviders(),
         );
 
         if (ctx.json) {
@@ -104,7 +126,9 @@ Examples:
           console.log('No providers found');
         } else {
           for (const provider of result.providers) {
-            console.log(`${provider.id}: ${provider.name} (${provider.status})`);
+            console.log(
+              `${provider.id}: ${provider.name} (${provider.status})`,
+            );
           }
         }
       } catch (error) {
@@ -124,7 +148,7 @@ Examples:
         const result = await withSpinner(
           ctx,
           { start: 'Fetching aliases...', failure: 'Failed to fetch aliases' },
-          () => ctx.client.models.listAliases()
+          () => ctx.client.models.listAliases(),
         );
 
         if (ctx.json) {
@@ -142,7 +166,9 @@ Examples:
   // ulu models resolve <alias>
   models
     .command('resolve <alias>')
-    .description('Resolve a model alias (e.g. sonnet → anthropic/claude-sonnet-4-6-...)')
+    .description(
+      'Resolve a model alias (e.g. sonnet → anthropic/claude-sonnet-4-6-...)',
+    )
     .action(async (alias: string, _, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createRegistryContext(globalOpts);
@@ -151,7 +177,7 @@ Examples:
         const resolution = await withSpinner(
           ctx,
           { start: 'Resolving alias...', failure: 'Failed to resolve alias' },
-          () => ctx.client.models.resolveAlias(alias)
+          () => ctx.client.models.resolveAlias(alias),
         );
 
         if (ctx.json) {
@@ -163,5 +189,4 @@ Examples:
         handleRegistryError(error, ctx);
       }
     });
-
 }

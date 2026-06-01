@@ -1,7 +1,11 @@
-import { Command } from 'commander';
 import type { DefinitionType } from '@uluops/registry-sdk';
-import { createRegistryContext, handleRegistryError, type GlobalOptions } from '../context.js';
-import { withSpinner, parseIntOption } from '../utils.js';
+import type { Command } from 'commander';
+import {
+  createRegistryContext,
+  type GlobalOptions,
+  handleRegistryError,
+} from '../context.js';
+import { parseIntOption, withSpinner } from '../utils.js';
 
 /**
  * Register execution commands
@@ -10,12 +14,15 @@ export function registerExecutionCommands(program: Command): void {
   const executions = program
     .command('executions')
     .description('Track definition execution metrics')
-    .addHelpText('after', `
+    .addHelpText(
+      'after',
+      `
 Examples:
   $ ulu executions stats agent code-validator 1.0.0
   $ ulu executions stats agent code-validator 1.0.0 --window 1440
   $ ulu executions record agent code-validator 1.0.0 --source cli
-`);
+`,
+    );
 
   // ulu executions record <type> <name> <version>
   executions
@@ -23,58 +30,81 @@ Examples:
     .description('Record an execution of a definition')
     .requiredOption('-s, --source <source>', 'Execution source identifier')
     .option('--run-id <id>', 'Run ID for idempotency')
-    .action(async (type: string, name: string, version: string, options, cmd) => {
-      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const ctx = createRegistryContext(globalOpts);
+    .action(
+      async (type: string, name: string, version: string, options, cmd) => {
+        const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+        const ctx = createRegistryContext(globalOpts);
 
-      try {
-        const result = await withSpinner(
-          ctx,
-          { start: 'Recording execution...', success: 'Execution recorded', failure: 'Failed to record execution' },
-          () => ctx.client.executions.record(type as DefinitionType, name, version, {
-            source: options.source,
-            runId: options.runId,
-          })
-        );
+        try {
+          const result = await withSpinner(
+            ctx,
+            {
+              start: 'Recording execution...',
+              success: 'Execution recorded',
+              failure: 'Failed to record execution',
+            },
+            () =>
+              ctx.client.executions.record(
+                type as DefinitionType,
+                name,
+                version,
+                {
+                  source: options.source,
+                  runId: options.runId,
+                },
+              ),
+          );
 
-        if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
-        } else {
-          console.log(`Execution recorded for ${type}/${name}@${version}`);
-          console.log(`Count: ${result.executionCount}`);
-          if (result.duplicate) console.log('(duplicate execution)');
+          if (ctx.json) {
+            console.log(JSON.stringify(result, null, 2));
+          } else {
+            console.log(`Execution recorded for ${type}/${name}@${version}`);
+            console.log(`Count: ${result.executionCount}`);
+            if (result.duplicate) console.log('(duplicate execution)');
+          }
+        } catch (error) {
+          handleRegistryError(error, ctx);
         }
-      } catch (error) {
-        handleRegistryError(error, ctx);
-      }
-    });
+      },
+    );
 
   // ulu executions stats <type> <name> <version>
   executions
     .command('stats <type> <name> <version>')
     .description('Get execution statistics')
     .option('-w, --window <minutes>', 'Time window in minutes (1-10080)', '60')
-    .action(async (type: string, name: string, version: string, options, cmd) => {
-      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
-      const ctx = createRegistryContext(globalOpts);
+    .action(
+      async (type: string, name: string, version: string, options, cmd) => {
+        const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+        const ctx = createRegistryContext(globalOpts);
 
-      try {
-        const stats = await withSpinner(
-          ctx,
-          { start: 'Fetching execution stats...', failure: 'Failed to fetch stats' },
-          () => ctx.client.executions.getStats(type as DefinitionType, name, version, parseIntOption(options.window, '--window'))
-        );
+        try {
+          const stats = await withSpinner(
+            ctx,
+            {
+              start: 'Fetching execution stats...',
+              failure: 'Failed to fetch stats',
+            },
+            () =>
+              ctx.client.executions.getStats(
+                type as DefinitionType,
+                name,
+                version,
+                parseIntOption(options.window, '--window'),
+              ),
+          );
 
-        if (ctx.json) {
-          console.log(JSON.stringify(stats, null, 2));
-        } else {
-          console.log(`Execution stats for ${type}/${name}@${version}:\n`);
-          console.log(`  Total: ${stats.totalCount}`);
-          console.log(`  Recent: ${stats.recentCount}`);
-          console.log(`  Window: ${stats.windowMinutes} minutes`);
+          if (ctx.json) {
+            console.log(JSON.stringify(stats, null, 2));
+          } else {
+            console.log(`Execution stats for ${type}/${name}@${version}:\n`);
+            console.log(`  Total: ${stats.totalCount}`);
+            console.log(`  Recent: ${stats.recentCount}`);
+            console.log(`  Window: ${stats.windowMinutes} minutes`);
+          }
+        } catch (error) {
+          handleRegistryError(error, ctx);
         }
-      } catch (error) {
-        handleRegistryError(error, ctx);
-      }
-    });
+      },
+    );
 }

@@ -11,8 +11,13 @@ export interface Column<T> {
 /**
  * Pad a cell value to the specified width
  */
-function padCell(text: string, width: number, align: 'left' | 'right' | 'center'): string {
-  const truncated = text.length > width ? text.slice(0, width - 1) + '\u2026' : text;
+function padCell(
+  text: string,
+  width: number,
+  align: 'left' | 'right' | 'center',
+): string {
+  const truncated =
+    text.length > width ? text.slice(0, width - 1) + '\u2026' : text;
   const padding = width - truncated.length;
 
   if (padding <= 0) return truncated;
@@ -50,14 +55,16 @@ export function formatTable<T>(data: T[], columns: Column<T>[]): string {
   const widths = columns.map((col) => {
     const headerLen = col.header.length;
     const maxDataLen = Math.max(
-      ...data.map((row) => getValue(row, col.accessor).length)
+      ...data.map((row) => getValue(row, col.accessor).length),
     );
     return col.width ?? Math.min(Math.max(headerLen, maxDataLen), 50);
   });
 
   // Build header
   const header = columns
-    .map((col, i) => padCell(col.header, widths[i] ?? col.header.length, col.align ?? 'left'))
+    .map((col, i) =>
+      padCell(col.header, widths[i] ?? col.header.length, col.align ?? 'left'),
+    )
     .join('  ');
 
   const separator = widths.map((w) => '-'.repeat(w ?? 10)).join('--');
@@ -69,7 +76,7 @@ export function formatTable<T>(data: T[], columns: Column<T>[]): string {
         const val = getValue(row, col.accessor);
         return padCell(val, widths[i] ?? 10, col.align ?? 'left');
       })
-      .join('  ')
+      .join('  '),
   );
 
   return [header, separator, ...rows].join('\n');
@@ -78,7 +85,10 @@ export function formatTable<T>(data: T[], columns: Column<T>[]): string {
 /**
  * Format a simple key-value display
  */
-export function formatKeyValue(data: Record<string, unknown>, indent = 0): string {
+export function formatKeyValue(
+  data: Record<string, unknown>,
+  indent = 0,
+): string {
   const prefix = ' '.repeat(indent);
   return Object.entries(data)
     .filter(([, v]) => v !== undefined && v !== null)

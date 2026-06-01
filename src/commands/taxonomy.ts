@@ -1,5 +1,9 @@
-import { Command } from 'commander';
-import { createOpsContext, handleOpsError, type GlobalOptions } from '../context.js';
+import type { Command } from 'commander';
+import {
+  createOpsContext,
+  type GlobalOptions,
+  handleOpsError,
+} from '../context.js';
 import { withSpinner } from '../utils.js';
 
 /**
@@ -9,16 +13,21 @@ export function registerTaxonomyCommands(program: Command): void {
   const taxonomy = program
     .command('taxonomy')
     .description('Inspect the failure taxonomy schema')
-    .addHelpText('after', `
+    .addHelpText(
+      'after',
+      `
 Examples:
   $ ulu taxonomy get
   $ ulu taxonomy get --json
-`);
+`,
+    );
 
   // ulu taxonomy get
   taxonomy
     .command('get')
-    .description('Display the failure taxonomy schema (domains, severity codes, statuses)')
+    .description(
+      'Display the failure taxonomy schema (domains, severity codes, statuses)',
+    )
     .action(async (_, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
@@ -26,8 +35,11 @@ Examples:
       try {
         const schema = await withSpinner(
           ctx,
-          { start: 'Fetching taxonomy...', failure: 'Failed to fetch taxonomy' },
-          () => ctx.client.taxonomy.get()
+          {
+            start: 'Fetching taxonomy...',
+            failure: 'Failed to fetch taxonomy',
+          },
+          () => ctx.client.taxonomy.get(),
         );
 
         if (ctx.json) {
@@ -47,7 +59,9 @@ Examples:
             console.log(`  ${sev.code} - ${sev.name} (weight: ${sev.weight})`);
           }
 
-          console.log(`\nFailure Code Pattern: ${schema.failureCodePattern.pattern}`);
+          console.log(
+            `\nFailure Code Pattern: ${schema.failureCodePattern.pattern}`,
+          );
           console.log(`Priorities: ${schema.priorities.join(', ')}`);
           console.log(`Statuses: ${schema.statuses.join(', ')}`);
         }
