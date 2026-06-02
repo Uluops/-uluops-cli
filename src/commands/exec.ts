@@ -1,5 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
-import { dirname, resolve } from 'node:path';
+import { basename, dirname, resolve } from 'node:path';
 import type {
   AgentResult,
   DefinitionType,
@@ -56,6 +56,53 @@ function getMergedOptions(cmd: Command): ExecOptions {
         : undefined,
   } as ExecOptions;
 }
+
+/**
+ * Warn when tracking is enabled but no project was specified.
+ *
+ * The core SDK silently infers a project name from `basename(resolve(target))`,
+ * which creates phantom projects named after random target dirs (e.g., `src`,
+ * `dist`). This helper surfaces the inference at the CLI layer so users can
+ * either pass `--project <name>` or opt out with `--no-tracking`.
+ *
+ * Honors `ULUOPS_PROJECT` env as an implicit project setter and suppresses the
+ * warning under `--quiet` or `--json`.
+ *
+ * @internal Exported for unit testing only.
+ */
+export function warnIfProjectInferred(
+  options: ExecOptions,
+  target: string | undefined,
+): void {
+  if (options.quiet || options.json) return;
+  if (options.tracking === false) return;
+  if (options.project) return;
+  if (process.env['ULUOPS_PROJECT']) return;
+  if (!target) return;
+  const inferred = basename(resolve(target));
+  console.error(
+    `⚠️  No --project specified; tracking under inferred name "${inferred}". ` +
+      `Pass --project <name> to set explicitly, or --no-tracking to skip submission.`,
+  );
+}
+
+/**
+ * Help text shown on every exec subcommand so users discover options that
+ * Commander would otherwise hide because they're declared on the parent
+ * `exec` command. Without this, `ulu exec agent --help` looks like agents
+ * cannot be tracked or scoped to a project, which is the opposite of true.
+ */
+const EXEC_INHERITED_HELP = `
+Inherited options (from \`ulu exec\`, must appear before the subcommand):
+  --local-definitions <dir>  Local YAML definitions directory
+  --registry-url <url>       Override registry URL
+  --project <name>           Project name for result tracking
+  --no-tracking              Disable validation service submission
+  --no-safety-warnings       Suppress risk warnings and runtime advisories
+
+Inherited global options (see \`ulu --help\`):
+  --api-key, --profile, --base-url, --timeout, --json, --debug, -q/--quiet
+`;
 
 /** Read a string option from Commander's untyped opts record. */
 function optString(
@@ -237,8 +284,9 @@ async function writeReportFiles(
     }
   }
 
-  if (opts.featuresList && typeof opts.featuresList === 'string') {
-    const featuresPath = resolve(opts.featuresList as string);
+  const featuresList = optString(opts, 'featuresList');
+  if (featuresList) {
+    const featuresPath = resolve(featuresList);
     const features = {
       agent: result.name,
       version: result.version,
@@ -303,6 +351,7 @@ Examples:
     .description(
       'Execute a definition by name against a target path (auto-detects type)',
     )
+    .addHelpText('after', EXEC_INHERITED_HELP)
     .option(
       '-m, --model <model>',
       'Model override for all agents (alias, tier, or provider:modelId)',
@@ -319,8 +368,9 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
-        const modelOverride = cmdOpts['model'] as string | undefined;
-        const prompt = cmdOpts['prompt'] as string | undefined;
+        warnIfProjectInferred(options, target);
+        const modelOverride = optString(cmdOpts, 'model');
+        const prompt = optString(cmdOpts, 'prompt');
         const ctx = createCoreContext(options, modelOverride);
 
         try {
@@ -354,6 +404,7 @@ Examples:
     .description(
       'Execute one or more agent definitions (runs in parallel when multiple)',
     )
+    .addHelpText('after', EXEC_INHERITED_HELP)
     .requiredOption('-t, --target <path>', 'Target directory to analyze')
     .option(
       '-m, --model <model>',
@@ -397,10 +448,11 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
+        const target: string = cmd.opts()['target'];
+        warnIfProjectInferred(options, target);
         const ctx = createCoreContext(options);
         const execOpts = buildExecOptions({ ...cmdOpts, ...options });
-        const target: string = cmd.opts()['target'];
-        const prompt = cmdOpts['prompt'] as string | undefined;
+        const prompt = optString(cmdOpts, 'prompt');
         const agentNames: string[] = names.filter(Boolean);
 
         // Single agent — show elapsed time during execution
@@ -542,8 +594,9 @@ Examples:
         }
 
         // Multiple agents — run with concurrency limit
-        const maxConcurrency = cmdOpts['concurrency']
-          ? parseIntOption(cmdOpts['concurrency'] as string, '--concurrency')
+        const concurrencyOpt = optString(cmdOpts, 'concurrency');
+        const maxConcurrency = concurrencyOpt
+          ? parseIntOption(concurrencyOpt, '--concurrency')
           : 5;
         console.log(
           `Running ${agentNames.length} agents (concurrency: ${maxConcurrency}) against ${target}...\n`,
@@ -633,6 +686,7 @@ Examples:
 
   exec
     .command('command <name> <target>')
+    .addHelpText('after', EXEC_INHERITED_HELP)
     .description('Execute a saved command configuration')
     .option(
       '-m, --model <model>',
@@ -650,9 +704,10 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
+        warnIfProjectInferred(options, target);
         const ctx = createCoreContext(options);
-        const modelOverride = cmdOpts['model'] as string | undefined;
-        const prompt = cmdOpts['prompt'] as string | undefined;
+        const modelOverride = optString(cmdOpts, 'model');
+        const prompt = optString(cmdOpts, 'prompt');
 
         try {
           const result = await withSpinner(
@@ -685,6 +740,7 @@ Examples:
 
   exec
     .command('workflow <name> <target>')
+    .addHelpText('after', EXEC_INHERITED_HELP)
     .description('Execute a multi-phase workflow')
     .option(
       '-m, --model <model>',
@@ -702,8 +758,9 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
-        const modelOverride = cmdOpts['model'] as string | undefined;
-        const prompt = cmdOpts['prompt'] as string | undefined;
+        warnIfProjectInferred(options, target);
+        const modelOverride = optString(cmdOpts, 'model');
+        const prompt = optString(cmdOpts, 'prompt');
         const ctx = createCoreContext(options, modelOverride);
 
         try {
@@ -732,6 +789,7 @@ Examples:
 
   exec
     .command('pipeline <name> <target>')
+    .addHelpText('after', EXEC_INHERITED_HELP)
     .description('Execute a multi-stage pipeline')
     .option(
       '-m, --model <model>',
@@ -749,8 +807,9 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
-        const modelOverride = cmdOpts['model'] as string | undefined;
-        const prompt = cmdOpts['prompt'] as string | undefined;
+        warnIfProjectInferred(options, target);
+        const modelOverride = optString(cmdOpts, 'model');
+        const prompt = optString(cmdOpts, 'prompt');
         const ctx = createCoreContext(options, modelOverride);
 
         try {
@@ -761,20 +820,13 @@ Examples:
               success: `Pipeline execution complete`,
               failure: `Pipeline execution failed`,
             },
-            () =>
-              (
-                ctx.client as unknown as { runPipeline: typeof ctx.client.run }
-              ).runPipeline(name, { target, prompt }),
+            () => ctx.client.runPipeline(name, { target, prompt }),
           );
 
           if (ctx.json) {
             console.log(JSON.stringify(result, null, 2));
           } else {
-            console.log(
-              formatExecutionResult(
-                result as import('@uluops/core').ExecutionResult,
-              ),
-            );
+            console.log(formatExecutionResult(result));
           }
         } catch (error) {
           handleCoreError(error, ctx);
@@ -786,6 +838,7 @@ Examples:
 
   exec
     .command('list')
+    .addHelpText('after', EXEC_INHERITED_HELP)
     .description('List available definitions')
     .option(
       '-t, --type <type>',
@@ -830,6 +883,7 @@ Examples:
 
   exec
     .command('describe <name>')
+    .addHelpText('after', EXEC_INHERITED_HELP)
     .description(
       "Show a definition's metadata, decision vocabulary, and interface",
     )

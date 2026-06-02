@@ -1,5 +1,6 @@
 import type { SaveRunInput, UpdateRunByNumberInput } from '@uluops/ops-sdk';
 import type { Command } from 'commander';
+import { z } from 'zod';
 import {
   createOpsContext,
   type GlobalOptions,
@@ -17,6 +18,31 @@ import {
   resolveProject,
   withSpinner,
 } from '../utils.js';
+
+/**
+ * Minimal runtime schema for the JSON input accepted by `ulu runs update`.
+ *
+ * Mirrors the shape of `AgentInput` from @uluops/ops-sdk but stays
+ * intentionally loose — the canonical authority is the API. We validate just
+ * enough to fail fast at the CLI on obvious malformed input (wrong types,
+ * empty agent name) rather than passing untyped data through.
+ */
+const RunsUpdateAgentInputSchema = z
+  .object({
+    name: z.string().min(1),
+    score: z.number().min(0).max(100).optional().nullable(),
+    maxScore: z.number().min(0).max(100).optional(),
+    decision: z.string().min(1),
+    summary: z.string().optional(),
+    model: z.string().optional(),
+    durationMs: z.number().int().nonnegative().optional(),
+    definitionVersion: z.string().optional(),
+  })
+  .passthrough();
+
+const RunsUpdateJsonInputSchema = z.object({
+  agents: z.array(RunsUpdateAgentInputSchema).optional(),
+});
 
 /**
  * Register run commands
@@ -525,11 +551,22 @@ Examples:
         if (options.passed !== undefined)
           input.allGatesPassed = options.passed === 'true';
 
-        // Read agent updates from file/stdin if provided
+        // Read agent updates from file/stdin if provided.
+        // The schema is a lightweight surface guard; the API performs strict
+        // validation. We fail fast on obvious type errors so users see "wrong
+        // shape" before a network round-trip.
         if (options.file || options.stdin) {
-          const data = (await readJsonInput(options)) as { agents?: unknown[] };
-          if (data.agents)
-            input.agents = data.agents as UpdateRunByNumberInput['agents'];
+          const raw = await readJsonInput(options);
+          const parsed = RunsUpdateJsonInputSchema.safeParse(raw);
+          if (!parsed.success) {
+            exitWithError(
+              `Invalid JSON input for runs update: ${parsed.error.message}`,
+            );
+          }
+          if (parsed.data.agents) {
+            input.agents = parsed.data
+              .agents as UpdateRunByNumberInput['agents'];
+          }
         }
 
         const run = await withSpinner(

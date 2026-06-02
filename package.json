@@ -1,6 +1,6 @@
 {
   "name": "@uluops/cli",
-  "version": "0.12.3",
+  "version": "0.12.4",
   "description": "Unified CLI for UluOps - validation tracking and registry management",
   "type": "module",
   "bin": {
@@ -43,9 +43,9 @@
     "@uluops/core": "0.18.3",
     "@uluops/ops-sdk": "3.0.5",
     "@uluops/registry-sdk": "0.30.2",
-    "@uluops/sdk-core": "0.11.1",
     "commander": "13.1.0",
-    "ora": "8.1.1"
+    "ora": "8.1.1",
+    "zod": "4.3.6"
   },
   "devDependencies": {
     "@biomejs/biome": "2.4.0",

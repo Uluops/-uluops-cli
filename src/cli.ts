@@ -80,7 +80,10 @@ program
   .option('--api-key <key>', 'API key (overrides environment variable)')
   .option('--profile <name>', 'Config profile to use', 'default')
   .option('--base-url <url>', 'API base URL')
-  .option('--timeout <ms>', 'Request timeout in milliseconds (default: 30000)')
+  .option(
+    '--timeout <ms>',
+    'Request timeout in milliseconds (default: 30000 for ops/registry, 600000 for exec)',
+  )
   .option('--json', 'Output in JSON format for scripting')
   .option('--debug', 'Enable debug output')
   .option('-q, --quiet', 'Suppress spinners and non-essential output')

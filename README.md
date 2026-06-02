@@ -445,7 +445,7 @@ Workflow definition management (registry API). Alias: `def`.
 
 ```bash
 ulu definitions list              # List definitions (--type, --status, --search)
-ulu definitions get <type> <name> [version]   # Get definition (--yaml, --rendered)
+ulu definitions get <type> <name> [version]   # Get definition (--yaml, --rendered, --target, -o)
 ulu definitions create <type> <name>          # Create draft (--file)
 ulu definitions update <type> <name> <ver>    # Update draft (--file)
 ulu definitions publish <type> <name> <ver>   # Publish definition
@@ -468,6 +468,12 @@ ulu def get agent code-validator 1.0.0 --yaml
 
 # Get rendered markdown for a published definition
 ulu def get agent code-validator --rendered
+
+# Render for a specific harness (claude-code, opencode, codex, gemini-cli)
+ulu def get agent code-validator --rendered --target opencode
+
+# Write rendered output to file instead of stdout
+ulu def get agent code-validator --rendered -o ./code-validator.md
 
 # Validate and render a local YAML file (type auto-detected from filename)
 ulu def validate --file my-agent.agent.yaml
@@ -600,6 +606,7 @@ ulu exec describe code-validator
 
 | Option | Description |
 |--------|-------------|
+| `-t, --target <path>` | **Required.** Target directory to analyze |
 | `--max-tokens <n>` | Maximum response tokens |
 | `--max-steps <n>` | Maximum tool loop iterations (default: 50) |
 | `--temperature <n>` | Generation temperature 0-1 (default: 0) |

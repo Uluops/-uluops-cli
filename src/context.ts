@@ -124,6 +124,17 @@ function requireCredentials(hasCredentials: unknown, profile: string): void {
 /** Default HTTP timeout for CLI commands (30 seconds) */
 const DEFAULT_TIMEOUT_MS = 30_000;
 
+/**
+ * Default timeout for core (exec) commands (10 minutes).
+ *
+ * Longer than the ops/registry HTTP default because exec wraps agent execution:
+ * model cold-start, multi-step tool loops, and large-target analysis all push
+ * single calls well past the 30s HTTP norm. Overrides the core SDK's own 5m
+ * fallback so CLI users get a single, predictable ceiling regardless of SDK
+ * version.
+ */
+const DEFAULT_CORE_TIMEOUT_MS = 600_000;
+
 export function createOpsContext(options: GlobalOptions): OpsCliContext {
   const config = loadOpsConfig({
     apiKey: options.apiKey,
@@ -294,10 +305,8 @@ export function createCoreContext(
 
   const timeout = options.timeout
     ? parseIntOption(options.timeout, '--timeout')
-    : undefined;
-  if (timeout !== undefined) {
-    config.timeout = timeout;
-  }
+    : DEFAULT_CORE_TIMEOUT_MS;
+  config.timeout = timeout;
 
   let client: UluOpsClient;
   try {

@@ -1,4 +1,7 @@
-import { describe, it, expect, vi } from 'vitest';
+import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
 import {
   toSnakeCase,
   toCamelCase,
@@ -15,6 +18,7 @@ import {
   inferDefinitionType,
   resolveDefinitionType,
   resolveProject,
+  writeFileAtomic,
 } from '../src/utils.js';
 
 describe('toSnakeCase', () => {
@@ -530,6 +534,62 @@ describe('resolveDefinitionType', () => {
 
     mockExit.mockRestore();
     mockError.mockRestore();
+  });
+});
+
+describe('writeFileAtomic', () => {
+  let workDir: string;
+
+  beforeEach(() => {
+    workDir = mkdtempSync(join(tmpdir(), 'ulu-atomic-'));
+  });
+
+  afterEach(() => {
+    rmSync(workDir, { recursive: true, force: true });
+  });
+
+  it('writes content to the target path', () => {
+    const target = join(workDir, 'config.json');
+    writeFileAtomic(target, '{"hello":"world"}');
+    expect(readFileSync(target, 'utf-8')).toBe('{"hello":"world"}');
+  });
+
+  it('overwrites an existing file', () => {
+    const target = join(workDir, 'config.json');
+    writeFileAtomic(target, 'first');
+    writeFileAtomic(target, 'second');
+    expect(readFileSync(target, 'utf-8')).toBe('second');
+  });
+
+  it('leaves no .tmp sibling on success', () => {
+    const target = join(workDir, 'config.json');
+    writeFileAtomic(target, 'data');
+    expect(existsSync(`${target}.tmp`)).toBe(false);
+  });
+
+  it('sets restrictive (0o600) permissions on the written file', () => {
+    const target = join(workDir, 'secret');
+    writeFileAtomic(target, 'sensitive');
+    // Mask to permission bits only — file type bits vary by platform.
+    const mode = statSync(target).mode & 0o777;
+    expect(mode).toBe(0o600);
+  });
+
+  it('cleans up the .tmp file when rename fails', () => {
+    // Renaming onto a directory throws on every platform we support.
+    const targetDir = join(workDir, 'collision');
+    // Create a directory at the target path so renameSync fails.
+    rmSync(targetDir, { recursive: true, force: true });
+    // mkdir via writeFileAtomic-friendly setup:
+    // we use the existence of `workDir` itself as the unwritable target.
+    expect(() => writeFileAtomic(workDir, 'oops')).toThrow();
+    expect(existsSync(`${workDir}.tmp`)).toBe(false);
+  });
+
+  it('propagates write errors and does not create the target', () => {
+    const missing = join(workDir, 'nonexistent-dir', 'file.txt');
+    expect(() => writeFileAtomic(missing, 'data')).toThrow();
+    expect(existsSync(missing)).toBe(false);
   });
 });
 

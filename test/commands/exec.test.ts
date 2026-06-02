@@ -10,8 +10,17 @@ import {
   registerExecCommands,
   resolveReportPath,
   applyReportModeDirective,
+  warnIfProjectInferred,
   REPORT_MODE_DIRECTIVE,
 } from '../../src/commands/exec.js';
+import type { GlobalOptions, CoreExecOptions } from '../../src/context.js';
+
+type ExecOpts = GlobalOptions &
+  CoreExecOptions & { safetyWarnings?: boolean };
+
+function baseOpts(overrides: Partial<ExecOpts> = {}): ExecOpts {
+  return overrides as ExecOpts;
+}
 import { resolve as resolvePath } from 'node:path';
 import type { AgentResult } from '@uluops/core';
 
@@ -24,6 +33,7 @@ function createMockCoreClient() {
     runAgent: vi.fn(),
     runCommand: vi.fn(),
     runWorkflow: vi.fn(),
+    runPipeline: vi.fn(),
     list: vi.fn(),
     describe: vi.fn(),
   };
@@ -249,6 +259,114 @@ describe('exec workflow', () => {
     const err = new Error('Workflow failed');
     mockClient.runWorkflow.mockRejectedValue(err);
     await expect(parse('exec', 'workflow', 'ship', './src')).rejects.toThrow('Workflow failed');
+  });
+});
+
+// ── exec pipeline ────────────────────────────────────────────────────────
+
+describe('exec pipeline', () => {
+  it('executes a pipeline and displays formatted result', async () => {
+    mockClient.runPipeline.mockResolvedValue(
+      createExecutionResult({ type: 'pipeline', name: 'foundations' }),
+    );
+    await parse('exec', 'pipeline', 'foundations', './src');
+    expect(mockClient.runPipeline).toHaveBeenCalledWith('foundations', {
+      target: './src',
+      prompt: undefined,
+    });
+  });
+
+  it('passes the operator prompt through', async () => {
+    mockClient.runPipeline.mockResolvedValue(
+      createExecutionResult({ type: 'pipeline', name: 'foundations' }),
+    );
+    await parse(
+      'exec',
+      'pipeline',
+      'foundations',
+      './src',
+      '--prompt',
+      'focus on security',
+    );
+    expect(mockClient.runPipeline).toHaveBeenCalledWith('foundations', {
+      target: './src',
+      prompt: 'focus on security',
+    });
+  });
+
+  it('emits JSON in json mode', async () => {
+    mockedCreateCoreContext.mockReturnValue({
+      client: mockClient as unknown as CoreCliContext['client'],
+      json: true,
+      debug: false,
+      quiet: true,
+    });
+    const result = createExecutionResult({ type: 'pipeline', name: 'foundations' });
+    mockClient.runPipeline.mockResolvedValue(result);
+    await parse('exec', 'pipeline', 'foundations', './src');
+    expect(output.stdout()).toContain('"name": "foundations"');
+  });
+
+  it('delegates errors to handleCoreError', async () => {
+    const err = new Error('Pipeline failed');
+    mockClient.runPipeline.mockRejectedValue(err);
+    await expect(
+      parse('exec', 'pipeline', 'foundations', './src'),
+    ).rejects.toThrow('Pipeline failed');
+  });
+});
+
+// ── project-inference warning ────────────────────────────────────────────
+
+describe('warnIfProjectInferred', () => {
+  const originalEnv = process.env['ULUOPS_PROJECT'];
+
+  afterEach(() => {
+    if (originalEnv === undefined) delete process.env['ULUOPS_PROJECT'];
+    else process.env['ULUOPS_PROJECT'] = originalEnv;
+  });
+
+  it('warns with the inferred basename when --project is omitted', () => {
+    delete process.env['ULUOPS_PROJECT'];
+    warnIfProjectInferred(baseOpts(), './src');
+    expect(output.stderr()).toContain('No --project specified');
+    expect(output.stderr()).toContain('"src"');
+  });
+
+  it('stays silent when --project is provided', () => {
+    delete process.env['ULUOPS_PROJECT'];
+    warnIfProjectInferred(baseOpts({ project: 'my-proj' }), './src');
+    expect(output.stderr()).not.toContain('No --project specified');
+  });
+
+  it('stays silent when --no-tracking is set', () => {
+    delete process.env['ULUOPS_PROJECT'];
+    warnIfProjectInferred(baseOpts({ tracking: false }), './src');
+    expect(output.stderr()).not.toContain('No --project specified');
+  });
+
+  it('stays silent when ULUOPS_PROJECT env is set', () => {
+    process.env['ULUOPS_PROJECT'] = 'env-proj';
+    warnIfProjectInferred(baseOpts(), './src');
+    expect(output.stderr()).not.toContain('No --project specified');
+  });
+
+  it('stays silent in quiet mode', () => {
+    delete process.env['ULUOPS_PROJECT'];
+    warnIfProjectInferred(baseOpts({ quiet: true }), './src');
+    expect(output.stderr()).not.toContain('No --project specified');
+  });
+
+  it('stays silent in json mode (machine-readable streams must stay clean)', () => {
+    delete process.env['ULUOPS_PROJECT'];
+    warnIfProjectInferred(baseOpts({ json: true }), './src');
+    expect(output.stderr()).not.toContain('No --project specified');
+  });
+
+  it('stays silent when target is missing', () => {
+    delete process.env['ULUOPS_PROJECT'];
+    warnIfProjectInferred(baseOpts(), undefined);
+    expect(output.stderr()).not.toContain('No --project specified');
   });
 });
 

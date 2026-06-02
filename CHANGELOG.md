@@ -4,6 +4,38 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.4] - 2026-06-02
+
+### Added
+
+- **Warning when `--project` is omitted with tracking enabled.** `exec run`, `exec agent`, `exec command`, `exec workflow`, and `exec pipeline` now print a stderr advisory showing the project name the SDK would silently infer from `basename(resolve(target))` and pointing to `--project` or `--no-tracking`. Suppressed under `--quiet`, `--json`, when `ULUOPS_PROJECT` is set, or when the operator passes `--project` explicitly. Surfaces the phantom-project class of bug (`exec agent foo ./src` creating a project literally named `src`) without breaking the one-line ad-hoc invocation pattern. The structural fix lives in `ops-uluops-api` issue `76f1c7e6`.
+- **Inherited options now visible on `exec` subcommand help.** `ulu exec agent --help`, `ulu exec pipeline --help`, etc. now list `--project`, `--no-tracking`, `--no-safety-warnings`, `--local-definitions`, `--registry-url` as inherited from the parent `exec` command, plus a pointer to global flags. Previously these were invisible in subcommand help, leading operators to believe tracking and project-scoping weren't available on the subcommand they were looking at.
+- **Default exec timeout: 10 minutes.** `createCoreContext` now passes `timeout: 600_000` to `UluOpsClient` when `--timeout` is not specified, overriding the SDK's internal 5-minute fallback with a single predictable CLI-owned ceiling that accounts for model cold-start and long agent execution. Ops/registry HTTP timeout remains 30s. `--timeout` help text updated to reflect both defaults.
+
+### Changed
+
+- **Type-safety refactor of `exec` action callbacks.** Replaced all `cmdOpts['key'] as string | undefined` casts (and one related `opts.featuresList as string`) with the existing `optString(opts, key)` helper. The helper was already in-file; usage is now uniform across all six action callbacks. Behavior unchanged.
+- **`runs update --file/--stdin` JSON input now Zod-validated.** Replaced the unguarded `(await readJsonInput(options)) as { agents?: unknown[] }` assertion with a `safeParse` against a minimal `RunsUpdateJsonInputSchema`. Validates `agents[].name`, `decision`, and numeric ranges before the network round-trip; passes through unknown fields (`.passthrough()`) so the API remains the canonical authority. Invalid input now exits with a clear `Invalid JSON input for runs update: <zod error>` message instead of forwarding malformed payloads.
+- **`runPipeline` double assertion removed.** `src/commands/exec.ts` previously cast `ctx.client` through `unknown` to access `runPipeline`. The method has been public on `UluOpsClient` since 0.18.0; the cast (and the dependent `as ExecutionResult` on the formatter call) was stale. Direct call now.
+
+### Fixed
+
+- **README documents `-t/--target` on `exec agent`.** The required option was missing from the "Agent-specific options" table.
+- **README documents `def get --rendered` options.** `--target <harness>` and `-o, --output <path>` were undocumented; added to the listing and two example invocations.
+
+### Removed
+
+- **`@uluops/sdk-core` no longer listed as a direct dependency.** Verified unimported in `src/`/`test/`; remains transitively available via `@uluops/ops-sdk` and `@uluops/registry-sdk`.
+
+### Added
+
+- **`zod@4.3.6` added as a direct dependency** (exact pin, matching `@uluops/ops-sdk`'s pin) to back the new `runs update` input schema.
+
+### Internal
+
+- 20 new tests across `test/utils.test.ts` (writeFileAtomic — 6), `test/commands/exec.test.ts` (`exec pipeline` happy/prompt/JSON/error paths plus `warnIfProjectInferred` 7-case matrix — 11), and `test/commands/runs.test.ts` (Zod validation — 4). Test suite now 394 cases.
+- `warnIfProjectInferred` exported as `@internal` for direct unit testing rather than driving it via Commander argv plumbing.
+
 ## [0.12.3] - 2026-06-02
 
 ### Changed

@@ -362,7 +362,7 @@ describe('createCoreContext', () => {
     );
   });
 
-  it('should not pass timeout when not provided', () => {
+  it('should use default timeout (10m) when not provided', () => {
     mockedLoadOpsConfig.mockReturnValue({
       baseUrl: 'http://localhost:3100',
       debug: false,
@@ -371,7 +371,7 @@ describe('createCoreContext', () => {
 
     createCoreContext({});
     expect(mockedUluOpsClient).toHaveBeenCalledWith(
-      expect.not.objectContaining({ timeout: expect.any(Number) })
+      expect.objectContaining({ timeout: 600_000 })
     );
   });
 

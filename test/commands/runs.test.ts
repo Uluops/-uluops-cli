@@ -180,6 +180,98 @@ describe('runs update', () => {
   });
 });
 
+describe('runs update --file (Zod-validated JSON input)', () => {
+  it('accepts well-formed agent updates and forwards them', async () => {
+    vi.mocked(readFileSync).mockReturnValueOnce(
+      JSON.stringify({
+        agents: [
+          { name: 'code-validator', decision: 'PASS', score: 88 },
+          { name: 'security-analyst', decision: 'WARN', score: 65 },
+        ],
+      }),
+    );
+    mockClient.runs.update.mockResolvedValue(
+      createRun({ runNumber: 4, averageScore: 76 }),
+    );
+    const output = captureOutput();
+    await parse(
+      'runs',
+      'update',
+      'my-proj',
+      '--number',
+      '4',
+      '--file',
+      '/tmp/agents.json',
+    );
+    expect(mockClient.runs.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agents: expect.arrayContaining([
+          expect.objectContaining({ name: 'code-validator' }),
+        ]),
+      }),
+    );
+    output.restore();
+  });
+
+  it('exits with a clear error when an agent entry is missing required fields', async () => {
+    vi.mocked(readFileSync).mockReturnValueOnce(
+      JSON.stringify({ agents: [{ score: 88 }] }), // missing name + decision
+    );
+    const output = captureOutput();
+    await expect(
+      parse(
+        'runs',
+        'update',
+        'my-proj',
+        '--number',
+        '4',
+        '--file',
+        '/tmp/agents.json',
+      ),
+    ).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Invalid JSON input for runs update');
+    output.restore();
+  });
+
+  it('exits when agents is the wrong type', async () => {
+    vi.mocked(readFileSync).mockReturnValueOnce(
+      JSON.stringify({ agents: 'not-an-array' }),
+    );
+    const output = captureOutput();
+    await expect(
+      parse(
+        'runs',
+        'update',
+        'my-proj',
+        '--number',
+        '4',
+        '--file',
+        '/tmp/agents.json',
+      ),
+    ).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Invalid JSON input for runs update');
+    output.restore();
+  });
+
+  it('skips the agents path when the JSON omits agents entirely', async () => {
+    vi.mocked(readFileSync).mockReturnValueOnce(JSON.stringify({}));
+    mockClient.runs.update.mockResolvedValue(createRun({ runNumber: 4 }));
+    const output = captureOutput();
+    await parse(
+      'runs',
+      'update',
+      'my-proj',
+      '--number',
+      '4',
+      '--file',
+      '/tmp/agents.json',
+    );
+    const call = mockClient.runs.update.mock.calls[0]?.[0];
+    expect(call).not.toHaveProperty('agents');
+    output.restore();
+  });
+});
+
 describe('runs delete', () => {
   it('should delete a run with --yes', async () => {
     mockClient.runs.delete.mockResolvedValue(undefined);
