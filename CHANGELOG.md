@@ -4,6 +4,20 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.1] - 2026-06-01
+
+### Fixed
+
+- **Install no longer fails on `ETARGET No matching version found for @uluops/ops-sdk@3.0.0`.** `0.12.0` transitively required `@uluops/core@0.18.0`, which had been published with broken pins to `@uluops/ops-sdk@3.0.0` and `@uluops/registry-sdk@0.30.0` — both subsequently unpublished from the registry. This release pulls in `@uluops/core@0.18.1` which repaired those references, unblocking fresh installs.
+
+### Security
+
+- **Bump full UluOps dep chain to today's hardened versions.** `@uluops/sdk-core` 0.11.0 → 0.11.1, `@uluops/ops-sdk` 3.0.3 → 3.0.5, `@uluops/registry-sdk` 0.30.1 → 0.30.2, `@uluops/core` 0.18.0 → 0.18.1. All packages now resolve to a single `@uluops/sdk-core@0.11.1` instance in `node_modules` (no duplicate nested copies), so the sdk-core security hardening — `redirect: 'error'` on all fetch sites, `stripControlChars` in error messages, widened `SENSITIVE_KEYS`, `REDACTED_DETAIL_KEYS` `column` fix, and `sanitizeString` URL-userinfo + bare JWT coverage — applies uniformly across every SDK code path the CLI invokes. See `@uluops/sdk-core` CHANGELOG 0.11.1.
+
+### Supply chain
+
+- **Pin remaining caret deps to exact versions.** `commander`, `ora`, `@biomejs/biome`, `@types/node`, `@vitest/coverage-v8`, `tsx`, `typescript`, `vitest` stripped of caret ranges per the UluOps exact-pinning policy adopted 2026-06-01 in response to the RedHat-class supply-chain attack pattern.
+
 ## [0.12.0] - 2026-06-01
 
 ### Changed
