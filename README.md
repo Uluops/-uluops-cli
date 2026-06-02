@@ -607,7 +607,8 @@ ulu exec describe code-validator
 | `-c, --concurrency <n>` | Max concurrent agents for parallel execution (default: 5) |
 | `--threshold-pass <n>` | Pass threshold score (agents) |
 | `--threshold-warn <n>` | Warning threshold score (agents) |
-| `--report <path>` | Write raw agent output report to file (single agent only) |
+| `--report [path]` | Write a publication-quality report to file (single agent only). With no path, defaults to `./<agent>-report-<YYYYMMDDTHHmmss>.md` in cwd. Injects a report-mode directive into the agent's prompt and disables structured-output enforcement so the model can emit prose. **Implies `--no-tracking`** because the schema-validated path the tracker depends on is no longer guaranteed under report mode. Run without `--report` for tracker submission. |
+| `-o, --output <path>` | Explicit output path for `--report` (overrides the `--report` argument and the default) |
 | `--features-list <path>` | Write structured features/recommendations to file (single agent only) |
 
 **Examples:**
@@ -628,6 +629,12 @@ ulu exec agent security-analyst -t ./src \
 ulu exec agent my-validator -t ./src \
   --local-definitions ./agent-defs \
   --project my-project
+
+# Produce a publication-quality report (cwd default destination)
+ulu exec agent wittgenstein-analyst -t ./docs --report
+
+# Same, with explicit destination
+ulu exec agent wittgenstein-analyst -t ./docs --report -o ~/my-report.md
 
 # Execute without tracking results
 ulu exec workflow ship ./packages/api --no-tracking

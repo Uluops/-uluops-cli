@@ -6,7 +6,14 @@ import type { CoreCliContext } from '../../src/context.js';
 vi.mock('../../src/context.js');
 
 import { createCoreContext, handleCoreError } from '../../src/context.js';
-import { registerExecCommands } from '../../src/commands/exec.js';
+import {
+  registerExecCommands,
+  resolveReportPath,
+  applyReportModeDirective,
+  REPORT_MODE_DIRECTIVE,
+} from '../../src/commands/exec.js';
+import { resolve as resolvePath } from 'node:path';
+import type { AgentResult } from '@uluops/core';
 
 const mockedCreateCoreContext = vi.mocked(createCoreContext);
 const mockedHandleCoreError = vi.mocked(handleCoreError);
@@ -445,5 +452,161 @@ describe('parent options', () => {
       { target: './src', prompt: undefined },
       expect.objectContaining({ project: 'my-proj' })
     );
+  });
+});
+
+describe('resolveReportPath', () => {
+  // Minimal AgentResult — only `name` is read by resolveReportPath's default
+  // filename branch. Other fields cast as unknown to avoid an exhaustive mock.
+  const makeResult = (name: string): AgentResult =>
+    ({ name } as unknown as AgentResult);
+
+  it('returns null when --report is not set', () => {
+    expect(resolveReportPath(makeResult('any-agent'), {})).toBeNull();
+  });
+
+  it('lets --output win over a positional --report path', () => {
+    const got = resolveReportPath(
+      makeResult('any-agent'),
+      { report: './a.md', output: './b.md' },
+    );
+    expect(got).toBe(resolvePath('./b.md'));
+  });
+
+  it('lets --output win over the cwd default', () => {
+    const got = resolveReportPath(
+      makeResult('any-agent'),
+      { report: true, output: './b.md' },
+    );
+    expect(got).toBe(resolvePath('./b.md'));
+  });
+
+  it('uses the positional --report argument when no --output is given', () => {
+    const got = resolveReportPath(
+      makeResult('any-agent'),
+      { report: './a.md' },
+    );
+    expect(got).toBe(resolvePath('./a.md'));
+  });
+
+  it('constructs a cwd-relative default with timestamp YYYYMMDDTHHmmss', () => {
+    const got = resolveReportPath(
+      makeResult('wittgenstein-analyst'),
+      { report: true },
+    );
+    // Path is absolute and ends with the constructed filename.
+    expect(got).toMatch(
+      /\/wittgenstein-analyst-report-\d{8}T\d{6}\.md$/,
+    );
+    expect(got!.startsWith(process.cwd())).toBe(true);
+  });
+
+  it('sanitizes agent name to [a-zA-Z0-9_.-] in the default filename', () => {
+    const got = resolveReportPath(
+      makeResult('weird/name with spaces'),
+      { report: true },
+    );
+    expect(got).toMatch(/\/weird_name_with_spaces-report-\d{8}T\d{6}\.md$/);
+  });
+
+  it('treats empty-string --output as not-set (falls through to next branch)', () => {
+    const got = resolveReportPath(
+      makeResult('any-agent'),
+      { report: './a.md', output: '' },
+    );
+    expect(got).toBe(resolvePath('./a.md'));
+  });
+});
+
+describe('applyReportModeDirective', () => {
+  it('returns the prompt unchanged when report mode is not requested', () => {
+    expect(applyReportModeDirective('focus on X', false)).toBe('focus on X');
+    expect(applyReportModeDirective(undefined, false)).toBeUndefined();
+  });
+
+  it('returns the directive alone when report mode is requested with no operator prompt', () => {
+    expect(applyReportModeDirective(undefined, true)).toBe(REPORT_MODE_DIRECTIVE);
+  });
+
+  it('prepends the directive, blank line, then operator prompt when both present', () => {
+    const got = applyReportModeDirective('focus on X', true);
+    expect(got!.startsWith(REPORT_MODE_DIRECTIVE)).toBe(true);
+    expect(got!.endsWith('focus on X')).toBe(true);
+    expect(got).toContain(`${REPORT_MODE_DIRECTIVE}\n\nfocus on X`);
+  });
+
+  // Contract pin: the discriminator marker is the load-bearing contract between
+  // this directive and AnalysisSummaryExtractor.parseAnalysisBlock's regex in
+  // @uluops/core. If this test breaks, either the directive was paraphrased or
+  // the extractor regex was changed — fix one or the other to restore the contract.
+  it('directive includes the ```json analysis discriminator (contract pin)', () => {
+    expect(REPORT_MODE_DIRECTIVE).toContain('```json analysis');
+  });
+});
+
+// ── v0.1.1: --report forces reportMode=true + trackResults=false ────────────
+// Report mode disables AI SDK structured-output enforcement (so the directive
+// can take effect) and forces tracking off (so the tracker's schema-validated
+// analytics contract isn't corrupted by best-effort extraction). The exclusivity
+// is unconditional — even an explicit --tracking flag is overridden. See
+// agent-reporting-spec-v0_1_1.md Phase 4.4 for the rationale.
+
+describe('--report forces reportMode + no-tracking (v0.1.1)', () => {
+  // Uses the top-of-file `createAgentResult` helper (full shape including
+  // categories/recommendations/metrics that the result formatter requires).
+
+  // Note on the --tracking flag: Commander's `.option('--no-tracking', ...)`
+  // pattern only registers the negation form. There is no explicit `--tracking`
+  // flag; the default behavior is tracking-on. So "user explicitly passes
+  // --tracking" is not a real CLI scenario. The exclusivity test is effectively
+  // "report mode forces tracking off, regardless of the default-on state",
+  // which is what the first test covers.
+
+  it('--report alone → reportMode=true, trackResults=false, notice on stderr', async () => {
+    mockClient.runAgent.mockResolvedValue(createAgentResult());
+    // Override ctx.quiet so console.error is not muted; otherwise we cannot
+    // assert on stderr from the report-mode notice.
+    mockedCreateCoreContext.mockReturnValue({
+      client: mockClient as unknown as CoreCliContext['client'],
+      json: false,
+      debug: false,
+      quiet: false,
+    });
+    await parse('exec', 'agent', '-t', './src', 'wittgenstein-analyst', '--report');
+
+    expect(mockClient.runAgent).toHaveBeenCalledWith(
+      'wittgenstein-analyst',
+      expect.objectContaining({ target: './src' }),
+      expect.objectContaining({ reportMode: true, trackResults: false }),
+    );
+    expect(output.stderr()).toContain('Report mode enabled');
+    expect(output.stderr()).toContain('tracking disabled');
+  });
+
+  it('no --report → reportMode not forced, trackResults respects --no-tracking', async () => {
+    mockClient.runAgent.mockResolvedValue(createAgentResult());
+    await parse('exec', '--no-tracking', 'agent', '-t', './src', 'wittgenstein-analyst');
+
+    const opts = mockClient.runAgent.mock.calls[0]?.[2];
+    expect(opts).toEqual(
+      expect.objectContaining({ trackResults: false }),
+    );
+    // reportMode must not be set by the CLI when --report is absent
+    expect(opts?.reportMode).toBeUndefined();
+    expect(output.stderr()).not.toContain('Report mode enabled');
+  });
+
+  it('--report with ctx.quiet=true → notice suppressed but flags still forced', async () => {
+    mockClient.runAgent.mockResolvedValue(createAgentResult());
+    // ctx.quiet=true (the default in this suite's beforeEach) gates the notice
+    // off without affecting the underlying flag mutation.
+    await parse('exec', 'agent', '-t', './src', 'wittgenstein-analyst', '--report');
+
+    expect(mockClient.runAgent).toHaveBeenCalledWith(
+      'wittgenstein-analyst',
+      expect.anything(),
+      expect.objectContaining({ reportMode: true, trackResults: false }),
+    );
+    expect(output.stderr()).not.toContain('Report mode enabled');
   });
 });

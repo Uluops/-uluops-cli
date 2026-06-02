@@ -4,6 +4,33 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.3] - 2026-06-02
+
+### Changed
+
+- **`--report` now implies `--no-tracking`.** Empirical verification of 0.12.2 (`openai:gpt-5.5` and `anthropic:claude-sonnet-4-6` against the CLI source) revealed that the Phase 2 report-mode directive is overruled by AI SDK structured-output enforcement at the API level — OpenAI's strict `json_schema` mode prevents prose emission entirely, and even on Claude the schema-validated extraction path breaks. 0.12.3 resolves this by signaling `reportMode: true` to `@uluops/core@0.18.3`'s new gating logic (which omits the output schema from the AI SDK call), and force-sets `trackResults: false` to preserve the tracker's schema-validated analytics contract. The exclusivity is unconditional. When the operator's terminal is not in quiet mode, a one-line stderr notice prints: `Report mode enabled — tracking disabled. For tracker submission, run without --report.`
+- **Bumps `@uluops/core` to `0.18.3` (exact pin).** Required for the `reportMode` plumbing on `ExecutionOptions` / `ResolvedExecutionContext` / `AgentExecutor.execute` and for the `OutputExtractor` discriminator-first regex chain.
+
+### Internal
+
+- Three new tests in `test/commands/exec.test.ts` pin the v0.1.1 contract: `--report` alone forces `reportMode=true`/`trackResults=false`/stderr notice; non-report invocations leave `reportMode` undefined and respect `--no-tracking`; `--report` in quiet mode suppresses the notice without affecting flag mutation.
+
+## [0.12.2] - 2026-06-02
+
+### Added
+
+- **`--report` flag now produces publication-quality reports.** When `--report` is set on `ulu exec agent`, the CLI injects a report-mode directive into the operator prompt steering the agent to compose a human-readable artifact in the form appropriate to its cognitive lens (prose, narrative, structured sections, dialectical passages). Previously `--report` wrote whatever raw findings the agent produced; now the agent knows it is producing a report for human readership. The structured findings (tracker submission, `--features-list` JSON) continue to flow as sibling artifacts, unchanged.
+- **`-o, --output <path>` flag on `exec agent`** provides explicit destination override for `--report`, with precedence over the `--report` positional argument and the cwd default.
+- **`--report [path]` is now an optional argument.** Called as `--report` (no path), it defaults to `./<agent-name>-report-<YYYYMMDDTHHmmss>.md` in cwd. The prior `--report <path>` form continues to work via Commander's optional-argument semantics.
+
+### Changed
+
+- **Bumps `@uluops/core` to `0.18.2` (exact pin).** Required for the lifted 32 KiB → 512 KiB `rawOutput` truncation cap; publication-quality reports empirically observed at 33–208 KB would otherwise be silently clipped — frequently mid-JSON, which also corrupted analysis-block extraction.
+
+### Internal
+
+- Exported `resolveReportPath`, `applyReportModeDirective`, and `REPORT_MODE_DIRECTIVE` (all marked `@internal`) from `commands/exec.ts` to support unit testing. 11 new tests added in `test/commands/exec.test.ts` pin the path-resolution precedence (`--output` > positional > default), the prompt-composition rules, and the contract between the directive's `\`\`\`json analysis` fence marker and core's `AnalysisSummaryExtractor` regex.
+
 ## [0.12.1] - 2026-06-01
 
 ### Fixed

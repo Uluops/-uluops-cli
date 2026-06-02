@@ -128,14 +128,104 @@ function buildExecOptions(
 }
 
 /**
+ * Steering directive prepended to the operator prompt when `--report` is set.
+ *
+ * Announces report mode to the agent and asks it to compose a publication-quality
+ * artifact in the form appropriate to its cognitive lens. The directive is
+ * lens-agnostic by design — it does not specify sections, headings, or length.
+ *
+ * The `\`\`\`json analysis` fence marker is contract-bound to the regex in
+ * `@uluops/core`'s AnalysisSummaryExtractor.parseAnalysisBlock, which prefers
+ * the discriminated form over plain ```json so that illustrative `\`\`\`json`
+ * blocks in the prose body cannot accidentally claim the canonical match.
+ *
+ * @internal Exported for unit testing only.
+ */
+export const REPORT_MODE_DIRECTIVE = `[Report mode]
+This invocation is producing a human-readable report alongside the standard
+structured findings. Compose your output as a publication-quality artifact in
+the form appropriate to your cognitive lens — prose, narrative, structured
+sections, dialectical passages, or whatever shape best conveys your analysis
+to a human reader.
+
+The structured JSON block your output contract requires must still be present
+(it is consumed by the tracker and by downstream parsers). Emit it ONCE, at
+the end of the report, using the fence marker \`\`\`json analysis (with the
+word "analysis" after \`json\`, separated by a single space) so that any
+illustrative \`\`\`json examples appearing earlier in the prose are not
+mistaken for the canonical block. Everything before the \`\`\`json analysis
+fence is the report itself; everything inside it is the structured payload.
+
+Length should be governed by the substance of what you have to say, not by a
+target. Brief is fine if the analysis is brief; long is fine if the analysis
+is long.`;
+
+/**
+ * If --report is set, prepend the report-mode directive to the operator prompt.
+ * Otherwise, return the prompt unchanged.
+ *
+ * Composition rule: the directive goes first so it frames whatever the operator
+ * said. Operators may want to add their own lens-specific guidance ("focus on
+ * type safety"); the report-mode signal must reach the agent regardless.
+ *
+ * @internal Exported for unit testing only.
+ */
+export function applyReportModeDirective(
+  prompt: string | undefined,
+  reportRequested: boolean,
+): string | undefined {
+  if (!reportRequested) return prompt;
+  if (!prompt) return REPORT_MODE_DIRECTIVE;
+  return `${REPORT_MODE_DIRECTIVE}\n\n${prompt}`;
+}
+
+/**
+ * Resolve the report output path from CLI flags.
+ *
+ * Precedence:
+ *   1. `-o, --output <path>` (explicit override)
+ *   2. `--report <path>` (the optional positional argument on --report)
+ *   3. cwd default: ./<agent-name>-report-<YYYYMMDDTHHmmss>.md
+ *
+ * Returns null when --report is not set.
+ *
+ * @internal Exported for unit testing only.
+ */
+export function resolveReportPath(
+  result: AgentResult,
+  opts: Record<string, unknown>,
+): string | null {
+  if (opts.report === undefined) return null;
+
+  // Explicit -o/--output wins.
+  if (typeof opts.output === 'string' && opts.output.length > 0) {
+    return resolve(opts.output);
+  }
+
+  // --report <path> — Commander gives the string here.
+  if (typeof opts.report === 'string' && opts.report.length > 0) {
+    return resolve(opts.report);
+  }
+
+  // --report with no argument — derive a cwd-relative default.
+  // ISO 8601 basic format: YYYYMMDDTHHmmss (no separators except T).
+  const ts = new Date()
+    .toISOString()
+    .replace(/[-:]/g, '')
+    .replace(/\.\d+Z$/, '');
+  const safeName = result.name.replace(/[^a-zA-Z0-9_.-]/g, '_');
+  return resolve(process.cwd(), `${safeName}-report-${ts}.md`);
+}
+
+/**
  * Write agent report and/or features list files if CLI flags are set.
  */
 async function writeReportFiles(
   result: AgentResult,
   opts: Record<string, unknown>,
 ): Promise<void> {
-  if (opts.report && typeof opts.report === 'string') {
-    const reportPath = resolve(opts.report as string);
+  const reportPath = resolveReportPath(result, opts);
+  if (reportPath) {
     if (result.rawOutput) {
       await mkdir(dirname(reportPath), { recursive: true });
       await writeFile(reportPath, result.rawOutput, 'utf-8');
@@ -198,6 +288,8 @@ export function registerExecCommands(program: Command): void {
 Examples:
   $ ulu exec agent code-validator ./src
   $ ulu exec agent code-validator ./src --model sonnet --project my-project
+  $ ulu exec agent wittgenstein-analyst ./docs --report               # cwd default path
+  $ ulu exec agent wittgenstein-analyst ./docs --report -o ~/report.md
   $ ulu exec workflow ship ./src
   $ ulu exec pipeline foundations ./src
   $ ulu exec describe code-validator
@@ -281,8 +373,14 @@ Examples:
     .option('--threshold-pass <n>', 'Pass threshold score (agents)')
     .option('--threshold-warn <n>', 'Warning threshold score (agents)')
     .option(
-      '--report <path>',
-      'Write raw agent output report to file (single agent only)',
+      '--report [path]',
+      'Write a publication-quality report to file (single agent only). ' +
+        'If no path is given, defaults to ./<agent-name>-report-<timestamp>.md in cwd. ' +
+        'Use -o/--output to override the destination explicitly.',
+    )
+    .option(
+      '-o, --output <path>',
+      'Explicit output path for --report (overrides the --report argument and the default).',
     )
     .option(
       '--features-list <path>',
@@ -308,6 +406,33 @@ Examples:
         // Single agent — show elapsed time during execution
         if (agentNames.length === 1) {
           const agentName = agentNames[0]!;
+          // Report-mode prompt augmentation: gated INSIDE the single-agent branch
+          // so it cannot leak into the multi-agent path (which neither writes a
+          // report file nor benefits from the directive).
+          const reportRequested = cmdOpts['report'] !== undefined;
+          const effectivePrompt = applyReportModeDirective(
+            prompt,
+            reportRequested,
+          );
+          // Report mode forces no-tracking + signals the executor to disable
+          // structured-output enforcement. The exclusivity is unconditional:
+          // even if the operator explicitly passes --tracking, report mode wins.
+          // See agent-reporting-spec-v0_1_1.md Phase 2 Formal Cause #2 and
+          // Phase 4.4 for the rationale.
+          let effectiveExecOpts: ExecutionOptions | undefined = execOpts;
+          if (reportRequested) {
+            effectiveExecOpts = {
+              ...(effectiveExecOpts ?? {}),
+              reportMode: true,
+              trackResults: false,
+            };
+            if (!ctx.quiet) {
+              console.error(
+                'Report mode enabled — tracking disabled. ' +
+                  'For tracker submission, run without --report.',
+              );
+            }
+          }
           try {
             // Pre-execution safety check — show warning for flagged definitions
             const safetyWarnings = (options as ExecOptions).safetyWarnings;
@@ -386,7 +511,11 @@ Examples:
                 failure: `Agent execution failed`,
               },
               () =>
-                ctx.client.runAgent(agentName, { target, prompt }, execOpts),
+                ctx.client.runAgent(
+                  agentName,
+                  { target, prompt: effectivePrompt },
+                  effectiveExecOpts,
+                ),
             ).finally(() => {
               if (timer) clearInterval(timer);
             });
