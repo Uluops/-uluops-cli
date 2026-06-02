@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { chmodSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { OpsClient } from '@uluops/ops-sdk';
@@ -41,9 +41,19 @@ function saveCredentials(
   const configDir = join(homedir(), CONFIG_PATHS.GLOBAL_DIR);
   const credPath = join(homedir(), CONFIG_PATHS.CREDENTIALS);
 
-  // Create config directory if it doesn't exist
+  // Create config directory if it doesn't exist (user-only 0700 so the dir
+  // listing — which exposes profile names — isn't world/group-readable).
   if (!existsSync(configDir)) {
-    mkdirSync(configDir, { recursive: true });
+    mkdirSync(configDir, { recursive: true, mode: 0o700 });
+  } else {
+    // Defensive: harden perms on every write in case an older CLI or a manual
+    // mkdir left the directory at the umask default (typically 0755). chmod
+    // is idempotent and cheap; ignore failures (e.g., dir owned by root).
+    try {
+      chmodSync(configDir, 0o700);
+    } catch {
+      /* best-effort */
+    }
   }
 
   // Load existing credentials or start fresh

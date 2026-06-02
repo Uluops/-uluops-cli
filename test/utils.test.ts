@@ -18,6 +18,7 @@ import {
   inferDefinitionType,
   resolveDefinitionType,
   resolveProject,
+  stripBom,
   writeFileAtomic,
 } from '../src/utils.js';
 
@@ -534,6 +535,26 @@ describe('resolveDefinitionType', () => {
 
     mockExit.mockRestore();
     mockError.mockRestore();
+  });
+});
+
+describe('stripBom', () => {
+  it('strips the UTF-8 BOM when present at the start', () => {
+    const input = `﻿{"agents":[]}`;
+    expect(stripBom(input)).toBe('{"agents":[]}');
+  });
+
+  it('returns the input unchanged when no BOM is present', () => {
+    expect(stripBom('{"agents":[]}')).toBe('{"agents":[]}');
+  });
+
+  it('returns an empty string unchanged', () => {
+    expect(stripBom('')).toBe('');
+  });
+
+  it('only strips a BOM at position 0, not in the middle', () => {
+    const input = `pre﻿mid`;
+    expect(stripBom(input)).toBe(input);
   });
 });
 

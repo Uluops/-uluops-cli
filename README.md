@@ -155,6 +155,7 @@ Every command accepts these flags:
 --api-key <key>      Override API key (env: ULUOPS_API_KEY)
 --profile <name>     Config profile to use (default: 'default')
 --base-url <url>     Override API base URL
+--timeout <ms>       Request timeout in milliseconds (default: 30000 for ops/registry, 600000 for exec)
 --json               Output raw JSON for scripting
 --debug              Enable debug output
 -q, --quiet          Suppress spinners and non-essential output

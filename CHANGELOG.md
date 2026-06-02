@@ -4,6 +4,25 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.5] - 2026-06-02
+
+### Security
+
+- **`~/.uluops` directory now created with `0o700` permissions.** Previously fell through to the OS umask default (typically `0o755`), making the directory listing — which exposes profile names — readable to other users on shared/multi-user systems. The credential file itself was already `0o600` via `writeFileAtomic`, so this closes the listing-side gap. On every credential write the CLI also runs a best-effort `chmodSync(configDir, 0o700)` to tighten any pre-existing directory that was created at the older default; failures (e.g., root-owned dir) are ignored.
+
+### Added
+
+- **`--timeout` now appears in the README Global Options block** with the dual default (`30000` for ops/registry, `600000` for exec) matching the in-CLI `--help` output. Resolves a docs gap left over from when the option existed but was undocumented.
+- **4 `stripBom` tests** in `test/utils.test.ts` covering the BOM-stripping branch, the non-BOM pass-through, the empty-string edge, and the position-0-only stripping guarantee.
+
+### Changed
+
+- **Extracted `hasCredentials` helper in `src/context.ts`.** Collapses the three-way duplicated `apiKey || sessionToken || (email && password)` OR-chain at `createOpsContext`, `createRegistryContext`, and `createCoreContext` into a single function with a local `CredentialFields` type. No cross-SDK import; the CLI's credential model stays the CLI's concern. Param of `requireCredentials` renamed from `hasCredentials` to `present` to avoid shadowing.
+
+### Internal
+
+- Test suite now 398 cases (+4).
+
 ## [0.12.4] - 2026-06-02
 
 ### Added

@@ -99,11 +99,33 @@ function isSessionExpired(profile: string): boolean {
 }
 
 /**
+ * Shape of the credentials object both ops-sdk and registry-sdk loaders
+ * return. Kept locally so this helper has no cross-SDK dependency.
+ */
+interface CredentialFields {
+  apiKey?: string;
+  sessionToken?: string;
+  email?: string;
+  password?: string;
+}
+
+/**
+ * Returns true if any single auth method is fully populated.
+ *
+ * The CLI accepts three credential modes: a bearer API key, a session token
+ * from a prior login, or an email+password pair. The pair must travel
+ * together — email without password (or vice versa) is not a credential.
+ */
+function hasCredentials(c: CredentialFields): boolean {
+  return Boolean(c.apiKey || c.sessionToken || (c.email && c.password));
+}
+
+/**
  * Validate that credentials exist, exiting with a helpful message if not.
  * Checks for expired sessions and provides appropriate guidance.
  */
-function requireCredentials(hasCredentials: unknown, profile: string): void {
-  if (hasCredentials) return;
+function requireCredentials(present: boolean, profile: string): void {
+  if (present) return;
 
   if (isSessionExpired(profile)) {
     exitWithError(
@@ -143,12 +165,10 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
     debug: options.debug,
   });
 
-  const hasCredentials =
-    config.credentials.apiKey ||
-    config.credentials.sessionToken ||
-    (config.credentials.email && config.credentials.password);
-
-  requireCredentials(hasCredentials, options.profile ?? 'default');
+  requireCredentials(
+    hasCredentials(config.credentials),
+    options.profile ?? 'default',
+  );
 
   const timeout = options.timeout
     ? parseIntOption(options.timeout, '--timeout')
@@ -198,12 +218,10 @@ export function createRegistryContext(
     debug: options.debug,
   });
 
-  const hasCredentials =
-    config.credentials.apiKey ||
-    config.credentials.sessionToken ||
-    (config.credentials.email && config.credentials.password);
-
-  requireCredentials(hasCredentials, options.profile ?? 'default');
+  requireCredentials(
+    hasCredentials(config.credentials),
+    options.profile ?? 'default',
+  );
 
   const timeout = options.timeout
     ? parseIntOption(options.timeout, '--timeout')
