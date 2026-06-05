@@ -4,6 +4,17 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.9] - 2026-06-05
+
+### Changed
+
+- **Ambiguous-name disambiguation hint now uses the actual types from the SDK error message.** Previously the hint suggested `--type <agent|command|workflow|pipeline>` regardless of which types actually matched the name, leaving operators to guess. The hint now parses `(agent, command)` from the SDK's "Multiple definitions named X found" message and emits one concrete `--type <name>` line per match, gated through a known-types whitelist so unexpected tokens in the message are dropped. Operators copy-paste a real flag instead of choosing from four hypotheticals.
+- **`ulu exec describe` with no name now lists all definitions** instead of printing commander's `error: missing required argument 'name'`. Operators land on the help page only when they pass `-h`. `--type` is honored as a filter in the no-name case (equivalent to `ulu exec list --type <t>`). Existing behavior with a name is unchanged.
+
+### Internal
+
+- 1 new `extractAmbiguousTypes` test in `test/context.test.ts` covering the type whitelist filtering; 2 new `exec describe` no-name tests in `test/commands/exec.test.ts` (unfiltered list, --type-filtered list). Suite now 408 cases (+3).
+
 ## [0.12.8] - 2026-06-05
 
 ### Added

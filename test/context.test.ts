@@ -660,9 +660,27 @@ describe('handleCoreError', () => {
     );
 
     expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
-    expect(output.stderr()).toContain('Multiple definitions named');
-    expect(output.stderr()).toContain('--type');
-    expect(output.stderr()).not.toContain('ANTHROPIC_API_KEY');
+    const stderr = output.stderr();
+    expect(stderr).toContain('Multiple definitions named');
+    expect(stderr).toContain('--type agent');
+    expect(stderr).toContain('--type command');
+    expect(stderr).not.toContain('--type workflow');
+    expect(stderr).not.toContain('--type pipeline');
+    expect(stderr).not.toContain('ANTHROPIC_API_KEY');
+    output.restore();
+  });
+
+  it('should filter ambiguous-name type list to known definition types', () => {
+    const output = captureOutput();
+    const error = new ConfigurationError(
+      'Multiple definitions named "x" found (agent, command, garbage). Specify type explicitly: resolve("x", version, "command")',
+    );
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    const stderr = output.stderr();
+    expect(stderr).toContain('--type agent');
+    expect(stderr).toContain('--type command');
+    expect(stderr).not.toContain('--type garbage');
     output.restore();
   });
 

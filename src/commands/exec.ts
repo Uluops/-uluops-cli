@@ -882,7 +882,7 @@ Examples:
   // ── exec describe ───────────────────────────────────────────────────────
 
   exec
-    .command('describe <name>')
+    .command('describe [name]')
     .option(
       '-t, --type <type>',
       'Disambiguate by definition type (agent, command, workflow, pipeline)',
@@ -893,14 +893,43 @@ Examples:
     )
     .addHelpText('after', EXEC_INHERITED_HELP)
     .description(
-      "Show a definition's metadata, decision vocabulary, and interface",
+      "Show a definition's metadata, decision vocabulary, and interface (lists all when <name> is omitted)",
     )
     .action(
-      async (name: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
+      async (
+        name: string | undefined,
+        cmdOpts: Record<string, unknown>,
+        cmd: Command,
+      ) => {
         const options = getMergedOptions(cmd);
         const ctx = createCoreContext(options);
         const type = optString(cmdOpts, 'type') as DefinitionType | undefined;
         const version = optString(cmdOpts, 'version');
+
+        // No name → list all definitions (optionally filtered by --type)
+        if (!name) {
+          try {
+            const filter = type ? { type } : undefined;
+            const items = await withSpinner(
+              ctx,
+              {
+                start: 'Fetching definitions...',
+                success: 'Definitions loaded',
+                failure: 'Failed to fetch definitions',
+              },
+              () => ctx.client.list(filter),
+            );
+
+            if (ctx.json) {
+              console.log(JSON.stringify(items, null, 2));
+            } else {
+              console.log(formatDefinitionList(items));
+            }
+          } catch (error) {
+            handleCoreError(error, ctx);
+          }
+          return;
+        }
 
         try {
           const details = await withSpinner(

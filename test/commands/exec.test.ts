@@ -435,6 +435,27 @@ describe('exec describe', () => {
     expect(output.stdout()).toContain('abc123');
   });
 
+  it('lists all definitions when invoked with no name', async () => {
+    mockClient.list.mockResolvedValue([
+      { type: 'agent', name: 'code-validator', version: '1.0.0', domain: 'qa', description: 'Code review agent' },
+      { type: 'command', name: 'validate', version: '1.0.0', domain: 'qa', description: 'Validate command' },
+    ]);
+    await parse('exec', 'describe');
+    expect(mockClient.list).toHaveBeenCalledWith(undefined);
+    expect(mockClient.describe).not.toHaveBeenCalled();
+    expect(output.stdout()).toContain('code-validator');
+    expect(output.stdout()).toContain('validate');
+  });
+
+  it('filters list by --type when no name is given', async () => {
+    mockClient.list.mockResolvedValue([
+      { type: 'agent', name: 'code-validator', version: '1.0.0', domain: 'qa', description: 'Code review agent' },
+    ]);
+    await parse('exec', 'describe', '--type', 'agent');
+    expect(mockClient.list).toHaveBeenCalledWith({ type: 'agent' });
+    expect(mockClient.describe).not.toHaveBeenCalled();
+  });
+
   it('forwards --type and --version flags to client.describe', async () => {
     mockClient.describe.mockResolvedValue({
       type: 'agent',

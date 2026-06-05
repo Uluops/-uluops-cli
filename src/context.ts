@@ -370,6 +370,24 @@ function isAuthRelatedMessage(message: string): boolean {
   );
 }
 
+const VALID_DEFINITION_TYPES = new Set([
+  'agent',
+  'command',
+  'workflow',
+  'pipeline',
+]);
+
+function extractAmbiguousTypes(message: string): string[] {
+  const match = /multiple definitions named .+? found \(([^)]+)\)/i.exec(
+    message,
+  );
+  if (!match?.[1]) return [];
+  return match[1]
+    .split(',')
+    .map((t) => t.trim().toLowerCase())
+    .filter((t) => VALID_DEFINITION_TYPES.has(t));
+}
+
 function printApiErrorDetails(
   error: ApiErrorLike,
   ctx: { json: boolean; debug: boolean },
@@ -529,10 +547,14 @@ export function handleCoreError(
       console.error(
         '\nHint: Check ULUOPS_API_KEY and ANTHROPIC_API_KEY environment variables.',
       );
-    } else if (/multiple definitions named/i.test(error.message)) {
-      console.error(
-        '\nHint: Pass --type <agent|command|workflow|pipeline> to disambiguate.',
-      );
+    } else {
+      const types = extractAmbiguousTypes(error.message);
+      if (types.length > 0) {
+        console.error('\nHint: Specify type to disambiguate. Add one of:');
+        for (const type of types) {
+          console.error(`  --type ${type}`);
+        }
+      }
     }
     process.exit(1);
   }
