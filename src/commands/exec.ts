@@ -883,14 +883,24 @@ Examples:
 
   exec
     .command('describe <name>')
+    .option(
+      '-t, --type <type>',
+      'Disambiguate by definition type (agent, command, workflow, pipeline)',
+    )
+    .option(
+      '-v, --version <version>',
+      'Resolve a specific version (overrides any @version suffix on <name>)',
+    )
     .addHelpText('after', EXEC_INHERITED_HELP)
     .description(
       "Show a definition's metadata, decision vocabulary, and interface",
     )
     .action(
-      async (name: string, _cmdOpts: Record<string, unknown>, cmd: Command) => {
+      async (name: string, cmdOpts: Record<string, unknown>, cmd: Command) => {
         const options = getMergedOptions(cmd);
         const ctx = createCoreContext(options);
+        const type = optString(cmdOpts, 'type') as DefinitionType | undefined;
+        const version = optString(cmdOpts, 'version');
 
         try {
           const details = await withSpinner(
@@ -900,7 +910,7 @@ Examples:
               success: `Definition resolved`,
               failure: `Failed to resolve definition`,
             },
-            () => ctx.client.describe(name),
+            () => ctx.client.describe(name, version, type),
           );
 
           if (ctx.json) {

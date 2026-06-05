@@ -426,9 +426,37 @@ describe('exec describe', () => {
       interface: { input: 'directory', output: 'json' },
     });
     await parse('exec', 'describe', 'code-validator');
-    expect(mockClient.describe).toHaveBeenCalledWith('code-validator');
+    expect(mockClient.describe).toHaveBeenCalledWith(
+      'code-validator',
+      undefined,
+      undefined,
+    );
     expect(output.stdout()).toContain('code-validator');
     expect(output.stdout()).toContain('abc123');
+  });
+
+  it('forwards --type and --version flags to client.describe', async () => {
+    mockClient.describe.mockResolvedValue({
+      type: 'agent',
+      name: 'socrates-explorer',
+      version: '1.4.0',
+      hash: 'def456',
+      interface: {},
+    });
+    await parse(
+      'exec',
+      'describe',
+      'socrates-explorer',
+      '--type',
+      'agent',
+      '--version',
+      '1.4.0',
+    );
+    expect(mockClient.describe).toHaveBeenCalledWith(
+      'socrates-explorer',
+      '1.4.0',
+      'agent',
+    );
   });
 
   it('displays JSON output in json mode', async () => {

@@ -4,6 +4,24 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.8] - 2026-06-05
+
+### Added
+
+- **`ulu exec describe` now accepts `-t/--type` and `-v/--version` flags.** Resolves the longstanding gap where the SDK's "Multiple definitions named X found (agent, command). Specify type explicitly" error was unactionable — the CLI had no way to pass the type through. `ulu exec describe socrates-explorer --type agent` now works. Both flags forward to `client.describe(name, version, type)`, which gained the matching pass-through in `@uluops/core` 0.18.5.
+
+### Fixed
+
+- **`handleCoreError` no longer slaps the auth-credentials hint on every `ConfigurationError`.** The previous behavior printed `Hint: Check ULUOPS_API_KEY and ANTHROPIC_API_KEY environment variables.` after any `ConfigurationError`, including SDK ambiguous-name errors and path-traversal validation errors that have nothing to do with credentials. Replaced with a regex gate (`isAuthRelatedMessage`): the auth hint now appears only when the error message references API keys, credentials, tokens, or auth/authorization/unauthorized/forbidden. Messages matching `/multiple definitions named/i` get a targeted disambiguation hint pointing to `--type`. Unmatched messages get no hint, letting the SDK message speak for itself.
+
+### Changed
+
+- **`@uluops/core` bumped 0.18.4 → 0.18.5** for the `client.describe(name, version?, type?)` signature extension.
+
+### Internal
+
+- 2 new `handleCoreError` tests in `test/context.test.ts` covering the disambiguation-hint branch and the no-hint-for-unrelated-message branch; 1 new test in `test/commands/exec.test.ts` verifying `--type`/`--version` forward to `client.describe`; existing describe test updated for the new three-arg call shape. Suite now 405 cases (+3).
+
 ## [0.12.7] - 2026-06-05
 
 ### Fixed

@@ -585,6 +585,8 @@ ulu exec list --domain security        # Filter by domain
 
 # Inspect a definition's metadata
 ulu exec describe code-validator
+ulu exec describe socrates-explorer --type agent       # Disambiguate when name exists across types
+ulu exec describe code-validator --version 1.2.0       # Inspect a specific version
 ```
 
 **Parent options** (apply to all subcommands):

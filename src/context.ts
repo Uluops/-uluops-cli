@@ -364,6 +364,12 @@ interface ErrorHintOverrides {
  * Print error details with contextual hints based on status code/error code.
  * Shared logic for both ops and registry error handlers.
  */
+function isAuthRelatedMessage(message: string): boolean {
+  return /\b(api[\s_-]?key|auth(?:entication|orization)?|credential|token|login|unauthorized|forbidden)\b/i.test(
+    message,
+  );
+}
+
 function printApiErrorDetails(
   error: ApiErrorLike,
   ctx: { json: boolean; debug: boolean },
@@ -519,9 +525,15 @@ export function handleCoreError(
 
   if (error instanceof ConfigurationError) {
     console.error(`Error: ${error.message}`);
-    console.error(
-      '\nHint: Check ULUOPS_API_KEY and ANTHROPIC_API_KEY environment variables.',
-    );
+    if (isAuthRelatedMessage(error.message)) {
+      console.error(
+        '\nHint: Check ULUOPS_API_KEY and ANTHROPIC_API_KEY environment variables.',
+      );
+    } else if (/multiple definitions named/i.test(error.message)) {
+      console.error(
+        '\nHint: Pass --type <agent|command|workflow|pipeline> to disambiguate.',
+      );
+    }
     process.exit(1);
   }
 

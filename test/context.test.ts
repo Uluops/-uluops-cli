@@ -643,13 +643,37 @@ describe('handleCoreError', () => {
     output.restore();
   });
 
-  it('should handle ConfigurationError', () => {
+  it('should handle ConfigurationError with auth-related hint when message mentions credentials', () => {
     const output = captureOutput();
     const error = new ConfigurationError('Missing API key');
 
     expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Missing API key');
     expect(output.stderr()).toContain('ANTHROPIC_API_KEY');
+    output.restore();
+  });
+
+  it('should handle ConfigurationError with disambiguation hint for ambiguous-name errors', () => {
+    const output = captureOutput();
+    const error = new ConfigurationError(
+      'Multiple definitions named "socrates-explorer" found (agent, command). Specify type explicitly: resolve("socrates-explorer", version, "command")',
+    );
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Multiple definitions named');
+    expect(output.stderr()).toContain('--type');
+    expect(output.stderr()).not.toContain('ANTHROPIC_API_KEY');
+    output.restore();
+  });
+
+  it('should handle ConfigurationError without any hint for unrelated messages', () => {
+    const output = captureOutput();
+    const error = new ConfigurationError('Invalid definition name: "../etc/passwd"');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Invalid definition name');
+    expect(output.stderr()).not.toContain('ANTHROPIC_API_KEY');
+    expect(output.stderr()).not.toContain('--type');
     output.restore();
   });
 
