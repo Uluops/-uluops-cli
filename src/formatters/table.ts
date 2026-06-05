@@ -100,6 +100,25 @@ export function formatKeyValue(
       if (typeof v === 'object' && v !== null && !Array.isArray(v)) {
         return `${prefix}${label}:\n${formatKeyValue(v as Record<string, unknown>, indent + 2)}`;
       }
+      if (Array.isArray(v)) {
+        const hasObjects = v.some(
+          (item) => typeof item === 'object' && item !== null,
+        );
+        const hasLongString = v.some(
+          (item) => typeof item === 'string' && item.length > 40,
+        );
+        if (hasObjects || (v.length > 1 && hasLongString)) {
+          const items = v
+            .map((item) => {
+              if (typeof item === 'object' && item !== null) {
+                return `${prefix}  -\n${formatKeyValue(item as Record<string, unknown>, indent + 4)}`;
+              }
+              return `${prefix}  - ${item}`;
+            })
+            .join('\n');
+          return `${prefix}${label}:\n${items}`;
+        }
+      }
       return `${prefix}${label}: ${v}`;
     })
     .join('\n');

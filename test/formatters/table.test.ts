@@ -98,4 +98,44 @@ describe('formatKeyValue', () => {
     const result = formatKeyValue({ name: 'test' }, 2);
     expect(result.startsWith('  ')).toBe(true);
   });
+
+  it('joins short string arrays inline', () => {
+    const result = formatKeyValue({ tags: ['a', 'b', 'c'] });
+    expect(result).toContain('Tags: a,b,c');
+  });
+
+  it('bullets multi-element arrays containing long strings', () => {
+    const result = formatKeyValue({
+      rationales: [
+        'A long rationale that exceeds forty characters and warrants its own line',
+        'Another long rationale also exceeding the forty character threshold',
+      ],
+    });
+    expect(result).toContain('Rationales:');
+    expect(result).toContain('  - A long rationale');
+    expect(result).toContain('  - Another long rationale');
+    expect(result).not.toMatch(/,Another/);
+  });
+
+  it('leaves single-element long-string arrays inline', () => {
+    const result = formatKeyValue({
+      note: ['Just one long note that exceeds forty characters in length'],
+    });
+    expect(result).toMatch(/Note: Just one long note/);
+  });
+
+  it('renders arrays of objects as nested blocks', () => {
+    const result = formatKeyValue({
+      calibrationExamples: [
+        { score: 90, scenario: 'Clean' },
+        { score: 40, scenario: 'Noisy' },
+      ],
+    });
+    expect(result).not.toContain('[object Object]');
+    expect(result).toContain('Calibration Examples:');
+    expect(result).toContain('Score: 90');
+    expect(result).toContain('Scenario: Clean');
+    expect(result).toContain('Score: 40');
+    expect(result).toContain('Scenario: Noisy');
+  });
 });

@@ -4,6 +4,17 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.12.7] - 2026-06-05
+
+### Fixed
+
+- **`ulu exec describe` no longer renders `[object Object]` for array-of-object fields.** `formatKeyValue` in `src/formatters/table.ts` previously fell through to template-string coercion for any array, invoking `Array.prototype.toString()` and stringifying object elements as `[object Object]`. Visible on `calibration_examples` and any future ADL/CDL field shaped as `Array<Record<string, unknown>>`. Arrays of objects now recurse into nested key-value blocks; each entry is printed as a bulleted record with its own indented sub-fields. Primitive-array behavior (`tags`, `tools`, `regions` joined with commas) preserved.
+- **Multi-element long-string arrays in `describe` now render as bullets instead of one comma-joined blob.** Affects fields like `downstream_handoff.<target>` where each entry is an independent rationale string. Heuristic: arrays with >1 element AND any element exceeding 40 chars switch to bullet rendering. Short string arrays (tags, tool lists) stay inline.
+
+### Internal
+
+- 4 new `formatKeyValue` tests in `test/formatters/table.test.ts` — array-of-objects rendering, primitive-array inline behavior, multi-element long-string bulleting, and single-element long-string inline fallback. Suite now 402 cases (+4).
+
 ## [0.12.5] - 2026-06-02
 
 ### Security
