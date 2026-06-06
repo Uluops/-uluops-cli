@@ -233,8 +233,8 @@ ulu projects trends my-app --days 90
 # Rename a project
 ulu projects rename old-name --new-name new-name
 
-# Soft delete and restore
-ulu projects delete my-app
+# Soft delete and restore (delete prompts for confirmation; pass -y to skip)
+ulu projects delete my-app -y
 ulu projects restore my-app
 ```
 
@@ -281,6 +281,8 @@ ulu runs archive my-project --keep-last 10
 # Update token counts on a run after the fact
 ulu runs update my-project --number 5 --file token-update.json
 ```
+
+> **Note:** `runs update --score` is rejected on finalized runs ("Cannot rewrite averageScore"). Use the `--file` form to patch per-agent fields. Each agent entry in the file must include `name` and `decision` (any other fields like `tokens` are merged into the existing record).
 
 ### Run Input Format
 
@@ -335,8 +337,8 @@ ulu issues history <id>           # Status change history
 ulu issues undo <id>              # Undo last status change
 ulu issues restore <id>           # Restore soft-deleted issue
 ulu issues bulk-update            # Bulk update statuses (--ids, --status)
-ulu issues by-fingerprint <fp>    # Get issue by SHA-256 fingerprint
-ulu issues update-by-fingerprint <fp>  # Update by fingerprint
+ulu issues by-fingerprint <fp> --project <name>        # Get issue by SHA-256 fingerprint
+ulu issues update-by-fingerprint <fp> --project <name> # Update by fingerprint
 ```
 
 **Examples:**
@@ -355,7 +357,7 @@ ulu issues create --project my-project \
   --severity critical \
   --type security \
   --file-path src/auth/login.ts \
-  --line-number 45
+  --line 45
 
 # Close an issue with a reason
 ulu issues close abc123 --reason "Fixed in PR #42"
@@ -395,7 +397,7 @@ ulu analytics burndown            # Taxonomy burndown time series
 ulu analytics velocity            # Rate of change per failure mode
 ulu analytics discovery           # New vs recurring issues timeline
 ulu analytics matrix              # Agent-taxonomy coverage matrix
-ulu analytics resolution          # Issue resolution rates by project
+ulu analytics resolution          # Issue resolution rates by project (cross-project; no --project flag)
 ulu analytics taxonomy            # Taxonomy distribution
 ulu analytics full-taxonomy       # Full taxonomy analytics breakdown
 ulu analytics trends              # Trend summary metrics
@@ -464,8 +466,11 @@ ulu definitions delete <type> <name> <ver>    # Delete draft (--yes)
 # List all published agents
 ulu definitions list --type agent --status published
 
-# Get a definition (YAML output)
-ulu def get agent code-validator 1.0.0 --yaml
+# Get a definition (YAML output, latest version)
+ulu def get agent code-validator --yaml
+
+# Get a specific version
+ulu def get agent code-validator 1.10.2 --yaml
 
 # Get rendered markdown for a published definition
 ulu def get agent code-validator --rendered
@@ -586,7 +591,8 @@ ulu exec list --domain security        # Filter by domain
 # Inspect a definition's metadata
 ulu exec describe code-validator
 ulu exec describe socrates-explorer --type agent       # Disambiguate when name exists across types
-ulu exec describe code-validator --version 1.2.0       # Inspect a specific version
+ulu exec describe code-validator@1.2.0                  # Inspect a specific version (@version suffix)
+ulu exec describe code-validator -v 1.2.0               # Same — explicit -v flag (--version is shadowed by the global -V/--version)
 ulu exec describe                                       # No name → list all definitions
 ulu exec describe --type pipeline                       # No name + --type → filter the list
 ```
@@ -599,6 +605,7 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `--registry-url <url>` | Override registry URL |
 | `--project <name>` | Project name for result tracking |
 | `--no-tracking` | Disable validation service submission |
+| `--no-safety-warnings` | Suppress risk warnings and runtime advisories |
 
 **Shared options** (all `exec` subcommands):
 

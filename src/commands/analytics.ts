@@ -211,16 +211,17 @@ Examples:
             },
             {
               header: 'ISSUES',
-              accessor: (h) => {
-                const count = getFlexibleProperty(
-                  h,
-                  'issueCount',
-                  h.totalIssues ?? 0,
-                );
-                return String(count);
-              },
+              accessor: (h) => String(h.issueCount),
               width: 8,
               align: 'right',
+            },
+            {
+              header: 'PROJECTS',
+              accessor: (h) =>
+                h.projects.length <= 2
+                  ? h.projects.join(', ')
+                  : `${h.projects.slice(0, 2).join(', ')} +${h.projects.length - 2}`,
+              width: 30,
             },
           ];
           console.log(formatTable(data, columns));

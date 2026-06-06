@@ -4,6 +4,7 @@ import type {
   Priority,
   Severity,
   Status,
+  StatusFilter,
 } from '@uluops/ops-sdk';
 import type { Command } from 'commander';
 import {
@@ -39,10 +40,10 @@ Examples:
     .description('List issues for a project (defaults to open issues)')
     .option(
       '-s, --status <status>',
-      'Filter by status (open, completed, deferred, wontfix)',
+      'Filter by status (open, completed, deferred, wontfix, all)',
       'open',
     )
-    .option('--all', 'Show all statuses (overrides --status default)')
+    .option('--all', 'Show all statuses (alias for --status all)')
     .option(
       '-p, --priority <priority>',
       'Filter by priority (critical, suggested, backlog)',
@@ -64,13 +65,16 @@ Examples:
       const ctx = createOpsContext(globalOpts);
 
       try {
-        const statusFilter = options.all ? undefined : options.status;
+        // `--all` is sugar for `--status all`; both pass the literal "all"
+        // sentinel so the API skips the default open-only filter.
+        const statusFilter =
+          options.all || options.status === 'all' ? 'all' : options.status;
         const data = await withSpinner(
           ctx,
           { start: 'Fetching issues...', failure: 'Failed to fetch issues' },
           () =>
             ctx.client.issues.listByProject(project, {
-              status: statusFilter as Status | undefined,
+              status: statusFilter as StatusFilter | undefined,
               priority: options.priority as Priority | undefined,
               severity: options.severity as Severity | undefined,
               agent: options.agent,

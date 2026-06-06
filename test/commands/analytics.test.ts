@@ -83,7 +83,7 @@ describe('analytics reliability', () => {
 describe('analytics hotspots', () => {
   it('should display file hotspots', async () => {
     mockClient.analytics.getFileHotspots.mockResolvedValue([
-      { filePath: 'src/index.ts', issueCount: 12, totalIssues: 12 },
+      { filePath: 'src/index.ts', issueCount: 12, projects: ['ops-sdk'] },
     ]);
     const output = captureOutput();
     await parse('analytics', 'hotspots');

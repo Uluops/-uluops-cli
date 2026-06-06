@@ -904,7 +904,18 @@ Examples:
         const options = getMergedOptions(cmd);
         const ctx = createCoreContext(options);
         const type = optString(cmdOpts, 'type') as DefinitionType | undefined;
-        const version = optString(cmdOpts, 'version');
+        let version = optString(cmdOpts, 'version');
+
+        // Allow `name@version` suffix syntax (avoids commander's global -V shadow).
+        // Explicit -v/--version still wins if both are supplied.
+        if (name && name.includes('@')) {
+          const atIdx = name.lastIndexOf('@');
+          const suffix = name.slice(atIdx + 1);
+          if (suffix.length > 0) {
+            if (!version) version = suffix;
+            name = name.slice(0, atIdx);
+          }
+        }
 
         // No name → list all definitions (optionally filtered by --type)
         if (!name) {
