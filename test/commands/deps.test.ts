@@ -99,6 +99,56 @@ describe('deps get', () => {
     output.restore();
   });
 
+  it('renders --tree recursively at depth 2 (grandchild visible with correct indent — post-impl r1)', async () => {
+    // The wave's printTree function is recursive. Prior tree test had depth 1
+    // only — a mutation removing the `for (child of dependencies) printTree(...)`
+    // line would have passed it. This test puts a grandchild at depth 2 and
+    // asserts both child and grandchild lines render with the correct
+    // indentation (2 spaces per depth level).
+    mockClient.dependencies.get.mockResolvedValue({
+      definition: { type: 'workflow', name: 'my-wf', version: '1.0.0' },
+      graph: {
+        id: 'root',
+        type: 'workflow',
+        name: 'my-wf',
+        version: '1.0.0',
+        dependencies: [
+          {
+            id: 'child',
+            type: 'agent',
+            name: 'child-agent',
+            version: '1.0.0',
+            context: 'invokes.agent',
+            dependencies: [
+              {
+                id: 'gc',
+                type: 'command',
+                name: 'grandchild-cmd',
+                version: '1.0.0',
+                context: 'invokes.command',
+                dependencies: [],
+              },
+            ],
+          },
+        ],
+      },
+      flat: [
+        { id: 'child', type: 'agent', name: 'child-agent', version: '1.0.0', depth: 1 },
+        { id: 'gc', type: 'command', name: 'grandchild-cmd', version: '1.0.0', depth: 2 },
+      ],
+      totalCount: 2,
+      maxDepth: 2,
+    });
+    const output = captureOutput();
+    await parse('deps', 'get', 'workflow', 'my-wf', '1.0.0', '--tree');
+    const out = output.stdout();
+    // Root at indent 2 ("  "), child at 4 ("    "), grandchild at 6 ("      ")
+    expect(out).toMatch(/^ {2}workflow\/my-wf@1\.0\.0/m);
+    expect(out).toMatch(/^ {4}agent\/child-agent@1\.0\.0 {2}\[invokes\.agent\]/m);
+    expect(out).toMatch(/^ {6}command\/grandchild-cmd@1\.0\.0 {2}\[invokes\.command\]/m);
+    output.restore();
+  });
+
   it('shows the no-deps message when totalCount is zero', async () => {
     mockClient.dependencies.get.mockResolvedValue({
       definition: { type: 'workflow', name: 'my-wf', version: '1.0.0' },

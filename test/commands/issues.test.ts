@@ -315,6 +315,48 @@ describe('issues history', () => {
     expect(output.stdout()).toContain('No history');
     output.restore();
   });
+
+  it('--json emits IssueHistoryEnvelope shape (post-impl r1 — BREAKING contract anchor)', async () => {
+    // The CHANGELOG documents `--json ulu issues history` as a BREAKING change:
+    // pre-3.2.0 it emitted StatusHistory[] (a flat array); after F10 it emits
+    // the IssueHistoryEnvelope shape ({issueId, events, totalEvents, truncated}).
+    // Without this test, a regression that re-flattened the output would
+    // silently pass — pinning the envelope keys here makes the contract
+    // mechanically checked.
+    mockedCreateOpsContext.mockReturnValue(
+      createMockOpsContext({
+        client: mockClient as unknown as OpsCliContext['client'],
+        json: true,
+      }),
+    );
+    mockClient.issues.getHistory.mockResolvedValue({
+      issueId: '11111111-1111-1111-1111-111111111111',
+      totalEvents: 1,
+      truncated: false,
+      events: [
+        {
+          type: 'status',
+          timestamp: '2026-06-08T10:00:00Z',
+          oldStatus: 'open',
+          newStatus: 'completed',
+          reason: 'Fixed',
+          transitionType: 'change',
+          revertedChangeId: null,
+        },
+      ],
+    });
+    const output = captureOutput();
+    await parse('issues', 'history', 'abc-123');
+    const parsed = JSON.parse(output.stdout()) as Record<string, unknown>;
+    expect(parsed).toHaveProperty('issueId', '11111111-1111-1111-1111-111111111111');
+    expect(parsed).toHaveProperty('events');
+    expect(parsed).toHaveProperty('totalEvents', 1);
+    expect(parsed).toHaveProperty('truncated', false);
+    expect(Array.isArray(parsed.events)).toBe(true);
+    // Crucially: the response is NOT a bare array (the pre-3.2.0 shape).
+    expect(Array.isArray(parsed)).toBe(false);
+    output.restore();
+  });
 });
 
 describe('issues undo', () => {

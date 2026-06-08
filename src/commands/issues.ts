@@ -356,8 +356,7 @@ Examples:
           );
           const sorted = [...issues].sort(
             (a, b) =>
-              new Date(b.updatedAt).getTime() -
-              new Date(a.updatedAt).getTime(),
+              new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
           );
           if (ctx.json) {
             console.log(JSON.stringify(sorted, null, 2));

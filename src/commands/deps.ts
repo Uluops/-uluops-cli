@@ -147,10 +147,27 @@ Examples:
     });
 }
 
-function printTree(node: DependencyNode, indent: string): void {
+// Defense-in-depth ceiling for the recursive render. The registry-sdk's
+// parse-time guard (`MAX_SAFE_GRAPH_DEPTH=50` in operations/dependencies.ts)
+// throws RangeError BEFORE the envelope reaches us, so this ceiling never
+// fires in production today. It's here for the case where the SDK guard is
+// bypassed (a mocked client in tests, a future schema change, a corrupted
+// response that slips through) — the renderer is then self-governing
+// instead of recursing until stack overflow. 60 > 50 so a compliant chain
+// never trips this; an attack chain produces a visible "..." line instead
+// of a process crash.
+const MAX_RENDER_DEPTH = 60;
+
+function printTree(node: DependencyNode, indent: string, depth = 0): void {
+  if (depth > MAX_RENDER_DEPTH) {
+    console.log(
+      `${indent}... (truncated at depth ${String(MAX_RENDER_DEPTH)})`,
+    );
+    return;
+  }
   const context = node.context ? `  [${node.context}]` : '';
   console.log(`${indent}${node.type}/${node.name}@${node.version}${context}`);
   for (const child of node.dependencies) {
-    printTree(child, `${indent}  `);
+    printTree(child, `${indent}  `, depth + 1);
   }
 }
