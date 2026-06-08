@@ -1,5 +1,6 @@
 import type {
   FailureDomain,
+  IssueHistoryEnvelope,
   IssueType,
   Priority,
   Severity,
@@ -13,7 +14,86 @@ import {
   handleOpsError,
 } from '../context.js';
 import { formatIssue, formatIssues } from '../formatters/ops.js';
-import { parseIntOption, resolveProject, withSpinner } from '../utils.js';
+import {
+  parseIntOption,
+  resolveProject,
+  stripAnsi,
+  truncate,
+  withSpinner,
+} from '../utils.js';
+
+/**
+ * Maximum chars displayed per event detail line before truncation.
+ * Keeps the timeline scannable in a typical 100-120 col terminal.
+ */
+const MAX_EVENT_DETAIL_DISPLAY = 200;
+
+/**
+ * Render the merged history envelope to stdout. Extracted from the history
+ * action callback (post-impl r2) so each branch of the action stays under
+ * the readable-line ceiling. All server-controlled strings flow through
+ * `stripAnsi` to neutralize CWE-116 terminal injection.
+ */
+function renderHistoryEnvelope(envelope: IssueHistoryEnvelope): void {
+  if (envelope.events.length === 0) {
+    console.log('No history');
+    return;
+  }
+
+  console.log(`History (${envelope.totalEvents} events):`);
+  if (envelope.truncated) {
+    console.log(
+      `  ⚠ Truncated to most recent ${envelope.events.length} of ${envelope.totalEvents} events`,
+    );
+  }
+
+  for (const event of envelope.events) {
+    const date = new Date(event.timestamp).toLocaleString();
+    switch (event.type) {
+      case 'status': {
+        const tag = event.transitionType === 'undo' ? '[undo]' : '';
+        console.log(
+          `  ${date} ${tag} status: ${event.oldStatus ?? '(new)'} → ${event.newStatus}`,
+        );
+        if (event.revertedChangeId) {
+          console.log(`    Reverts: ${event.revertedChangeId}`);
+        }
+        if (event.reason) {
+          console.log(`    Reason: ${stripAnsi(event.reason)}`);
+        }
+        break;
+      }
+      case 'occurrence': {
+        console.log(
+          `  ${date} occurrence: ${stripAnsi(event.agentName)} (run ${event.runId})`,
+        );
+        if (event.description) {
+          console.log(
+            `    ${truncate(stripAnsi(event.description), MAX_EVENT_DETAIL_DISPLAY)}`,
+          );
+        }
+        break;
+      }
+      case 'note': {
+        const author = event.createdBy ? stripAnsi(event.createdBy) : '(anonymous)';
+        console.log(`  ${date} note [${stripAnsi(event.noteType)}] by ${author}`);
+        console.log(
+          `    ${truncate(stripAnsi(event.content), MAX_EVENT_DETAIL_DISPLAY)}`,
+        );
+        break;
+      }
+      default: {
+        // Exhaustiveness guard (post-impl r2). If ops-sdk adds a 4th event
+        // variant the union widens, `event` is no longer narrowed to `never`,
+        // and tsc fails compilation — forcing a deliberate decision rather
+        // than a silent passthrough.
+        const _exhaustive: never = event;
+        void _exhaustive;
+        break;
+      }
+    }
+  }
+}
 
 /**
  * Register issue commands
@@ -376,7 +456,8 @@ Examples:
               .replace('T', ' ')
               .slice(0, 16);
             const status = issue.status.padEnd(9);
-            console.log(`  ${fp}  ${ts}  ${status}  ${issue.title}`);
+            // Strip ANSI from server-controlled title (CWE-116 defense).
+            console.log(`  ${fp}  ${ts}  ${status}  ${stripAnsi(issue.title)}`);
           }
           console.log(
             `\n↳ Drill in: ulu issues history <fingerprint> --project ${options.project}`,
@@ -420,55 +501,7 @@ Examples:
           return;
         }
 
-        if (envelope.events.length === 0) {
-          console.log('No history');
-          return;
-        }
-
-        console.log(`History (${envelope.totalEvents} events):`);
-        if (envelope.truncated) {
-          console.log(
-            `  ⚠ Truncated to most recent ${envelope.events.length} of ${envelope.totalEvents} events`,
-          );
-        }
-
-        for (const event of envelope.events) {
-          const date = new Date(event.timestamp).toLocaleString();
-          switch (event.type) {
-            case 'status': {
-              const tag = event.transitionType === 'undo' ? '[undo]' : '';
-              console.log(
-                `  ${date} ${tag} status: ${event.oldStatus ?? '(new)'} → ${event.newStatus}`,
-              );
-              if (event.revertedChangeId) {
-                console.log(`    Reverts: ${event.revertedChangeId}`);
-              }
-              if (event.reason) {
-                console.log(`    Reason: ${event.reason}`);
-              }
-              break;
-            }
-            case 'occurrence': {
-              console.log(
-                `  ${date} occurrence: ${event.agentName} (run ${event.runId})`,
-              );
-              if (event.description) {
-                console.log(
-                  `    ${event.description.slice(0, 200)}${event.description.length > 200 ? '...' : ''}`,
-                );
-              }
-              break;
-            }
-            case 'note': {
-              const author = event.createdBy ?? '(anonymous)';
-              console.log(`  ${date} note [${event.noteType}] by ${author}`);
-              console.log(
-                `    ${event.content.slice(0, 200)}${event.content.length > 200 ? '...' : ''}`,
-              );
-              break;
-            }
-          }
-        }
+        renderHistoryEnvelope(envelope);
       } catch (error) {
         handleOpsError(error, ctx);
       }

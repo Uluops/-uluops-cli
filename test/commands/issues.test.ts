@@ -75,18 +75,31 @@ describe('issues get', () => {
   });
 
   it('should fetch full details with --full', async () => {
+    // Post-impl r2: SDK field name is `agentName` on occurrences (not `validator`)
+    // and the IssueDetails envelope key is `history` (not `statusHistory`).
+    // Pre-r2 mock used the wrong names, so the rendering assertions only checked
+    // counts — a regression in agent-name rendering would have passed silently.
     mockClient.issues.getDetails.mockResolvedValue({
       issue: createIssue({ title: 'Detailed bug' }),
-      occurrences: [{ validator: 'code-validator', filePath: 'src/index.ts', lineNumber: 42 }],
+      occurrences: [
+        { agentName: 'code-validator', filePath: 'src/index.ts', lineNumber: 42 },
+      ],
       notes: [{ noteType: 'context', content: 'This is a note about the issue' }],
-      statusHistory: [{ changedAt: '2025-01-15T10:00:00Z', oldStatus: 'open', newStatus: 'completed' }],
+      history: [
+        { changedAt: '2025-01-15T10:00:00Z', oldStatus: 'open', newStatus: 'completed' },
+      ],
     });
     const output = captureOutput();
     await parse('issues', 'get', 'abc-123', '--full');
+    const out = output.stdout();
     expect(mockClient.issues.getDetails).toHaveBeenCalledWith('abc-123');
-    expect(output.stdout()).toContain('Detailed bug');
-    expect(output.stdout()).toContain('Occurrences (1)');
-    expect(output.stdout()).toContain('Notes (1)');
+    expect(out).toContain('Detailed bug');
+    expect(out).toContain('Occurrences (1)');
+    // Anchor the agent-name rendering — pre-r2 this was masked by the wrong
+    // mock field, so a regression in `occ.agentName` access in issues.ts would
+    // have been invisible.
+    expect(out).toContain('code-validator at src/index.ts:42');
+    expect(out).toContain('Notes (1)');
     output.restore();
   });
 });
@@ -167,7 +180,11 @@ describe('issues history', () => {
           timestamp: '2026-01-15T09:00:00Z',
           noteId: '33333333-3333-3333-3333-333333333333',
           content: 'Investigation note',
-          noteType: 'investigation',
+          // SDK enum is 'context' | 'resolution' | 'blocker'.
+          // Pre-r2 used 'investigation' which isn't a valid NoteType — the
+          // mock client bypasses Zod so it rendered, but production would
+          // 400 on this value.  Using the closest valid enum here.
+          noteType: 'context',
           createdBy: 'alex',
         },
         {
@@ -186,7 +203,7 @@ describe('issues history', () => {
     expect(out).toContain('[undo] status: completed → open');
     expect(out).toContain('Reverts: 22222222-2222-2222-2222-222222222222');
     expect(out).toContain('Reason: Undo of prior change');
-    expect(out).toContain('note [investigation] by alex');
+    expect(out).toContain('note [context] by alex');
     expect(out).toContain('Investigation note');
     expect(out).toContain('occurrence: aristotle-analyst');
     expect(out).toContain('Telos misalignment detected');

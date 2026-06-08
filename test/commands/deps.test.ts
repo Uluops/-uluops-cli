@@ -149,6 +149,46 @@ describe('deps get', () => {
     output.restore();
   });
 
+  it('truncates --tree rendering at MAX_RENDER_DEPTH=60 (post-impl r2 CWE-674 defense-in-depth)', async () => {
+    // The SDK guards at MAX_SAFE_GRAPH_DEPTH=50, but the CLI carries an
+    // independent ceiling at 60 for the case where the SDK guard is bypassed
+    // (mocked clients in tests, future schema changes, corrupted responses
+    // that slip through).  Mocked clients ARE the bypass scenario, so this
+    // test exercises the guard directly.
+    //
+    // Build a 62-deep chain and assert the truncation marker fires.
+    type Node = {
+      id: string;
+      type: string;
+      name: string;
+      version: string;
+      dependencies: Node[];
+    };
+    const buildChain = (remaining: number, depth: number): Node => ({
+      id: `node-${String(depth)}`,
+      type: 'agent',
+      name: `agent-${String(depth)}`,
+      version: '1.0.0',
+      dependencies:
+        remaining > 0 ? [buildChain(remaining - 1, depth + 1)] : [],
+    });
+    const chain = buildChain(62, 0); // 63 nodes total
+    mockClient.dependencies.get.mockResolvedValue({
+      definition: { type: 'workflow', name: 'deep', version: '1.0.0' },
+      graph: chain,
+      flat: [],
+      totalCount: 62,
+      maxDepth: 62,
+    });
+    const output = captureOutput();
+    await parse('deps', 'get', 'workflow', 'deep', '1.0.0', '--tree');
+    const out = output.stdout();
+    // The truncation marker must appear — without the depth guard, the
+    // recursion would either complete (no marker) or stack-overflow.
+    expect(out).toContain('... (truncated at depth 60)');
+    output.restore();
+  });
+
   it('shows the no-deps message when totalCount is zero', async () => {
     mockClient.dependencies.get.mockResolvedValue({
       definition: { type: 'workflow', name: 'my-wf', version: '1.0.0' },

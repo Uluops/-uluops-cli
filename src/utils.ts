@@ -72,6 +72,33 @@ export function truncate(str: string, maxLength: number): string {
 }
 
 /**
+ * Strip ANSI escape sequences from server-controlled strings before they
+ * reach the user's terminal (post-impl r2, CWE-116).
+ *
+ * The SDK schemas constrain string lengths but do NOT strip control bytes.
+ * A compromised or adversarial registry/tracker API could return a name,
+ * version, context, title, or content value containing:
+ *   - `\x1b[2J\x1b[H` to clear the terminal + reset cursor
+ *   - `\x1b]0;{title}\x07` to spoof the window title (OSC)
+ *   - `\x1b[6n` to probe cursor position (RIS)
+ * Pass any string sourced from a remote response through this before
+ * `console.log` to neutralize the vector. Compliant servers never include
+ * these sequences; an attack chain produces visibly-stripped text instead
+ * of an injection event.
+ */
+export function stripAnsi(str: string): string {
+  // CSI sequences: ESC [ ... letter
+  // OSC sequences: ESC ] ... BEL
+  // Plus bare control chars below 0x20 (except tab/newline/cr)
+  return str
+    .replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '')
+    // eslint-disable-next-line no-control-regex
+    .replace(/\x1b\][^\x07]*\x07/g, '')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
+}
+
+/**
  * Print error message and exit
  */
 export function exitWithError(message: string, code = 1): never {

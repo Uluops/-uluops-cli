@@ -81,7 +81,10 @@ export function createIssue(overrides: Partial<Issue> = {}): Issue {
     failureMode: 'VAL',
     failureSeverityCode: 'M',
     category: 'Error Quality',
-    validator: 'code-validator',
+    // SDK schema field is `agent`, not `validator` (corrected in post-impl r2).
+    // Tests that assert on agent rendering depend on this matching the
+    // IssueResponseSchema.agent shape.
+    agent: 'code-validator',
     type: 'bug',
     filePath: 'src/index.ts',
     lineNumber: 42,

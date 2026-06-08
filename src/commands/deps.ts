@@ -1,7 +1,6 @@
 import type {
   DefinitionType,
   DependencyNode,
-  Dependent,
 } from '@uluops/registry-sdk';
 import type { Command } from 'commander';
 import {
@@ -9,7 +8,7 @@ import {
   type GlobalOptions,
   handleRegistryError,
 } from '../context.js';
-import { parseIntOption, withSpinner } from '../utils.js';
+import { parseIntOption, stripAnsi, withSpinner } from '../utils.js';
 
 /**
  * Register dependency commands
@@ -69,8 +68,10 @@ Examples:
           }
 
           const { definition, graph, flat, totalCount, maxDepth } = envelope;
+          // All server-controlled strings flow through stripAnsi to
+          // neutralize CWE-116 terminal injection. See utils.ts:stripAnsi.
           console.log(
-            `Dependencies for ${definition.type}/${definition.name}@${definition.version}:`,
+            `Dependencies for ${stripAnsi(definition.type)}/${stripAnsi(definition.name)}@${stripAnsi(definition.version)}:`,
           );
           console.log(`  Total: ${totalCount} (max depth ${maxDepth})`);
 
@@ -86,7 +87,7 @@ Examples:
             for (const dep of flat) {
               const indent = '  '.repeat(dep.depth);
               console.log(
-                `${indent}${dep.type}/${dep.name}@${dep.version} (depth ${dep.depth})`,
+                `${indent}${stripAnsi(dep.type)}/${stripAnsi(dep.name)}@${stripAnsi(dep.version)} (depth ${dep.depth})`,
               );
             }
           }
@@ -129,16 +130,18 @@ Examples:
         const { definition, dependents, totalCount } = envelope;
         if (totalCount === 0) {
           console.log(
-            `No dependents of ${definition.type}/${definition.name}@${definition.version}`,
+            `No dependents of ${stripAnsi(definition.type)}/${stripAnsi(definition.name)}@${stripAnsi(definition.version)}`,
           );
           return;
         }
         console.log(
-          `Dependents of ${definition.type}/${definition.name}@${definition.version} (${totalCount}):`,
+          `Dependents of ${stripAnsi(definition.type)}/${stripAnsi(definition.name)}@${stripAnsi(definition.version)} (${totalCount}):`,
         );
-        for (const dep of dependents as Dependent[]) {
+        // Removed `as Dependent[]` cast — `dependents` is already typed
+        // as `Dependent[]` from DependentsResponse (post-impl r2).
+        for (const dep of dependents) {
           console.log(
-            `  ${dep.type}/${dep.name}@${dep.version}  ←  ${dep.context}`,
+            `  ${stripAnsi(dep.type)}/${stripAnsi(dep.name)}@${stripAnsi(dep.version)}  ←  ${stripAnsi(dep.context)}`,
           );
         }
       } catch (error) {
@@ -165,8 +168,10 @@ function printTree(node: DependencyNode, indent: string, depth = 0): void {
     );
     return;
   }
-  const context = node.context ? `  [${node.context}]` : '';
-  console.log(`${indent}${node.type}/${node.name}@${node.version}${context}`);
+  const context = node.context ? `  [${stripAnsi(node.context)}]` : '';
+  console.log(
+    `${indent}${stripAnsi(node.type)}/${stripAnsi(node.name)}@${stripAnsi(node.version)}${context}`,
+  );
   for (const child of node.dependencies) {
     printTree(child, `${indent}  `, depth + 1);
   }

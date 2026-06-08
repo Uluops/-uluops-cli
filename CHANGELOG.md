@@ -4,6 +4,43 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.13.1] - 2026-06-08
+
+Post-implementation hardening on the 0.13.0 wave. No breaking changes;
+all improvements are defensive, doc-fix, or test-strengthening.
+
+### Security
+
+- **ANSI escape stripping on all server-controlled string renders (CWE-116).** New `stripAnsi()` helper in `src/utils.ts` neutralizes terminal injection vectors: CSI sequences (`\x1b[...m`), OSC sequences (`\x1b]...\x07` — title spoofing), and bare control bytes below 0x20. Applied at every `console.log` site that prints SDK-returned `name`, `version`, `context`, `title`, `agentName`, `noteType`, `createdBy`, or `content`. The SDK schemas constrain length but did not strip control bytes; a compromised registry/tracker API could otherwise return `\x1b[2J\x1b[H[SUDO] Password:` and clear the operator's terminal. Compliant servers are unaffected.
+- **Bump `@uluops/ops-sdk` 3.2.0 → 3.2.1.** Picks up CWE-20 `.max()` bounds on history event string fields (`agentName`/255, `description`/10k, `reason`/2k, `content`/10k, `createdBy`/200), `Extract<>` → `z.infer<>` constituent event types, and the README envelope-shape fix.
+- **Bump `@uluops/registry-sdk` 0.31.0 → 0.31.1.** Picks up CWE-674 pre-parse depth guard on the dependency graph (`MAX_SAFE_GRAPH_DEPTH=50` server-side throws `RangeError`) and CWE-20 `.max()` bounds on `name`/`version`/`context` fields. The CLI also carries a client-side `MAX_RENDER_DEPTH=60` defense-in-depth ceiling in `printTree` for the case where the SDK guard is bypassed (mocked clients, schema changes).
+
+### Changed
+
+- **`ulu issues history` action callback extracted.** The 139-line, 4-deep-nested callback in `issues.ts` was split: the event-rendering loop is now `renderHistoryEnvelope(envelope)` at module scope. Picker and fingerprint-resolution branches stay inline. No behavior change.
+- **Exhaustiveness guard added to the `HistoryEvent` switch.** `default: { const _exhaustive: never = event; ... }` ensures `tsc` fails compilation if `@uluops/ops-sdk` adds a 4th event variant — forcing a deliberate decision rather than a silent passthrough.
+
+### Fixed
+
+- **Inline truncation pattern replaced with the existing `truncate()` helper.** Three sites in the event renderer were duplicating `.slice(0, 200) + (length > 200 ? '...' : '')`. Now they use `truncate(stripAnsi(content), MAX_EVENT_DETAIL_DISPLAY)` with a named constant. Closes optimizer STR-EXC/M.
+- **Removed redundant `as Dependent[]` cast** in `deps.ts:139` — `dependents` is already typed as `Dependent[]` from `DependentsResponse`.
+
+### Docs
+
+- **README example for `ulu issues history`** now shows all three invocation modes (by UUID, by fingerprint + `--project`, picker mode by `--project` alone). Was previously a single-line bare-UUID example.
+- **README example for `ulu deps get`** now shows `--tree` rendering, `--max-depth`, and a `deps dependents` example. Was previously just a one-line listing.
+- **README `--json` BREAKING callout** for `ulu issues history` — was only in the CHANGELOG, now also above the Issues section examples.
+- **CHANGELOG `[0.13.0]` Dependencies section** updated to reflect the actual shipped pins (3.2.1 / 0.31.1 — not 3.2.0 / 0.31.0 as previously stated). This entry's Security section now also calls out the CWE-20 / CWE-674 chain explicitly.
+
+### Tests
+
+- **MAX_RENDER_DEPTH=60 truncation test** added — builds a 62-deep chain, asserts the truncation marker `"... (truncated at depth 60)"` fires. Without this, a regression removing the depth guard would pass all tests.
+- **Mock factory `createIssue()` field rename**: `validator` → `agent`. The SDK schema field is `agent`; pre-r2 the mock shipped an undefined `agent` and a phantom `validator` key. Tests that asserted on agent rendering passed only because they checked counts, not the rendered value.
+- **`--full` mock corrected**: occurrences use `agentName` not `validator`; details envelope key is `history` not `statusHistory`. Plus a new assertion (`'code-validator at src/index.ts:42'`) anchors the agent-name rendering.
+- **`noteType: 'investigation'` → `'context'`** in the merged-envelope test. The SDK enum only allows `context | resolution | blocker`; the invalid value worked only because the mock client bypasses Zod.
+
+Suite 414 → 417.  Build + typecheck + lint clean.
+
 ## [0.13.0] - 2026-06-08
 
 ### Added
@@ -27,8 +64,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Dependencies
 
-- `@uluops/ops-sdk` 3.1.2 → 3.2.0 (envelope types: `IssueHistoryEnvelope`, `HistoryEvent`, `TransitionType`).
-- `@uluops/registry-sdk` 0.30.2 → 0.31.0 (R12 envelope types: `DependencyGraphResponse`, `DependentsResponse`, `Dependent`, `FlatDep`, recursive `DependencyNode`).
+- `@uluops/ops-sdk` 3.1.2 → 3.2.1 (envelope types: `IssueHistoryEnvelope`, `HistoryEvent`, `TransitionType`; plus 3.2.1's CWE-20 `.max()` string bounds on event fields).
+- `@uluops/registry-sdk` 0.30.2 → 0.31.1 (R12 envelope types: `DependencyGraphResponse`, `DependentsResponse`, `Dependent`, `FlatDep`, recursive `DependencyNode`; plus 0.31.1's CWE-674 depth guard + CWE-20 string bounds).
 
 ### Internal
 

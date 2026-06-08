@@ -333,7 +333,9 @@ ulu issues update <id>            # Update status (--status, --reason)
 ulu issues close <id>             # Mark as completed (--reason)
 ulu issues edit <id>              # Edit metadata (--title, --severity, etc.)
 ulu issues add-note <id>          # Add note (--message, --type)
-ulu issues history <id>           # Status change history
+ulu issues history <id>                          # Show timeline by UUID
+ulu issues history <fingerprint> --project <slug> # Resolve fingerprint then show timeline
+ulu issues history --project <slug>              # Picker: list recent issues, then drill in
 ulu issues undo <id>              # Undo last status change
 ulu issues restore <id>           # Restore soft-deleted issue
 ulu issues bulk-update            # Bulk update statuses (--ids, --status)
@@ -370,7 +372,19 @@ ulu issues undo abc123
 
 # Bulk close multiple issues
 ulu issues bulk-update --ids id1,id2,id3 --status completed --reason "Batch fix"
+
+# Browse recent issues then drill into one (picker mode, v0.13.0)
+ulu issues history --project my-project          # list recent issues
+ulu issues history a1b2c3d4 --project my-project # then drill in by fingerprint
 ```
+
+> **v0.13.0 breaking change (`--json`):** `ulu issues history --json` now emits the
+> `IssueHistoryEnvelope` shape `{ issueId, events, totalEvents, truncated }` instead of
+> a flat `StatusHistory[]` array. Scripts doing `result[0]` or `Array.isArray(result)`
+> must migrate to `result.events[0]`. The `events[]` array contains discriminated entries
+> with `type: 'occurrence' | 'status' | 'note'` — narrow on `type` before accessing
+> event-specific fields. See [CHANGELOG](./CHANGELOG.md#0130---2026-06-08) for the full
+> migration story.
 
 **Filter options for `issues list`:**
 
@@ -514,9 +528,31 @@ ulu versions diff <type> <name> <from> <to>      # Compare two versions
 Dependency graph inspection.
 
 ```bash
-ulu deps get <type> <name> <version>         # Show dependency graph (--max-depth)
+ulu deps get <type> <name> <version>         # Show dependency graph (--max-depth, --tree)
 ulu deps dependents <type> <name> <version>  # Show reverse dependencies
 ```
+
+**Examples:**
+
+```bash
+# Flat indented dependency list (default; each line tagged with its depth)
+ulu deps get workflow ship 1.0.0
+
+# Recursive tree view with [context] edge labels (v0.13.0)
+ulu deps get workflow ship 1.0.0 --tree
+
+# Limit traversal depth
+ulu deps get workflow ship 1.0.0 --max-depth 2
+
+# Reverse lookup with ← context attribution
+ulu deps dependents agent code-validator 1.0.0
+```
+
+> **v0.13.0 changes:** `deps get` output format changed (no longer prints `Edges: N`
+> or cycle warnings — the registry never tracked those). The new `--tree` flag renders
+> the recursive `DependencyNode` graph with `[context]` labels per edge (e.g.,
+> `[invokes.agent]`, `[stage "Final Checks"]`). `deps dependents` now shows
+> `← context` arrows so operators can see how each consumer references the target.
 
 ---
 
