@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.13.0] - 2026-06-08
 
+### Added
+
+- **`ulu issues history <id-or-fingerprint> --project <slug>`.** The positional arg can now be a fingerprint when `--project` is set; the CLI resolves the fingerprint to an issue id via `getByFingerprint` and then fetches history. Matches the existing `by-fingerprint` / `update-by-fingerprint` ergonomics so operators can work from the human-readable handle they already have.
+
 ### Changed
 
 - **`ulu issues history <id>` now renders the merged history envelope** introduced by ops-sdk v3.2.0 (live-tests T2 §3.1, Bug A/B/C). The dedicated history endpoint used to return a bare `StatusHistory[]` and silently dropped occurrences + notes; it also destroyed rows on undo, leaving a non-monotonic audit trail. The new envelope merges all three event sources into a single timestamp-sorted stream with a discriminated `type` field (`'occurrence' | 'status' | 'note'`). The CLI now iterates `events[]` and renders:

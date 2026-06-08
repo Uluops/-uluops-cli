@@ -318,21 +318,42 @@ Examples:
       }
     });
 
-  // ulu issues history <id>
+  // ulu issues history <id-or-fingerprint>
   issues
-    .command('history <id>')
+    .command('history <id-or-fingerprint>')
     .description(
-      'Show full issue timeline (status changes, occurrences, notes)',
+      'Show full issue timeline (status changes, occurrences, notes). Pass --project to look up by fingerprint instead of issue id.',
     )
-    .action(async (id: string, _, cmd) => {
+    .option(
+      '-p, --project <name>',
+      'Project slug — when set, treats the positional arg as a fingerprint and resolves it to an issue id first',
+    )
+    .action(async (idOrFingerprint: string, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
       try {
+        let issueId = idOrFingerprint;
+        if (options.project) {
+          const issue = await withSpinner(
+            ctx,
+            {
+              start: 'Resolving fingerprint...',
+              failure: 'Failed to resolve fingerprint',
+            },
+            () =>
+              ctx.client.issues.getByFingerprint(
+                idOrFingerprint,
+                options.project,
+              ),
+          );
+          issueId = issue.id;
+        }
+
         const envelope = await withSpinner(
           ctx,
           { start: 'Fetching history...', failure: 'Failed to fetch history' },
-          () => ctx.client.issues.getHistory(id),
+          () => ctx.client.issues.getHistory(issueId),
         );
 
         if (ctx.json) {

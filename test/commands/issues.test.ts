@@ -216,6 +216,34 @@ describe('issues history', () => {
     output.restore();
   });
 
+  it('resolves fingerprint via --project before fetching history', async () => {
+    mockClient.issues.getByFingerprint.mockResolvedValue(
+      createIssue({ id: '99999999-9999-9999-9999-999999999999' }),
+    );
+    mockClient.issues.getHistory.mockResolvedValue({
+      issueId: '99999999-9999-9999-9999-999999999999',
+      totalEvents: 0,
+      truncated: false,
+      events: [],
+    });
+    const output = captureOutput();
+    await parse(
+      'issues',
+      'history',
+      'fe8e8396a6167a50c7451697eabbaa7a4ebc03c8dc474931176954179c1e7308',
+      '--project',
+      'uluops-plans',
+    );
+    expect(mockClient.issues.getByFingerprint).toHaveBeenCalledWith(
+      'fe8e8396a6167a50c7451697eabbaa7a4ebc03c8dc474931176954179c1e7308',
+      'uluops-plans',
+    );
+    expect(mockClient.issues.getHistory).toHaveBeenCalledWith(
+      '99999999-9999-9999-9999-999999999999',
+    );
+    output.restore();
+  });
+
   it('shows empty message when no events', async () => {
     mockClient.issues.getHistory.mockResolvedValue({
       issueId: '11111111-1111-1111-1111-111111111111',
