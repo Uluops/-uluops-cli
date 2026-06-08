@@ -20,13 +20,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   A `⚠ Truncated to most recent N of M events` warning surfaces when the server applies the 1000-event ceiling.
 - **BREAKING (JSON output):** `--json ulu issues history` now emits the `IssueHistoryEnvelope` shape (`{issueId, events, totalEvents, truncated}`) instead of a flat `StatusHistory[]`. Scripts consuming `result[0]` or `Array.isArray(result)` need to switch to `result.events`. The bare-array shape was lossy on F10 (occurrences + notes were dropped on the server side, then undo destroyed status rows) so most real consumers were already getting `[]` before the fix landed.
 
+### Changed
+
+- **`ulu deps get` / `ulu deps dependents` now render the real envelope shapes** (live-tests T2 §3.5, R12). registry-sdk v0.31.0 fixed both endpoints to return real structured graphs/lists instead of the silent `{}` they used to parse to. The CLI used to defend against the broken contract with `data.nodes ?? data.flat ?? []` fallbacks; that scaffolding is gone. `deps get` now prints a flat indented list by default (each line tagged with its `(depth N)`) and accepts `--tree` to render the recursive graph as an indented tree with `[context]` labels per edge (`[invokes.agent]`, `[stage "Final Checks"]`, `[dependencies.requires]`, etc). `deps dependents` now shows `← context` arrows so operators can see which reference type each consumer uses.
+- Removed: the unused `cycleDetected` / `cycles` warning — the registry API never tracked those.
+
 ### Dependencies
 
 - `@uluops/ops-sdk` 3.1.2 → 3.2.0 (envelope types: `IssueHistoryEnvelope`, `HistoryEvent`, `TransitionType`).
+- `@uluops/registry-sdk` 0.30.2 → 0.31.0 (R12 envelope types: `DependencyGraphResponse`, `DependentsResponse`, `Dependent`, `FlatDep`, recursive `DependencyNode`).
 
 ### Internal
 
-- Issues test suite gained 3 new history-renderer cases (merged-event rendering with all 3 event types + undo tombstone, truncation warning, empty envelope). Suite now 409 cases.
+- Issues test suite gained 3 new history-renderer cases (merged-event rendering with all 3 event types + undo tombstone, truncation warning, empty envelope). Picker mode added 3 more cases (sorted list, empty project, no-arg error). Deps test suite fully rewritten for R12 envelope shape (5 cases: flat default + tree view + no-deps + populated dependents + no-dependents). Suite 408 → 414.
 
 ## [0.12.9] - 2026-06-05
 

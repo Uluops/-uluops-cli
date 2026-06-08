@@ -1,11 +1,15 @@
-import type { DefinitionType } from '@uluops/registry-sdk';
+import type {
+  DefinitionType,
+  DependencyNode,
+  Dependent,
+} from '@uluops/registry-sdk';
 import type { Command } from 'commander';
 import {
   createRegistryContext,
   type GlobalOptions,
   handleRegistryError,
 } from '../context.js';
-import { asFlexibleResponse, parseIntOption, withSpinner } from '../utils.js';
+import { parseIntOption, withSpinner } from '../utils.js';
 
 /**
  * Register dependency commands
@@ -20,6 +24,7 @@ export function registerDepsCommands(program: Command): void {
 Examples:
   $ ulu deps get workflow ship 1.0.0
   $ ulu deps get workflow ship 1.0.0 --max-depth 2
+  $ ulu deps get workflow ship 1.0.0 --tree
   $ ulu deps dependents agent code-validator 1.0.0
 `,
     );
@@ -27,15 +32,19 @@ Examples:
   // ulu deps get <type> <name> <version>
   deps
     .command('get <type> <name> <version>')
-    .description('Show what a definition depends on (with cycle detection)')
+    .description('Show what a definition depends on')
     .option('-d, --max-depth <number>', 'Maximum traversal depth')
+    .option(
+      '--tree',
+      'Render the dependency graph as an indented tree instead of a flat list',
+    )
     .action(
       async (type: string, name: string, version: string, options, cmd) => {
         const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
         const ctx = createRegistryContext(globalOpts);
 
         try {
-          const graph = await withSpinner(
+          const envelope = await withSpinner(
             ctx,
             {
               start: 'Fetching dependencies...',
@@ -55,41 +64,30 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(graph, null, 2));
+            console.log(JSON.stringify(envelope, null, 2));
+            return;
+          }
+
+          const { definition, graph, flat, totalCount, maxDepth } = envelope;
+          console.log(
+            `Dependencies for ${definition.type}/${definition.name}@${definition.version}:`,
+          );
+          console.log(`  Total: ${totalCount} (max depth ${maxDepth})`);
+
+          if (totalCount === 0) {
+            console.log('\n  No dependencies');
+            return;
+          }
+
+          console.log('');
+          if (options.tree) {
+            printTree(graph, '  ');
           } else {
-            // API may return { graph, flat, totalCount } or { nodes, edges }
-            const data = asFlexibleResponse(graph);
-            const nodes = (data.nodes ?? data.flat ?? []) as Array<{
-              type: string;
-              name: string;
-              version: string;
-              status: string;
-            }>;
-            const edges = (data.edges ?? []) as unknown[];
-            console.log(`Dependencies for ${type}/${name}@${version}:`);
-            console.log(
-              `  Dependencies: ${(data.totalCount as number) ?? nodes.length}`,
-            );
-            if (edges.length > 0) {
-              console.log(`  Edges: ${edges.length}`);
-            }
-            if (graph.cycleDetected) {
-              console.log('  WARNING: Circular dependency detected!');
-              if (graph.cycles) {
-                for (const cycle of graph.cycles) {
-                  console.log(`    ${cycle.join(' -> ')}`);
-                }
-              }
-            }
-            if (nodes.length === 0) {
-              console.log('\n  No dependencies');
-            } else {
-              console.log('');
-              for (const node of nodes) {
-                console.log(
-                  `  ${node.type}/${node.name}@${node.version} (${node.status})`,
-                );
-              }
+            for (const dep of flat) {
+              const indent = '  '.repeat(dep.depth);
+              console.log(
+                `${indent}${dep.type}/${dep.name}@${dep.version} (depth ${dep.depth})`,
+              );
             }
           }
         } catch (error) {
@@ -109,7 +107,7 @@ Examples:
       const ctx = createRegistryContext(globalOpts);
 
       try {
-        const graph = await withSpinner(
+        const envelope = await withSpinner(
           ctx,
           {
             start: 'Fetching dependents...',
@@ -124,28 +122,35 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(graph, null, 2));
-        } else {
-          const depData = asFlexibleResponse(graph);
-          const nodes = (depData.nodes ?? depData.flat ?? []) as Array<{
-            type: string;
-            name: string;
-            version: string;
-            status: string;
-          }>;
-          if (nodes.length === 0) {
-            console.log('No dependents found');
-          } else {
-            console.log(`Dependents of ${type}/${name}@${version}:`);
-            for (const node of nodes) {
-              console.log(
-                `  ${node.type}/${node.name}@${node.version} (${node.status})`,
-              );
-            }
-          }
+          console.log(JSON.stringify(envelope, null, 2));
+          return;
+        }
+
+        const { definition, dependents, totalCount } = envelope;
+        if (totalCount === 0) {
+          console.log(
+            `No dependents of ${definition.type}/${definition.name}@${definition.version}`,
+          );
+          return;
+        }
+        console.log(
+          `Dependents of ${definition.type}/${definition.name}@${definition.version} (${totalCount}):`,
+        );
+        for (const dep of dependents as Dependent[]) {
+          console.log(
+            `  ${dep.type}/${dep.name}@${dep.version}  ←  ${dep.context}`,
+          );
         }
       } catch (error) {
         handleRegistryError(error, ctx);
       }
     });
+}
+
+function printTree(node: DependencyNode, indent: string): void {
+  const context = node.context ? `  [${node.context}]` : '';
+  console.log(`${indent}${node.type}/${node.name}@${node.version}${context}`);
+  for (const child of node.dependencies) {
+    printTree(child, `${indent}  `);
+  }
 }

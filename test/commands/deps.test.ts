@@ -31,57 +31,122 @@ function parse(...args: string[]) {
 }
 
 describe('deps get', () => {
-  it('should display dependency graph', async () => {
+  it('renders the flat list by default (post-R12 envelope)', async () => {
     mockClient.dependencies.get.mockResolvedValue({
-      nodes: [
-        { id: '1', type: 'agent', name: 'dep-agent', version: '1.0.0', status: 'published' },
+      definition: { type: 'workflow', name: 'my-wf', version: '1.0.0' },
+      graph: {
+        id: 'root',
+        type: 'workflow',
+        name: 'my-wf',
+        version: '1.0.0',
+        dependencies: [
+          {
+            id: 'a',
+            type: 'agent',
+            name: 'dep-agent',
+            version: '1.0.0',
+            context: 'invokes.agent',
+            dependencies: [],
+          },
+        ],
+      },
+      flat: [
+        { id: 'a', type: 'agent', name: 'dep-agent', version: '1.0.0', depth: 1 },
       ],
-      edges: [{ from: 'root', to: '1', type: 'depends_on' }],
-      cycleDetected: false,
+      totalCount: 1,
+      maxDepth: 1,
     });
     const output = captureOutput();
     await parse('deps', 'get', 'workflow', 'my-wf', '1.0.0');
     expect(mockClient.dependencies.get).toHaveBeenCalledWith('workflow', 'my-wf', '1.0.0', undefined);
-    expect(output.stdout()).toContain('dep-agent');
-    expect(output.stdout()).toContain('Dependencies: 1');
+    const out = output.stdout();
+    expect(out).toContain('Dependencies for workflow/my-wf@1.0.0');
+    expect(out).toContain('Total: 1 (max depth 1)');
+    expect(out).toContain('agent/dep-agent@1.0.0 (depth 1)');
     output.restore();
   });
 
-  it('should warn about cycles', async () => {
+  it('renders the tree view under --tree, including context labels', async () => {
     mockClient.dependencies.get.mockResolvedValue({
-      nodes: [],
-      edges: [],
-      cycleDetected: true,
-      cycles: [['a', 'b', 'a']],
+      definition: { type: 'workflow', name: 'my-wf', version: '1.0.0' },
+      graph: {
+        id: 'root',
+        type: 'workflow',
+        name: 'my-wf',
+        version: '1.0.0',
+        dependencies: [
+          {
+            id: 'a',
+            type: 'agent',
+            name: 'dep-agent',
+            version: '1.0.0',
+            context: 'phase validate',
+            dependencies: [],
+          },
+        ],
+      },
+      flat: [
+        { id: 'a', type: 'agent', name: 'dep-agent', version: '1.0.0', depth: 1 },
+      ],
+      totalCount: 1,
+      maxDepth: 1,
+    });
+    const output = captureOutput();
+    await parse('deps', 'get', 'workflow', 'my-wf', '1.0.0', '--tree');
+    const out = output.stdout();
+    expect(out).toContain('workflow/my-wf@1.0.0');
+    expect(out).toContain('agent/dep-agent@1.0.0  [phase validate]');
+    output.restore();
+  });
+
+  it('shows the no-deps message when totalCount is zero', async () => {
+    mockClient.dependencies.get.mockResolvedValue({
+      definition: { type: 'workflow', name: 'my-wf', version: '1.0.0' },
+      graph: { id: 'root', type: 'workflow', name: 'my-wf', version: '1.0.0', dependencies: [] },
+      flat: [],
+      totalCount: 0,
+      maxDepth: 0,
     });
     const output = captureOutput();
     await parse('deps', 'get', 'workflow', 'my-wf', '1.0.0');
-    expect(output.stdout()).toContain('Circular dependency');
+    expect(output.stdout()).toContain('No dependencies');
     output.restore();
   });
 });
 
 describe('deps dependents', () => {
-  it('should list dependents', async () => {
+  it('lists dependents with context (post-R12 envelope)', async () => {
     mockClient.dependencies.getDependents.mockResolvedValue({
-      nodes: [
-        { id: '1', type: 'workflow', name: 'consumer-wf', version: '2.0.0', status: 'published' },
+      definition: { type: 'agent', name: 'my-agent', version: '1.0.0' },
+      dependents: [
+        {
+          id: '1',
+          type: 'workflow',
+          name: 'consumer-wf',
+          version: '2.0.0',
+          context: 'invokes.agent',
+        },
       ],
-      edges: [],
-      cycleDetected: false,
+      totalCount: 1,
     });
     const output = captureOutput();
     await parse('deps', 'dependents', 'agent', 'my-agent', '1.0.0');
     expect(mockClient.dependencies.getDependents).toHaveBeenCalledWith('agent', 'my-agent', '1.0.0');
-    expect(output.stdout()).toContain('consumer-wf');
+    const out = output.stdout();
+    expect(out).toContain('Dependents of agent/my-agent@1.0.0 (1)');
+    expect(out).toContain('workflow/consumer-wf@2.0.0  ←  invokes.agent');
     output.restore();
   });
 
-  it('should show empty message', async () => {
-    mockClient.dependencies.getDependents.mockResolvedValue({ nodes: [], edges: [], cycleDetected: false });
+  it('shows the no-dependents message when totalCount is zero', async () => {
+    mockClient.dependencies.getDependents.mockResolvedValue({
+      definition: { type: 'agent', name: 'my-agent', version: '1.0.0' },
+      dependents: [],
+      totalCount: 0,
+    });
     const output = captureOutput();
     await parse('deps', 'dependents', 'agent', 'my-agent', '1.0.0');
-    expect(output.stdout()).toContain('No dependents found');
+    expect(output.stdout()).toContain('No dependents of agent/my-agent@1.0.0');
     output.restore();
   });
 });
