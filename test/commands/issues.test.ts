@@ -147,22 +147,85 @@ describe('issues add-note', () => {
 });
 
 describe('issues history', () => {
-  it('should display status history', async () => {
-    mockClient.issues.getHistory.mockResolvedValue([
-      { changedAt: '2025-01-15T10:00:00Z', oldStatus: 'open', newStatus: 'completed', reason: 'Fixed' },
-    ]);
+  it('renders merged envelope with status, occurrence, and note events', async () => {
+    mockClient.issues.getHistory.mockResolvedValue({
+      issueId: '11111111-1111-1111-1111-111111111111',
+      totalEvents: 3,
+      truncated: false,
+      events: [
+        {
+          type: 'status',
+          timestamp: '2026-01-15T10:00:00Z',
+          oldStatus: 'completed',
+          newStatus: 'open',
+          reason: 'Undo of prior change',
+          transitionType: 'undo',
+          revertedChangeId: '22222222-2222-2222-2222-222222222222',
+        },
+        {
+          type: 'note',
+          timestamp: '2026-01-15T09:00:00Z',
+          noteId: '33333333-3333-3333-3333-333333333333',
+          content: 'Investigation note',
+          noteType: 'investigation',
+          createdBy: 'alex',
+        },
+        {
+          type: 'occurrence',
+          timestamp: '2026-01-15T08:00:00Z',
+          runId: '44444444-4444-4444-4444-444444444444',
+          agentName: 'aristotle-analyst',
+          description: 'Telos misalignment detected',
+        },
+      ],
+    });
     const output = captureOutput();
     await parse('issues', 'history', 'abc-123');
-    expect(output.stdout()).toContain('Status History');
-    expect(output.stdout()).toContain('Reason: Fixed');
+    const out = output.stdout();
+    expect(out).toContain('History (3 events)');
+    expect(out).toContain('[undo] status: completed → open');
+    expect(out).toContain('Reverts: 22222222-2222-2222-2222-222222222222');
+    expect(out).toContain('Reason: Undo of prior change');
+    expect(out).toContain('note [investigation] by alex');
+    expect(out).toContain('Investigation note');
+    expect(out).toContain('occurrence: aristotle-analyst');
+    expect(out).toContain('Telos misalignment detected');
     output.restore();
   });
 
-  it('should show empty history message', async () => {
-    mockClient.issues.getHistory.mockResolvedValue([]);
+  it('warns when envelope is truncated', async () => {
+    mockClient.issues.getHistory.mockResolvedValue({
+      issueId: '11111111-1111-1111-1111-111111111111',
+      totalEvents: 1500,
+      truncated: true,
+      events: [
+        {
+          type: 'status',
+          timestamp: '2026-01-15T10:00:00Z',
+          oldStatus: 'open',
+          newStatus: 'completed',
+          reason: null,
+          transitionType: 'change',
+          revertedChangeId: null,
+        },
+      ],
+    });
     const output = captureOutput();
     await parse('issues', 'history', 'abc-123');
-    expect(output.stdout()).toContain('No status history');
+    expect(output.stdout()).toContain('Truncated to most recent');
+    output.restore();
+  });
+
+  it('shows empty message when no events', async () => {
+    mockClient.issues.getHistory.mockResolvedValue({
+      issueId: '11111111-1111-1111-1111-111111111111',
+      totalEvents: 0,
+      truncated: false,
+      events: [],
+    });
+    const output = captureOutput();
+    await parse('issues', 'history', 'abc-123');
+    expect(output.stdout()).toContain('No history');
     output.restore();
   });
 });

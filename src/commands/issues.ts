@@ -321,31 +321,71 @@ Examples:
   // ulu issues history <id>
   issues
     .command('history <id>')
-    .description('Show issue status history')
+    .description(
+      'Show full issue timeline (status changes, occurrences, notes)',
+    )
     .action(async (id: string, _, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
       try {
-        const history = await withSpinner(
+        const envelope = await withSpinner(
           ctx,
           { start: 'Fetching history...', failure: 'Failed to fetch history' },
           () => ctx.client.issues.getHistory(id),
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(history, null, 2));
-        } else if (history.length === 0) {
-          console.log('No status history');
-        } else {
-          console.log('Status History:');
-          for (const entry of history) {
-            const date = new Date(entry.changedAt).toLocaleString();
-            console.log(
-              `  ${date}: ${entry.oldStatus ?? '(new)'} → ${entry.newStatus}`,
-            );
-            if (entry.reason) {
-              console.log(`    Reason: ${entry.reason}`);
+          console.log(JSON.stringify(envelope, null, 2));
+          return;
+        }
+
+        if (envelope.events.length === 0) {
+          console.log('No history');
+          return;
+        }
+
+        console.log(`History (${envelope.totalEvents} events):`);
+        if (envelope.truncated) {
+          console.log(
+            `  ⚠ Truncated to most recent ${envelope.events.length} of ${envelope.totalEvents} events`,
+          );
+        }
+
+        for (const event of envelope.events) {
+          const date = new Date(event.timestamp).toLocaleString();
+          switch (event.type) {
+            case 'status': {
+              const tag = event.transitionType === 'undo' ? '[undo]' : '';
+              console.log(
+                `  ${date} ${tag} status: ${event.oldStatus ?? '(new)'} → ${event.newStatus}`,
+              );
+              if (event.revertedChangeId) {
+                console.log(`    Reverts: ${event.revertedChangeId}`);
+              }
+              if (event.reason) {
+                console.log(`    Reason: ${event.reason}`);
+              }
+              break;
+            }
+            case 'occurrence': {
+              console.log(
+                `  ${date} occurrence: ${event.agentName} (run ${event.runId})`,
+              );
+              if (event.description) {
+                console.log(
+                  `    ${event.description.slice(0, 200)}${event.description.length > 200 ? '...' : ''}`,
+                );
+              }
+              break;
+            }
+            case 'note': {
+              const author = event.createdBy ?? '(anonymous)';
+              console.log(`  ${date} note [${event.noteType}] by ${author}`);
+              console.log(
+                `    ${event.content.slice(0, 200)}${event.content.length > 200 ? '...' : ''}`,
+              );
+              break;
             }
           }
         }

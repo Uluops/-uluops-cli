@@ -4,6 +4,25 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.13.0] - 2026-06-08
+
+### Changed
+
+- **`ulu issues history <id>` now renders the merged history envelope** introduced by ops-sdk v3.2.0 (live-tests T2 §3.1, Bug A/B/C). The dedicated history endpoint used to return a bare `StatusHistory[]` and silently dropped occurrences + notes; it also destroyed rows on undo, leaving a non-monotonic audit trail. The new envelope merges all three event sources into a single timestamp-sorted stream with a discriminated `type` field (`'occurrence' | 'status' | 'note'`). The CLI now iterates `events[]` and renders:
+  - `status` events with an `[undo]` marker for tombstones, a `Reverts: <id>` line when the row reverts an earlier change, and the reason line as before
+  - `occurrence` events with agent name, run id, and a truncated description
+  - `note` events with note type, author, and a truncated content body
+  A `⚠ Truncated to most recent N of M events` warning surfaces when the server applies the 1000-event ceiling.
+- **BREAKING (JSON output):** `--json ulu issues history` now emits the `IssueHistoryEnvelope` shape (`{issueId, events, totalEvents, truncated}`) instead of a flat `StatusHistory[]`. Scripts consuming `result[0]` or `Array.isArray(result)` need to switch to `result.events`. The bare-array shape was lossy on F10 (occurrences + notes were dropped on the server side, then undo destroyed status rows) so most real consumers were already getting `[]` before the fix landed.
+
+### Dependencies
+
+- `@uluops/ops-sdk` 3.1.2 → 3.2.0 (envelope types: `IssueHistoryEnvelope`, `HistoryEvent`, `TransitionType`).
+
+### Internal
+
+- Issues test suite gained 3 new history-renderer cases (merged-event rendering with all 3 event types + undo tombstone, truncation warning, empty envelope). Suite now 409 cases.
+
 ## [0.12.9] - 2026-06-05
 
 ### Changed

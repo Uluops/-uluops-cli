@@ -6,6 +6,10 @@ coverage/
 .env
 .env.*
 
+# Local Verdaccio scope override (per CLAUDE.md): drop in to validate a
+# @uluops/* publish; remove when done.
+.npmrc
+
 # Claude Code context files (auto-generated, machine-local)
 **/CLAUDE.md
 !./CLAUDE.md
