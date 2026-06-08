@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Added
 
+- **`ulu issues history --project <slug>` (picker mode).** Run with `--project` alone (no positional arg) to list the project's recent issues sorted by last activity, with fingerprint-prefix handles, status, and title. Surfaces a hint for drilling in. Solves the human-discoverability gap — operators no longer need a UUID or full fingerprint in hand to find a starting point. Server returns by priority then recency, so the picker biases toward critical/high issues with recent activity (`--limit` is honored).
 - **`ulu issues history <id-or-fingerprint> --project <slug>`.** The positional arg can now be a fingerprint when `--project` is set; the CLI resolves the fingerprint to an issue id via `getByFingerprint` and then fetches history. Matches the existing `by-fingerprint` / `update-by-fingerprint` ergonomics so operators can work from the human-readable handle they already have.
 
 ### Changed

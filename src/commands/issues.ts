@@ -318,21 +318,81 @@ Examples:
       }
     });
 
-  // ulu issues history <id-or-fingerprint>
+  // ulu issues history [id-or-fingerprint]
   issues
-    .command('history <id-or-fingerprint>')
+    .command('history [id-or-fingerprint]')
     .description(
-      'Show full issue timeline (status changes, occurrences, notes). Pass --project to look up by fingerprint instead of issue id.',
+      'Show issue timeline. With --project alone: list recent issues as a picker. With id/fingerprint + --project: resolve fingerprint then show events. With bare id: show events directly.',
     )
     .option(
       '-p, --project <name>',
-      'Project slug — when set, treats the positional arg as a fingerprint and resolves it to an issue id first',
+      'Project slug. Alone: lists recent issues as a picker. With a positional arg: resolves it as a fingerprint instead of an issue id.',
     )
-    .action(async (idOrFingerprint: string, options, cmd) => {
+    .option(
+      '-l, --limit <number>',
+      'Picker mode: max issues to list. Server returns by priority then recency, so the picker biases toward critical/high issues with recent activity.',
+      '20',
+    )
+    .action(async (idOrFingerprint: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
       try {
+        // Picker mode: --project alone, no positional → list recent issues.
+        if (!idOrFingerprint && options.project) {
+          const limit = parseIntOption(options.limit, '--limit');
+          const issues = await withSpinner(
+            ctx,
+            {
+              start: 'Fetching recent activity...',
+              failure: 'Failed to fetch recent activity',
+            },
+            () =>
+              ctx.client.issues.listByProject(options.project, {
+                status: 'all' as StatusFilter,
+                includeResolved: true,
+                limit,
+              }),
+          );
+          const sorted = [...issues].sort(
+            (a, b) =>
+              new Date(b.updatedAt).getTime() -
+              new Date(a.updatedAt).getTime(),
+          );
+          if (ctx.json) {
+            console.log(JSON.stringify(sorted, null, 2));
+            return;
+          }
+          if (sorted.length === 0) {
+            console.log(`No issues in ${options.project}`);
+            return;
+          }
+          console.log(
+            `Recent activity in ${options.project} (top ${sorted.length} by last change):`,
+          );
+          for (const issue of sorted) {
+            const fp = issue.fingerprint.slice(0, 8);
+            const ts = new Date(issue.updatedAt)
+              .toISOString()
+              .replace('T', ' ')
+              .slice(0, 16);
+            const status = issue.status.padEnd(9);
+            console.log(`  ${fp}  ${ts}  ${status}  ${issue.title}`);
+          }
+          console.log(
+            `\n↳ Drill in: ulu issues history <fingerprint> --project ${options.project}`,
+          );
+          return;
+        }
+
+        if (!idOrFingerprint) {
+          console.error(
+            'Pass an issue id or fingerprint, or use --project <slug> alone to see recent activity.',
+          );
+          process.exitCode = 1;
+          return;
+        }
+
         let issueId = idOrFingerprint;
         if (options.project) {
           const issue = await withSpinner(

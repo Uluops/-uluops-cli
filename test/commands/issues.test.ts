@@ -216,6 +216,65 @@ describe('issues history', () => {
     output.restore();
   });
 
+  it('picker mode: --project alone lists recent issues sorted by updatedAt', async () => {
+    mockClient.issues.listByProject.mockResolvedValue([
+      createIssue({
+        title: 'Older issue',
+        fingerprint: 'aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111',
+        status: 'open',
+        updatedAt: '2026-06-05T10:00:00Z',
+      }),
+      createIssue({
+        title: 'Newer issue',
+        fingerprint: 'bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222',
+        status: 'completed',
+        updatedAt: '2026-06-08T15:00:00Z',
+      }),
+    ]);
+    const output = captureOutput();
+    await parse('issues', 'history', '--project', 'uluops-plans');
+    expect(mockClient.issues.listByProject).toHaveBeenCalledWith(
+      'uluops-plans',
+      expect.objectContaining({
+        status: 'all',
+        includeResolved: true,
+        limit: 20,
+      }),
+    );
+    expect(mockClient.issues.getHistory).not.toHaveBeenCalled();
+    const out = output.stdout();
+    expect(out).toContain('Recent activity in uluops-plans');
+    // Newer should appear before older (sorted DESC by updatedAt).
+    const newerIdx = out.indexOf('Newer issue');
+    const olderIdx = out.indexOf('Older issue');
+    expect(newerIdx).toBeGreaterThan(-1);
+    expect(olderIdx).toBeGreaterThan(newerIdx);
+    expect(out).toContain('bbbb2222');
+    expect(out).toContain('aaaa1111');
+    expect(out).toContain(
+      '↳ Drill in: ulu issues history <fingerprint> --project uluops-plans',
+    );
+    output.restore();
+  });
+
+  it('picker mode: shows empty message when project has no issues', async () => {
+    mockClient.issues.listByProject.mockResolvedValue([]);
+    const output = captureOutput();
+    await parse('issues', 'history', '--project', 'uluops-plans');
+    expect(output.stdout()).toContain('No issues in uluops-plans');
+    output.restore();
+  });
+
+  it('errors when no arg and no --project', async () => {
+    const output = captureOutput();
+    await parse('issues', 'history');
+    expect(output.stderr()).toContain(
+      'Pass an issue id or fingerprint, or use --project',
+    );
+    expect(mockClient.issues.getHistory).not.toHaveBeenCalled();
+    output.restore();
+  });
+
   it('resolves fingerprint via --project before fetching history', async () => {
     mockClient.issues.getByFingerprint.mockResolvedValue(
       createIssue({ id: '99999999-9999-9999-9999-999999999999' }),
