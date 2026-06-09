@@ -758,6 +758,13 @@ ulu runs save --file results.json -q
 ulu projects get my-project --debug
 ```
 
+> **Destructive commands in scripts and CI.** `projects delete`, `runs delete`,
+> and `definitions delete` prompt for confirmation at an interactive terminal.
+> In a non-interactive context (CI, piped stdin, automated agent harness) there
+> is no prompt to answer, so they **fail closed**: without `--yes`/`-y` they
+> print an error to stderr and **exit non-zero** rather than silently skipping
+> the deletion with a success code. Always pass `-y` when scripting a delete.
+
 ## Environment Variables
 
 | Variable | Description | Default |

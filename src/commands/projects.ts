@@ -9,7 +9,7 @@ import {
   formatProjectSummary,
   formatProjects,
 } from '../formatters/ops.js';
-import { confirmAction, parseIntOption, withSpinner } from '../utils.js';
+import { confirmOrExit, parseIntOption, withSpinner } from '../utils.js';
 
 /**
  * Register project commands
@@ -139,15 +139,9 @@ Example:
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
-      // Confirm deletion
-      if (!options.yes) {
-        const action = options.force ? 'permanently delete' : 'soft-delete';
-        const confirmed = await confirmAction(`${action} project "${name}"?`);
-        if (!confirmed) {
-          console.log('Cancelled');
-          process.exit(0);
-        }
-      }
+      // Confirm deletion (fails closed in non-interactive contexts)
+      const action = options.force ? 'permanently delete' : 'soft-delete';
+      await confirmOrExit(`${action} project "${name}"?`, options.yes);
 
       try {
         if (options.force) {

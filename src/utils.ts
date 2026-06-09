@@ -387,13 +387,39 @@ export function promptInput(
 }
 
 /**
- * Ask for y/n confirmation. Returns true if confirmed.
- * In non-interactive mode (piped stdin), returns false unless --yes is set.
+ * Gate a destructive action behind confirmation, failing closed when it cannot
+ * prompt.
+ *
+ * Behavior:
+ * - `skip` (from --yes/-y): proceed immediately, no prompt.
+ * - Interactive TTY: prompt; a non-"yes" answer cancels cleanly (exit 0) — the
+ *   user made a deliberate choice not to proceed.
+ * - Non-interactive (no TTY) WITHOUT --yes: there is no one to answer, so the
+ *   absence of a "yes" is not a deliberate decline. Fail closed — write an
+ *   actionable message to stderr and exit non-zero — instead of silently
+ *   skipping the action with a success code. A captive CI/automation caller
+ *   cannot distinguish a silent exit-0 skip from a successful deletion, so the
+ *   skip path must be loud and non-zero.
+ *
+ * Never returns when it cancels or fails closed (it calls process.exit).
  */
-export async function confirmAction(message: string): Promise<boolean> {
-  if (!process.stdin.isTTY) return false;
+export async function confirmOrExit(
+  message: string,
+  skip = false,
+): Promise<void> {
+  if (skip) return;
+  if (!process.stdin.isTTY) {
+    console.error(
+      'Confirmation required, but stdin is not an interactive terminal.',
+    );
+    console.error('Re-run with --yes (-y) to proceed non-interactively.');
+    process.exit(1);
+  }
   const answer = await promptInput(`${message} [y/N] `);
-  return answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes';
+  if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
+    console.log('Cancelled');
+    process.exit(0);
+  }
 }
 
 /** Timeout for reading from stdin (30 seconds) */

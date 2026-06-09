@@ -280,6 +280,14 @@ describe('runs delete', () => {
     expect(mockClient.runs.delete).toHaveBeenCalledWith('run-uuid-123');
     output.restore();
   });
+
+  it('should fail closed (exit 1) without --yes in non-interactive mode', async () => {
+    const output = captureOutput();
+    await expect(parse('runs', 'delete', 'run-uuid-123')).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('not an interactive terminal');
+    expect(mockClient.runs.delete).not.toHaveBeenCalled();
+    output.restore();
+  });
 });
 
 describe('runs list with numeric options', () => {

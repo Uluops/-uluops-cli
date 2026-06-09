@@ -12,6 +12,7 @@ import {
   formatValidationResult,
 } from '../formatters/registry.js';
 import {
+  confirmOrExit,
   parseIntOption,
   readFileOption,
   resolveDefinitionType,
@@ -496,12 +497,11 @@ Examples:
         const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
         const ctx = createRegistryContext(globalOpts);
 
-        // Confirm deletion
-        if (!options.yes) {
-          console.log(`\nThis will delete: ${type}/${name}@${version}`);
-          console.log('To confirm, run again with --yes flag');
-          process.exit(0);
-        }
+        // Confirm deletion (fails closed in non-interactive contexts)
+        await confirmOrExit(
+          `Delete definition ${type}/${name}@${version}?`,
+          options.yes,
+        );
 
         try {
           await withSpinner(

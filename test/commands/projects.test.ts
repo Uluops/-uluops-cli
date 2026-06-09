@@ -85,10 +85,12 @@ describe('projects create', () => {
 });
 
 describe('projects delete', () => {
-  it('should cancel without --yes in non-interactive mode', async () => {
+  it('should fail closed (exit 1) without --yes in non-interactive mode', async () => {
     const output = captureOutput();
-    await expect(parse('projects', 'delete', 'my-proj')).rejects.toThrow('process.exit(0)');
-    expect(output.stdout()).toContain('Cancelled');
+    await expect(parse('projects', 'delete', 'my-proj')).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('not an interactive terminal');
+    expect(mockClient.projects.softDelete).not.toHaveBeenCalled();
+    expect(mockClient.projects.delete).not.toHaveBeenCalled();
     output.restore();
   });
 

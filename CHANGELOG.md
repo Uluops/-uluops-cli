@@ -4,6 +4,40 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.13.3] - 2026-06-09
+
+### Changed
+
+- **Destructive delete commands now fail closed in non-interactive contexts.**
+  `projects delete`, `runs delete`, and `definitions delete` previously printed a
+  cancellation message and **exited 0** when run without `--yes` and without an
+  interactive TTY (e.g. in CI or when called by an automated agent harness). A
+  silent exit-0 skip is indistinguishable from a successful deletion to a captive
+  automated caller, so the operation looked done when it had not run. These
+  commands now write `Confirmation required, but stdin is not an interactive
+  terminal.` to **stderr** and **exit 1** instead. Pass `--yes`/`-y` to proceed
+  non-interactively. Interactive behavior is unchanged: at a TTY you are still
+  prompted, and answering "no" cancels cleanly with exit 0.
+  - **Breaking for scripts** that relied on the old exit-0 skip. Any automation
+    that deletes resources must now pass `-y` explicitly (which it should have
+    been doing — the old behavior silently no-op'd the deletion).
+- **Unified the confirmation protocol across delete commands.** `definitions
+  delete` previously used a divergent "To confirm, run again with --yes flag"
+  message and never prompted, even at a TTY, while `projects`/`runs` used an
+  interactive `[y/N]` prompt. All three now route through a single
+  `confirmOrExit` helper, so confirmation behaves identically across resource
+  types. `definitions delete` now also prompts interactively at a TTY.
+
+### Internal
+
+- Replaced the `confirmAction` util (which collapsed "user declined" and "no TTY
+  available" into the same `false` return) with `confirmOrExit`, which
+  distinguishes the two: a deliberate decline at a prompt exits 0; an inability
+  to prompt fails closed with a non-zero exit. Added fail-closed test coverage
+  for all three delete commands. Suite 418/418 passes.
+- Source: captive-user analysis of `@uluops/cli` (tracker run #11, findings
+  `cu-a1` PRA-FRA/H and `cu-a2` SEM-COM/H).
+
 ## [0.13.2] - 2026-06-08
 
 ### Fixed

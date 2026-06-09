@@ -121,12 +121,13 @@ describe('definitions deprecate', () => {
 });
 
 describe('definitions delete', () => {
-  it('should prompt without --yes', async () => {
+  it('should fail closed (exit 1) without --yes in non-interactive mode', async () => {
     const output = captureOutput();
     await expect(
       parse('definitions', 'delete', 'agent', 'my-agent', '1.0.0')
-    ).rejects.toThrow('process.exit(0)');
-    expect(output.stdout()).toContain('agent/my-agent@1.0.0');
+    ).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('not an interactive terminal');
+    expect(mockClient.definitions.delete).not.toHaveBeenCalled();
     output.restore();
   });
 

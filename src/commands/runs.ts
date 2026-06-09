@@ -8,7 +8,7 @@ import {
 } from '../context.js';
 import { formatRun, formatRuns } from '../formatters/ops.js';
 import {
-  confirmAction,
+  confirmOrExit,
   exitWithError,
   getFlexibleProperty,
   normalizeKeys,
@@ -598,15 +598,7 @@ Examples:
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
-      if (!options.yes) {
-        const confirmed = await confirmAction(
-          `Permanently delete run ${runId}?`,
-        );
-        if (!confirmed) {
-          console.log('Cancelled');
-          process.exit(0);
-        }
-      }
+      await confirmOrExit(`Permanently delete run ${runId}?`, options.yes);
 
       try {
         await withSpinner(
