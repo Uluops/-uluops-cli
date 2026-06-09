@@ -4,7 +4,10 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [0.13.3] - 2026-06-09
+## [0.14.0] - 2026-06-09
+
+> Minor bump (not patch): the non-interactive exit-code change below is breaking
+> for any script that relied on the old silent exit-0 skip.
 
 ### Changed
 
