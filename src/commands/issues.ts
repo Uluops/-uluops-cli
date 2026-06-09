@@ -75,8 +75,12 @@ function renderHistoryEnvelope(envelope: IssueHistoryEnvelope): void {
         break;
       }
       case 'note': {
-        const author = event.createdBy ? stripAnsi(event.createdBy) : '(anonymous)';
-        console.log(`  ${date} note [${stripAnsi(event.noteType)}] by ${author}`);
+        const author = event.createdBy
+          ? stripAnsi(event.createdBy)
+          : '(anonymous)';
+        console.log(
+          `  ${date} note [${stripAnsi(event.noteType)}] by ${author}`,
+        );
         console.log(
           `    ${truncate(stripAnsi(event.content), MAX_EVENT_DETAIL_DISPLAY)}`,
         );

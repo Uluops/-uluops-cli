@@ -87,15 +87,21 @@ export function truncate(str: string, maxLength: number): string {
  * of an injection event.
  */
 export function stripAnsi(str: string): string {
-  // CSI sequences: ESC [ ... letter
-  // OSC sequences: ESC ] ... BEL
-  // Plus bare control chars below 0x20 (except tab/newline/cr)
-  return str
-    .replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '')
-    // eslint-disable-next-line no-control-regex
-    .replace(/\x1b\][^\x07]*\x07/g, '')
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '');
+  // Biome flags control bytes in regexes as suspicious because they're
+  // usually accidental — here they're load-bearing for the CWE-116 strip,
+  // explicitly documented in the JSDoc above, and confined to this helper.
+  return (
+    str
+      // CSI sequence: ESC [ ... letter
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: CSI ESC (0x1b)
+      .replace(/\x1b\[[0-9;?]*[a-zA-Z]/g, '')
+      // OSC sequence: ESC ] ... BEL
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: OSC framed by ESC (0x1b) ... BEL (0x07)
+      .replace(/\x1b\][^\x07]*\x07/g, '')
+      // Bare control chars below 0x20 (except tab/newline/cr) + DEL.
+      // biome-ignore lint/suspicious/noControlCharactersInRegex: stripping bare control bytes is the point
+      .replace(/[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]/g, '')
+  );
 }
 
 /**

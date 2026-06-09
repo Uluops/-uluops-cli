@@ -1,7 +1,4 @@
-import type {
-  DefinitionType,
-  DependencyNode,
-} from '@uluops/registry-sdk';
+import type { DefinitionType, DependencyNode } from '@uluops/registry-sdk';
 import type { Command } from 'commander';
 import {
   createRegistryContext,

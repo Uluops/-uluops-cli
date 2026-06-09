@@ -4,6 +4,16 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.13.2] - 2026-06-08
+
+### Fixed
+
+- **`prepublishOnly` lint step now passes.** The `stripAnsi()` helper added in 0.13.1 used `// eslint-disable-next-line no-control-regex` comments to suppress the control-byte regex warnings, but this package uses **Biome**, not ESLint — the comments had no effect, and `npm run lint` (called by `prepublishOnly`) failed at publish time with 4× `lint/suspicious/noControlCharactersInRegex` errors. Replaced with Biome's `// biome-ignore lint/suspicious/noControlCharactersInRegex: <reason>` syntax per directive, restructured the function with a single chained-replace expression so each suppression sits immediately above its target regex. Caught when running the actual publish chain.
+
+### Internal
+
+- Ran `biome check --write src/` to clear two pre-existing formatter errors in `src/commands/issues.ts` (multi-line wrap of the `renderHistoryEnvelope` `case 'note'` block) and `src/commands/deps.ts` (similar wrap). Pure formatting changes — no semantics. Suite 417/417 still passes.
+
 ## [0.13.1] - 2026-06-08
 
 Post-implementation hardening on the 0.13.0 wave. No breaking changes;
