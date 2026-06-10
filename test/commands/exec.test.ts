@@ -855,4 +855,22 @@ describe('--report forces reportMode + no-tracking (v0.1.1)', () => {
     );
     expect(output.stderr()).not.toContain('Report mode enabled');
   });
+
+  it('--report with multiple agents → hard error (exit 1), nothing runs', async () => {
+    // Guards the captive-user run #12 regression: a multi-agent --report would
+    // skip the phantom-project guard (the report skip fires for any --report)
+    // AND still track AND write no report. Must fail closed before any of that.
+    mockClient.runAgent.mockResolvedValue(createAgentResult());
+    mockedCreateCoreContext.mockReturnValue({
+      client: mockClient as unknown as CoreCliContext['client'],
+      json: false,
+      debug: false,
+      quiet: false,
+    });
+    await expect(
+      parse('exec', 'agent', '-t', './src', 'agent-a', 'agent-b', '--report'),
+    ).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('single agent only');
+    expect(mockClient.runAgent).not.toHaveBeenCalled();
+  });
 });

@@ -596,6 +596,25 @@ Examples:
       ) => {
         const options = getMergedOptions(cmd);
         const target: string = cmd.opts()['target'];
+        const agentNames: string[] = names.filter(Boolean);
+
+        // --report is single-agent only. In a multi-agent run the report-mode
+        // no-tracking coupling and the report-file write live only in the
+        // single-agent branch below — but the report skip passed to
+        // confirmInferredProjectOrExit fires for ANY --report. So a multi-agent
+        // --report would skip the phantom-project guard, still track under an
+        // inferred project, and write no report — silently, exit 0. Fail closed.
+        // (For multi-phase reports, use `exec workflow|pipeline --report` once
+        // consolidated-report mode ships.)
+        if (cmdOpts['report'] !== undefined && agentNames.length > 1) {
+          console.error(
+            `--report supports a single agent only — you passed ${agentNames.length} ` +
+              `(${agentNames.join(', ')}).\n` +
+              '  Run one agent with --report, or omit --report for a multi-agent run.',
+          );
+          process.exit(1);
+        }
+
         await confirmInferredProjectOrExit(
           options,
           target,
@@ -604,7 +623,6 @@ Examples:
         const ctx = createCoreContext(options);
         const execOpts = buildExecOptions({ ...cmdOpts, ...options });
         const prompt = optString(cmdOpts, 'prompt');
-        const agentNames: string[] = names.filter(Boolean);
 
         // Single agent — show elapsed time during execution
         if (agentNames.length === 1) {
