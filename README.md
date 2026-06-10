@@ -627,7 +627,8 @@ ulu exec list --domain security        # Filter by domain
 ulu exec describe code-validator
 ulu exec describe socrates-explorer --type agent       # Disambiguate when name exists across types
 ulu exec describe code-validator@1.2.0                  # Inspect a specific version (@version suffix)
-ulu exec describe code-validator -v 1.2.0               # Same — explicit -v flag (--version is shadowed by the global -V/--version)
+ulu exec describe code-validator -v 1.2.0               # Same — explicit -v flag
+ulu exec describe code-validator --def-version 1.2.0    # Same — long form is --def-version (the global -V/--version shadows a plain --version)
 ulu exec describe                                       # No name → list all definitions
 ulu exec describe --type pipeline                       # No name + --type → filter the list
 ```
@@ -673,7 +674,7 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `-c, --concurrency <n>` | Max concurrent agents for parallel execution (default: 5) |
 | `--threshold-pass <n>` | Pass threshold score (agents) |
 | `--threshold-warn <n>` | Warning threshold score (agents) |
-| `--report [path]` | Write a publication-quality report to file (single agent only). With no path, defaults to `./<agent>-report-<YYYYMMDDTHHmmss>.md` in cwd. Injects a report-mode directive into the agent's prompt and disables structured-output enforcement so the model can emit prose. **Implies `--no-tracking`** because the schema-validated path the tracker depends on is no longer guaranteed under report mode. Run without `--report` for tracker submission. |
+| `--report [path]` | Write a human-readable, publication-quality report to file (single agent only). With no path, defaults to `./<agent>-report-<YYYYMMDDTHHmmss>.md` in cwd. Injects a report-mode directive into the agent's prompt and disables structured-output enforcement so the model can emit prose. **Mutually exclusive with tracker submission** (implies `--no-tracking`): the schema-validated path the tracker depends on is no longer guaranteed under report mode. Run without `--report` for tracker submission. |
 | `-o, --output <path>` | Explicit output path for `--report` (overrides the `--report` argument and the default) |
 | `--features-list <path>` | Write structured features/recommendations to file (single agent only) |
 

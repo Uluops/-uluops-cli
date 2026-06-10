@@ -165,7 +165,7 @@ const VALUE_TAKING_FLAGS = new Set([
   '--features-list',
   '--type',
   '-v',
-  '--version',
+  '--def-version',
   '--api-key',
   '--profile',
   '--base-url',
@@ -560,13 +560,19 @@ Examples:
     .option('--temperature <n>', 'Generation temperature 0-1 (default: 0)')
     .option(
       '--exec-timeout <ms>',
-      'Execution timeout in milliseconds (distinct from global --timeout for HTTP)',
+      'Execution timeout in ms for this run. Overrides the --timeout ceiling: ' +
+        'in exec, --timeout sets the default execution timeout (600s); for ' +
+        'ops/registry commands --timeout is the 30s HTTP timeout instead. ' +
+        'Precedence: --exec-timeout > definition default > --timeout > 5m SDK fallback.',
     )
     .option('--threshold-pass <n>', 'Pass threshold score (agents)')
     .option('--threshold-warn <n>', 'Warning threshold score (agents)')
     .option(
       '--report [path]',
-      'Write a publication-quality report to file (single agent only). ' +
+      'Write a human-readable report to file (single agent only). ' +
+        'Mutually exclusive with tracker submission: report mode disables the ' +
+        'structured-output enforcement that tracking requires, so --report runs ' +
+        'do not produce a tracker record. ' +
         'If no path is given, defaults to ./<agent-name>-report-<timestamp>.md in cwd. ' +
         'Use -o/--output to override the destination explicitly.',
     )
@@ -611,9 +617,9 @@ Examples:
             prompt,
             reportRequested,
           );
-          // Report mode forces no-tracking + signals the executor to disable
-          // structured-output enforcement. The exclusivity is unconditional:
-          // even if the operator explicitly passes --tracking, report mode wins.
+          // Report mode and tracking are mutually exclusive: report mode signals
+          // the executor to disable structured-output enforcement, which tracker
+          // submission requires. Report mode wins, so --report forces no-tracking.
           // See agent-reporting-spec-v0_1_1.md Phase 2 Formal Cause #2 and
           // Phase 4.4 for the rationale.
           let effectiveExecOpts: ExecutionOptions | undefined = execOpts;
@@ -1045,8 +1051,10 @@ Examples:
       'Disambiguate by definition type (agent, command, workflow, pipeline)',
     )
     .option(
-      '-v, --version <version>',
-      'Resolve a specific version (overrides any @version suffix on <name>)',
+      '-v, --def-version <version>',
+      'Resolve a specific definition version (overrides any @version suffix on ' +
+        '<name>). Long form is --def-version, not --version: the global ' +
+        '-V/--version prints the CLI version and would shadow it.',
     )
     .addHelpText('after', EXEC_INHERITED_HELP)
     .description(
@@ -1061,10 +1069,10 @@ Examples:
         const options = getMergedOptions(cmd);
         const ctx = createCoreContext(options);
         const type = optString(cmdOpts, 'type') as DefinitionType | undefined;
-        let version = optString(cmdOpts, 'version');
+        let version = optString(cmdOpts, 'defVersion');
 
         // Allow `name@version` suffix syntax (avoids commander's global -V shadow).
-        // Explicit -v/--version still wins if both are supplied.
+        // Explicit -v/--def-version still wins if both are supplied.
         if (name && name.includes('@')) {
           const atIdx = name.lastIndexOf('@');
           const suffix = name.slice(atIdx + 1);

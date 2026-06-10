@@ -530,7 +530,7 @@ describe('exec describe', () => {
     expect(mockClient.describe).not.toHaveBeenCalled();
   });
 
-  it('forwards --type and --version flags to client.describe', async () => {
+  it('forwards --type and --def-version flags to client.describe', async () => {
     mockClient.describe.mockResolvedValue({
       type: 'agent',
       name: 'socrates-explorer',
@@ -538,13 +538,17 @@ describe('exec describe', () => {
       hash: 'def456',
       interface: {},
     });
+    // Long form is --def-version, not --version: in the real CLI the global
+    // -V/--version (cli.ts) shadows a subcommand --version. This bare-program
+    // harness omits that global, so --version would pass here while failing in
+    // production — --def-version is correct in both.
     await parse(
       'exec',
       'describe',
       'socrates-explorer',
       '--type',
       'agent',
-      '--version',
+      '--def-version',
       '1.4.0',
     );
     expect(mockClient.describe).toHaveBeenCalledWith(
@@ -797,11 +801,12 @@ describe('--report forces reportMode + no-tracking (v0.1.1)', () => {
   // categories/recommendations/metrics that the result formatter requires).
 
   // Note on the --tracking flag: Commander's `.option('--no-tracking', ...)`
-  // pattern only registers the negation form. There is no explicit `--tracking`
-  // flag; the default behavior is tracking-on. So "user explicitly passes
-  // --tracking" is not a real CLI scenario. The exclusivity test is effectively
-  // "report mode forces tracking off, regardless of the default-on state",
-  // which is what the first test covers.
+  // pattern only registers the negation form, and Commander rejects a typed
+  // `--tracking` as an unknown option. So "user explicitly passes --tracking"
+  // is not a reachable CLI scenario — there is no explicit positive flag, only
+  // the tracking-on default. The exclusivity is therefore "report mode forces
+  // tracking off, regardless of the default-on state", which the first test
+  // covers. The trade-off is disclosed up front in the --report help text.
 
   it('--report alone → reportMode=true, trackResults=false, notice on stderr', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
