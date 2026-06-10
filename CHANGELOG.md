@@ -4,6 +4,50 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.16.0] - 2026-06-09
+
+> Minor bump (breaking-for-scripts): `ulu exec` runs that previously tracked
+> under a silently-inferred project name now require an explicit/confirmed
+> project, and fail closed (exit 1) in non-interactive contexts.
+
+### Changed
+
+- **Inferred project names are now confirmed, not silently used.** When `ulu exec`
+  runs with tracking on and no project resolves (`--project` or `ULUOPS_PROJECT`),
+  the core SDK previously invented a project name from `basename(resolve(target))`
+  — minting phantom tracker projects named `src`, `dist`, the cwd basename, etc.
+  A captive automated caller never agreed to that name and couldn't act on the
+  stderr-only warning, so it silently polluted the tracker (captive-user
+  `PRA-FRA/H`). Now:
+  - **At a TTY:** the CLI shows the project the run would be tracked under and
+    asks to confirm (`This run will be tracked under inferred project "<name>".
+    Proceed? [y/N]`). Confirm → the name is used explicitly; decline → cancel
+    (exit 0).
+  - **Non-interactive / CI:** there is no one to confirm an unintended name, so
+    it **fails closed** — actionable stderr message + **exit 1**, before the model
+    call. Pass `--project <name>`, set `ULUOPS_PROJECT`, or `--no-tracking`.
+  - **Breaking for scripts** that relied on inference: CI `ulu exec` invocations
+    must now name their project explicitly (which they should have been doing —
+    inference silently scattered runs across phantom projects).
+- **Inherited `exec` options placed after the subcommand are now a loud error.**
+  `--project` / `--no-tracking` / `--local-definitions` / `--registry-url` /
+  `--no-safety-warnings` are options of `ulu exec`, not the subcommand. Placed
+  after the subcommand (`ulu exec agent foo -t . --project x`) Commander silently
+  swallowed them, falling through to project inference and tracking under the
+  wrong name with no signal (captive-user `PRA-FRA/M`). The CLI now detects this
+  and exits 1 with the canonical order (`ulu exec --project <name> <subcommand>
+  …`). A bogus flag already errored; a *known* inherited flag no longer slips
+  through silently.
+
+### Internal
+
+- Replaced the advisory `warnIfProjectInferred` with `confirmInferredProjectOrExit`
+  (reuses the 0.14.0 `confirmOrExit` TTY/non-TTY fail-closed pattern) and added a
+  deterministic, parser-independent `guardInheritedOptionOrder` argv scan wired
+  via an `exec` `preAction` hook. CLI-only change — no `@uluops/core` change
+  required, since the CLI now resolves + confirms the project and passes it
+  explicitly, so the SDK's inference fallback is never reached from the CLI.
+
 ## [0.15.0] - 2026-06-09
 
 > Minor bump (additive, non-breaking): the default `--json` output shape is

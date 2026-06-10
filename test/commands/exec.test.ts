@@ -5,12 +5,21 @@ import type { CoreCliContext } from '../../src/context.js';
 
 vi.mock('../../src/context.js');
 
+// Partial-mock utils so promptInput is controllable; everything else stays real
+// (withSpinner, parse*Option are used by the command actions under test).
+vi.mock('../../src/utils.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/utils.js')>();
+  return { ...actual, promptInput: vi.fn() };
+});
+
 import { createCoreContext, handleCoreError } from '../../src/context.js';
+import { promptInput } from '../../src/utils.js';
 import {
   registerExecCommands,
   resolveReportPath,
   applyReportModeDirective,
-  warnIfProjectInferred,
+  confirmInferredProjectOrExit,
+  guardInheritedOptionOrder,
   REPORT_MODE_DIRECTIVE,
 } from '../../src/commands/exec.js';
 import type { GlobalOptions, CoreExecOptions } from '../../src/context.js';
@@ -53,10 +62,15 @@ beforeEach(() => {
   });
   mockedHandleCoreError.mockImplementation((error) => { throw error; });
   output = captureOutput();
+  // Command-execution tests aren't testing project inference; give them a
+  // project so the confirmInferredProjectOrExit gate skips. The dedicated gate
+  // tests below delete this explicitly to exercise the inference path.
+  process.env['ULUOPS_PROJECT'] = 'test-proj';
 });
 
 afterEach(() => {
   output.restore();
+  delete process.env['ULUOPS_PROJECT'];
 });
 
 function parse(...args: string[]) {
@@ -316,57 +330,117 @@ describe('exec pipeline', () => {
   });
 });
 
-// ── project-inference warning ────────────────────────────────────────────
+// ── project-inference confirmation (PRA-FRA/H #2) ─────────────────────────
 
-describe('warnIfProjectInferred', () => {
+describe('confirmInferredProjectOrExit', () => {
   const originalEnv = process.env['ULUOPS_PROJECT'];
+  const originalTTY = process.stdin.isTTY;
+  const setTTY = (value: boolean | undefined) =>
+    Object.defineProperty(process.stdin, 'isTTY', {
+      value,
+      configurable: true,
+    });
+  const mockedPrompt = vi.mocked(promptInput);
 
   afterEach(() => {
     if (originalEnv === undefined) delete process.env['ULUOPS_PROJECT'];
     else process.env['ULUOPS_PROJECT'] = originalEnv;
+    setTTY(originalTTY);
+    mockedPrompt.mockReset();
   });
 
-  it('warns with the inferred basename when --project is omitted', () => {
+  it('non-TTY + no project: fails closed (exit 1) with guidance, never prompts', async () => {
     delete process.env['ULUOPS_PROJECT'];
-    warnIfProjectInferred(baseOpts(), './src');
-    expect(output.stderr()).toContain('No --project specified');
+    setTTY(undefined);
+    await expect(
+      confirmInferredProjectOrExit(baseOpts(), './src'),
+    ).rejects.toThrow('process.exit(1)');
     expect(output.stderr()).toContain('"src"');
+    expect(output.stderr()).toContain('--project');
+    expect(mockedPrompt).not.toHaveBeenCalled();
   });
 
-  it('stays silent when --project is provided', () => {
+  it('TTY + confirm: pins options.project to the inferred name and proceeds', async () => {
     delete process.env['ULUOPS_PROJECT'];
-    warnIfProjectInferred(baseOpts({ project: 'my-proj' }), './src');
-    expect(output.stderr()).not.toContain('No --project specified');
+    setTTY(true);
+    mockedPrompt.mockResolvedValue('y');
+    const opts = baseOpts();
+    await confirmInferredProjectOrExit(opts, './my-proj-dir');
+    expect(mockedPrompt).toHaveBeenCalledOnce();
+    expect(opts.project).toBe('my-proj-dir');
   });
 
-  it('stays silent when --no-tracking is set', () => {
+  it('TTY + decline: cancels (exit 0) and leaves project unset', async () => {
     delete process.env['ULUOPS_PROJECT'];
-    warnIfProjectInferred(baseOpts({ tracking: false }), './src');
-    expect(output.stderr()).not.toContain('No --project specified');
+    setTTY(true);
+    mockedPrompt.mockResolvedValue('n');
+    const opts = baseOpts();
+    await expect(
+      confirmInferredProjectOrExit(opts, './src'),
+    ).rejects.toThrow('process.exit(0)');
+    expect(opts.project).toBeUndefined();
   });
 
-  it('stays silent when ULUOPS_PROJECT env is set', () => {
+  it('skips when --project is provided', async () => {
+    delete process.env['ULUOPS_PROJECT'];
+    await confirmInferredProjectOrExit(baseOpts({ project: 'my-proj' }), './src');
+    expect(mockedPrompt).not.toHaveBeenCalled();
+  });
+
+  it('skips when --no-tracking is set', async () => {
+    delete process.env['ULUOPS_PROJECT'];
+    await confirmInferredProjectOrExit(baseOpts({ tracking: false }), './src');
+    expect(mockedPrompt).not.toHaveBeenCalled();
+  });
+
+  it('skips when ULUOPS_PROJECT env is set', async () => {
     process.env['ULUOPS_PROJECT'] = 'env-proj';
-    warnIfProjectInferred(baseOpts(), './src');
-    expect(output.stderr()).not.toContain('No --project specified');
+    await confirmInferredProjectOrExit(baseOpts(), './src');
+    expect(mockedPrompt).not.toHaveBeenCalled();
   });
 
-  it('stays silent in quiet mode', () => {
+  it('skips when report mode is requested (tracking already disabled)', async () => {
     delete process.env['ULUOPS_PROJECT'];
-    warnIfProjectInferred(baseOpts({ quiet: true }), './src');
-    expect(output.stderr()).not.toContain('No --project specified');
+    await confirmInferredProjectOrExit(baseOpts(), './src', true);
+    expect(mockedPrompt).not.toHaveBeenCalled();
   });
 
-  it('stays silent in json mode (machine-readable streams must stay clean)', () => {
+  it('skips when target is missing', async () => {
     delete process.env['ULUOPS_PROJECT'];
-    warnIfProjectInferred(baseOpts({ json: true }), './src');
-    expect(output.stderr()).not.toContain('No --project specified');
+    await confirmInferredProjectOrExit(baseOpts(), undefined);
+    expect(mockedPrompt).not.toHaveBeenCalled();
+  });
+});
+
+// ── inherited-option ordering guard (PRA-FRA/M #3) ────────────────────────
+
+describe('guardInheritedOptionOrder', () => {
+  it('errors (exit 1) when --project appears after the subcommand', () => {
+    const argv = ['node', 'ulu', 'exec', 'agent', 'foo', '-t', '.', '--project', 'x'];
+    expect(() => guardInheritedOptionOrder(argv)).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('--project');
+    expect(output.stderr()).toContain('BEFORE the subcommand');
   });
 
-  it('stays silent when target is missing', () => {
-    delete process.env['ULUOPS_PROJECT'];
-    warnIfProjectInferred(baseOpts(), undefined);
-    expect(output.stderr()).not.toContain('No --project specified');
+  it('passes when --project appears before the subcommand', () => {
+    const argv = ['node', 'ulu', 'exec', '--project', 'x', 'agent', 'foo', '-t', '.'];
+    expect(() => guardInheritedOptionOrder(argv)).not.toThrow();
+  });
+
+  it('does not false-positive on a flag-like value of --prompt', () => {
+    const argv = ['node', 'ulu', 'exec', 'agent', 'foo', '-t', '.', '-p', '--project'];
+    expect(() => guardInheritedOptionOrder(argv)).not.toThrow();
+  });
+
+  it('catches --no-tracking after the subcommand', () => {
+    const argv = ['node', 'ulu', 'exec', 'workflow', 'ship', './src', '--no-tracking'];
+    expect(() => guardInheritedOptionOrder(argv)).toThrow('process.exit(1)');
+  });
+
+  it('is a no-op outside exec invocations', () => {
+    expect(() =>
+      guardInheritedOptionOrder(['node', 'ulu', 'issues', 'list', '--project', 'x']),
+    ).not.toThrow();
   });
 });
 

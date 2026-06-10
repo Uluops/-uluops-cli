@@ -19,7 +19,12 @@ import {
   formatExecutionResult,
 } from '../formatters/core.js';
 import { emitJson } from '../formatters/json.js';
-import { parseFloatOption, parseIntOption, withSpinner } from '../utils.js';
+import {
+  parseFloatOption,
+  parseIntOption,
+  promptInput,
+  withSpinner,
+} from '../utils.js';
 
 type ExecOptions = GlobalOptions &
   CoreExecOptions & { safetyWarnings?: boolean };
@@ -59,32 +64,157 @@ function getMergedOptions(cmd: Command): ExecOptions {
 }
 
 /**
- * Warn when tracking is enabled but no project was specified.
+ * Confirm the tracker project before an inferred name is used.
  *
- * The core SDK silently infers a project name from `basename(resolve(target))`,
- * which creates phantom projects named after random target dirs (e.g., `src`,
- * `dist`). This helper surfaces the inference at the CLI layer so users can
- * either pass `--project <name>` or opt out with `--no-tracking`.
+ * When tracking is on but no project was specified, the core SDK would fall back
+ * to inferring a project name from `basename(resolve(target))` — minting phantom
+ * tracker projects named after whatever directory was targeted (`src`, `dist`,
+ * the cwd basename). A captive automated caller never agreed to that name and
+ * cannot act on a stderr warning, so it silently pollutes the tracker.
  *
- * Honors `ULUOPS_PROJECT` env as an implicit project setter and suppresses the
- * warning under `--quiet` or `--json`.
+ * This surfaces the would-be name and requires consent, reusing the 0.14.0
+ * fail-closed pattern (`confirmOrExit`):
+ * - At a TTY: prompt with the inferred name; on confirm, pin it onto
+ *   `options.project` so the SDK tracks under exactly that and never re-infers;
+ *   on decline, cancel cleanly (exit 0).
+ * - Non-interactive (no TTY): there is no one to confirm an unintended name, so
+ *   fail closed — actionable stderr message + exit 1 — before any execution.
+ *
+ * Skips entirely when tracking is off, when a project is already resolved
+ * (`--project`, `ULUOPS_PROJECT`), when there is no target, or when `skip` is set
+ * (e.g. report mode, which disables tracking).
  *
  * @internal Exported for unit testing only.
  */
-export function warnIfProjectInferred(
+export async function confirmInferredProjectOrExit(
   options: ExecOptions,
   target: string | undefined,
-): void {
-  if (options.quiet || options.json) return;
+  skip = false,
+): Promise<void> {
+  if (skip) return;
   if (options.tracking === false) return;
   if (options.project) return;
   if (process.env['ULUOPS_PROJECT']) return;
   if (!target) return;
   const inferred = basename(resolve(target));
-  console.error(
-    `⚠️  No --project specified; tracking under inferred name "${inferred}". ` +
-      `Pass --project <name> to set explicitly, or --no-tracking to skip submission.`,
+  if (!process.stdin.isTTY) {
+    console.error(
+      `No --project specified; this run would be tracked under the inferred ` +
+        `project "${inferred}", but stdin is not an interactive terminal to ` +
+        `confirm it.`,
+    );
+    console.error(
+      'Pass --project <name> (or set ULUOPS_PROJECT) to name it explicitly, ' +
+        'or --no-tracking to skip submission.',
+    );
+    process.exit(1);
+  }
+  const answer = await promptInput(
+    `This run will be tracked under inferred project "${inferred}". Proceed? [y/N] `,
   );
+  if (answer.toLowerCase() !== 'y' && answer.toLowerCase() !== 'yes') {
+    console.log('Cancelled');
+    process.exit(0);
+  }
+  // Confirmed — pin the name so the SDK tracks under exactly this and never
+  // performs its own basename inference.
+  options.project = inferred;
+}
+
+/** Inherited `ulu exec` options that must precede the subcommand. */
+const INHERITED_EXEC_FLAGS = [
+  '--project',
+  '--no-tracking',
+  '--local-definitions',
+  '--registry-url',
+  '--no-safety-warnings',
+];
+
+/** exec subcommands — used to locate where inherited options stop being valid. */
+const EXEC_SUBCOMMANDS = [
+  'run',
+  'agent',
+  'command',
+  'workflow',
+  'pipeline',
+  'list',
+  'describe',
+];
+
+/**
+ * Options on exec subcommands that consume the following token as a value, so
+ * the ordering guard does not mistake a flag-like value for a misplaced option.
+ */
+const VALUE_TAKING_FLAGS = new Set([
+  '-t',
+  '--target',
+  '-m',
+  '--model',
+  '-p',
+  '--prompt',
+  '-o',
+  '--output',
+  '--max-tokens',
+  '--max-steps',
+  '--temperature',
+  '--exec-timeout',
+  '-c',
+  '--concurrency',
+  '--threshold-pass',
+  '--threshold-warn',
+  '--features-list',
+  '--type',
+  '-v',
+  '--version',
+  '--api-key',
+  '--profile',
+  '--base-url',
+  '--timeout',
+]);
+
+/**
+ * Fail loudly when an inherited `ulu exec` option is placed AFTER the
+ * subcommand. Such options are declared on the `exec` parent command, so
+ * Commander parses them but never surfaces them to the subcommand — they are
+ * silently ignored, falling through to project inference and tracking under the
+ * wrong name with no signal (captive-user PRA-FRA/M).
+ *
+ * Deterministic argv scan (parser-independent): find the exec subcommand, then
+ * flag any known inherited option appearing after it. Values of value-taking
+ * options are skipped so e.g. `-p "--project"` is not a false positive.
+ *
+ * @internal Exported for unit testing only.
+ */
+export function guardInheritedOptionOrder(argv: string[] = process.argv): void {
+  const execIdx = argv.findIndex((a) => a === 'exec' || a === 'x');
+  if (execIdx === -1) return;
+  let subIdx = -1;
+  for (let i = execIdx + 1; i < argv.length; i++) {
+    if (EXEC_SUBCOMMANDS.includes(argv[i]!)) {
+      subIdx = i;
+      break;
+    }
+  }
+  if (subIdx === -1) return;
+  const offending: string[] = [];
+  for (let i = subIdx + 1; i < argv.length; i++) {
+    if (VALUE_TAKING_FLAGS.has(argv[i - 1]!)) continue; // this token is a value
+    const tok = argv[i]!;
+    const flag = tok.includes('=') ? tok.slice(0, tok.indexOf('=')) : tok;
+    if (INHERITED_EXEC_FLAGS.includes(flag) && !offending.includes(flag)) {
+      offending.push(flag);
+    }
+  }
+  if (offending.length === 0) return;
+  console.error(
+    `Inherited exec option(s) ${offending.join(', ')} must appear BEFORE the ` +
+      `subcommand — they are options of \`ulu exec\`, not the subcommand, so ` +
+      `placed after it they are silently ignored.`,
+  );
+  console.error(
+    `  Correct order:  ulu exec ${offending[0]} <value> <subcommand> [args]`,
+  );
+  process.exit(1);
 }
 
 /**
@@ -345,6 +475,12 @@ Examples:
 `,
     );
 
+  // Catch inherited exec options placed after the subcommand (where Commander
+  // silently swallows them) before any subcommand action runs.
+  exec.hook('preAction', () => {
+    guardInheritedOptionOrder();
+  });
+
   // ── exec run ────────────────────────────────────────────────────────────
 
   exec
@@ -369,7 +505,11 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
-        warnIfProjectInferred(options, target);
+        await confirmInferredProjectOrExit(
+          options,
+          target,
+          cmdOpts['report'] !== undefined,
+        );
         const modelOverride = optString(cmdOpts, 'model');
         const prompt = optString(cmdOpts, 'prompt');
         const ctx = createCoreContext(options, modelOverride);
@@ -450,7 +590,11 @@ Examples:
       ) => {
         const options = getMergedOptions(cmd);
         const target: string = cmd.opts()['target'];
-        warnIfProjectInferred(options, target);
+        await confirmInferredProjectOrExit(
+          options,
+          target,
+          cmdOpts['report'] !== undefined,
+        );
         const ctx = createCoreContext(options);
         const execOpts = buildExecOptions({ ...cmdOpts, ...options });
         const prompt = optString(cmdOpts, 'prompt');
@@ -705,7 +849,11 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
-        warnIfProjectInferred(options, target);
+        await confirmInferredProjectOrExit(
+          options,
+          target,
+          cmdOpts['report'] !== undefined,
+        );
         const ctx = createCoreContext(options);
         const modelOverride = optString(cmdOpts, 'model');
         const prompt = optString(cmdOpts, 'prompt');
@@ -759,7 +907,11 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
-        warnIfProjectInferred(options, target);
+        await confirmInferredProjectOrExit(
+          options,
+          target,
+          cmdOpts['report'] !== undefined,
+        );
         const modelOverride = optString(cmdOpts, 'model');
         const prompt = optString(cmdOpts, 'prompt');
         const ctx = createCoreContext(options, modelOverride);
@@ -808,7 +960,11 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
-        warnIfProjectInferred(options, target);
+        await confirmInferredProjectOrExit(
+          options,
+          target,
+          cmdOpts['report'] !== undefined,
+        );
         const modelOverride = optString(cmdOpts, 'model');
         const prompt = optString(cmdOpts, 'prompt');
         const ctx = createCoreContext(options, modelOverride);

@@ -641,6 +641,19 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `--no-tracking` | Disable validation service submission |
 | `--no-safety-warnings` | Suppress risk warnings and runtime advisories |
 
+> **Parent options must come BEFORE the subcommand.** They belong to `ulu exec`,
+> not the subcommand — `ulu exec --project foo agent code-validator ./src`, not
+> `ulu exec agent code-validator ./src --project foo`. Placed after the
+> subcommand they were previously *silently ignored*; the CLI now detects this
+> and errors with the correct order.
+>
+> **Tracking requires a named project.** When tracking is on and no project is
+> resolved (`--project` or `ULUOPS_PROJECT`), the CLI shows the project name the
+> run would be tracked under and asks you to confirm it — rather than silently
+> inventing one from the target directory. In a non-interactive context (CI,
+> piped stdin) it **fails closed** (exit 1) instead of prompting; pass
+> `--project <name>`, set `ULUOPS_PROJECT`, or `--no-tracking`.
+
 **Shared options** (all `exec` subcommands):
 
 | Option | Description |
