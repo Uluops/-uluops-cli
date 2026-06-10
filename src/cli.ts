@@ -54,8 +54,7 @@ process.on('unhandledRejection', (reason) => {
   // Always surface the error message — it is the one actionable line a captive
   // caller (CI, agent harness) gets, and they often cannot reproduce to add
   // --debug. Only the full stack is gated behind debug mode.
-  const message =
-    reason instanceof Error ? reason.message : String(reason);
+  const message = reason instanceof Error ? reason.message : String(reason);
   console.error(`Error: ${message || 'An unexpected error occurred.'}`);
   if (debug && reason instanceof Error && reason.stack) {
     console.error('\nStack trace:', reason.stack);
