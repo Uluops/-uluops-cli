@@ -834,7 +834,8 @@ through the single `emitJson()` chokepoint. To change an output shape you must:
 | `ULUOPS_API_KEY` | API key for authentication | - |
 | `ULUOPS_EMAIL` | Email for session auth | - |
 | `ULUOPS_PASSWORD` | Password for session auth | - |
-| `ULUOPS_DEBUG` | Enable debug logging | `false` |
+| `ULUOPS_BASE_URL` | API base URL (overrides the built-in default) | `https://api.uluops.ai/api/v1` (production); `http://localhost:3100/api/v1` only when `NODE_ENV=development` |
+| `ULUOPS_DEBUG` | Enable debug logging (also expands the global unhandled-error handler's output) | `false` |
 | `ULU_JSON_SCHEMA` | Set to `1` to wrap `--json` output in the versioned stability envelope | - |
 | `ANTHROPIC_API_KEY` | API key for AI model execution (required for `ulu exec` commands) | - |
 | `ULUOPS_THINKING_BUDGET` | Token budget for extended thinking (optional) | - |

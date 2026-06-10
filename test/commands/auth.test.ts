@@ -36,7 +36,10 @@ vi.mock('node:os', async (importOriginal) => {
 });
 
 import { createOpsContext, createUnauthenticatedContext, handleOpsError } from '../../src/context.js';
-import { registerAuthCommands } from '../../src/commands/auth.js';
+import {
+  registerAuthCommands,
+  resolveCredentialSource,
+} from '../../src/commands/auth.js';
 
 const mockedCreateOpsContext = vi.mocked(createOpsContext);
 const mockedCreateUnauthContext = vi.mocked(createUnauthenticatedContext);
@@ -242,5 +245,65 @@ describe('auth sessions revoke', () => {
     expect(mockClient.auth.revokeSession).toHaveBeenCalledWith('sess-123');
     expect(output.stdout()).toContain('revoked');
     output.restore();
+  });
+});
+
+describe('resolveCredentialSource', () => {
+  // Mirrors the sdk-core loadCredentials precedence: flag > env api key >
+  // env email+password > env session > stored profile. Each tier pinned; the
+  // helper takes an explicit env so process.env is never touched. Label-only
+  // by design — no test should ever see a credential VALUE in the output.
+
+  it('reports the --api-key flag at highest precedence (over env)', () => {
+    const src = resolveCredentialSource(
+      { apiKey: 'ulr_secret' },
+      { ULUOPS_API_KEY: 'ulr_env', ULUOPS_SESSION_TOKEN: 'tok' },
+    );
+    expect(src).toBe('--api-key flag');
+    expect(src).not.toContain('ulr_secret'); // never echo the value
+  });
+
+  it('reports ULUOPS_API_KEY env when no flag', () => {
+    expect(
+      resolveCredentialSource({}, { ULUOPS_API_KEY: 'ulr_env' }),
+    ).toBe('ULUOPS_API_KEY environment variable');
+  });
+
+  it('reports email+password env (both required) below the api key', () => {
+    expect(
+      resolveCredentialSource(
+        {},
+        { ULUOPS_EMAIL: 'a@b.co', ULUOPS_PASSWORD: 'pw' },
+      ),
+    ).toBe('ULUOPS_EMAIL + ULUOPS_PASSWORD environment variables');
+    // email alone does not qualify — falls through to profile
+    expect(resolveCredentialSource({ profile: 'default' }, { ULUOPS_EMAIL: 'a@b.co' })).toContain(
+      'profile',
+    );
+  });
+
+  it('reports ULUOPS_SESSION_TOKEN env below email/password', () => {
+    expect(
+      resolveCredentialSource({}, { ULUOPS_SESSION_TOKEN: 'tok' }),
+    ).toBe('ULUOPS_SESSION_TOKEN environment variable');
+  });
+
+  it('falls through to the named profile file when no flag or env', () => {
+    expect(resolveCredentialSource({ profile: 'work' }, {})).toBe(
+      'profile "work" (~/.uluops/credentials.json)',
+    );
+    expect(resolveCredentialSource({}, {})).toBe(
+      'profile "default" (~/.uluops/credentials.json)',
+    );
+  });
+
+  it('never includes a credential value in any branch', () => {
+    const secret = 'ulr_super_secret_value';
+    const labels = [
+      resolveCredentialSource({ apiKey: secret }, {}),
+      resolveCredentialSource({}, { ULUOPS_API_KEY: secret }),
+      resolveCredentialSource({}, { ULUOPS_SESSION_TOKEN: secret }),
+    ];
+    for (const label of labels) expect(label).not.toContain(secret);
   });
 });

@@ -1,7 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { OpsClient } from '@uluops/ops-sdk';
+import { ENV_VARS, OpsClient } from '@uluops/ops-sdk';
 import type { Command } from 'commander';
 import {
   createOpsContext,
@@ -17,6 +17,40 @@ import {
   withSpinner,
   writeFileAtomic,
 } from '../utils.js';
+
+/**
+ * Resolve which credential SOURCE the SDK used, by mirroring the exact
+ * precedence ladder in @uluops/sdk-core loadCredentials (explicit flag > env
+ * vars > stored profile). Returns a human-readable LABEL only — never the
+ * credential value — matching the codebase's no-secret-leak discipline
+ * (sdk-core's loader deliberately avoids echoing credential-file content).
+ *
+ * `.env` files are loaded into process.env at startup (loadEnvFiles), so a
+ * credential set via .env is reported as an environment variable — there is no
+ * separate ".env" tier to distinguish at this layer.
+ *
+ * This MIRRORS sdk-core; if that precedence changes, update both. Each tier is
+ * pinned by a unit test. Only reached after createOpsContext has confirmed
+ * credentials resolved (requireCredentials exits otherwise), so the final
+ * else-branch is necessarily the stored profile.
+ *
+ * @internal Exported for unit testing only.
+ */
+export function resolveCredentialSource(
+  options: { apiKey?: string; profile?: string },
+  env: NodeJS.ProcessEnv = process.env,
+): string {
+  if (options.apiKey) return '--api-key flag';
+  if (env[ENV_VARS.API_KEY]) return `${ENV_VARS.API_KEY} environment variable`;
+  if (env[ENV_VARS.EMAIL] && env[ENV_VARS.PASSWORD]) {
+    return `${ENV_VARS.EMAIL} + ${ENV_VARS.PASSWORD} environment variables`;
+  }
+  if (env[ENV_VARS.SESSION_TOKEN]) {
+    return `${ENV_VARS.SESSION_TOKEN} environment variable`;
+  }
+  const profile = options.profile ?? 'default';
+  return `profile "${profile}" (~/.uluops/credentials.json)`;
+}
 
 /**
  * Config file paths
@@ -289,6 +323,9 @@ Examples:
         );
 
         if (ctx.json) {
+          // Default --json shape is a frozen public contract (README JSON
+          // Output Stability) — do NOT add credentialSource here. The source
+          // label is a human-readable convenience only.
           emitJson(ctx, user, 'auth.whoami');
         } else {
           console.log(`Email: ${user.email}`);
@@ -297,6 +334,9 @@ Examples:
           if (user.username) console.log(`Username: ${user.username}`);
           if (user.name) console.log(`Name: ${user.name}`);
           console.log(`Auth Type: ${ctx.client.getAuthType()}`);
+          console.log(
+            `Credential Source: ${resolveCredentialSource(globalOpts)}`,
+          );
         }
       } catch (error) {
         handleOpsError(error, ctx);

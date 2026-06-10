@@ -47,12 +47,20 @@ process.on('SIGTERM', () => {
 
 // Global unhandled rejection handler (defense-in-depth)
 process.on('unhandledRejection', (reason) => {
-  const debug = process.argv.includes('--debug');
-  console.error('Error: An unexpected error occurred.');
+  // Honor both the --debug flag and ULUOPS_DEBUG env: captive CI that cannot
+  // re-run to add the flag can set the env once and still get the stack.
+  const debug =
+    process.argv.includes('--debug') || process.env['ULUOPS_DEBUG'] === 'true';
+  // Always surface the error message — it is the one actionable line a captive
+  // caller (CI, agent harness) gets, and they often cannot reproduce to add
+  // --debug. Only the full stack is gated behind debug mode.
+  const message =
+    reason instanceof Error ? reason.message : String(reason);
+  console.error(`Error: ${message || 'An unexpected error occurred.'}`);
   if (debug && reason instanceof Error && reason.stack) {
     console.error('\nStack trace:', reason.stack);
   } else if (!debug) {
-    console.error('Run with --debug for more details.');
+    console.error('Run with --debug (or ULUOPS_DEBUG=true) for more details.');
   }
   process.exit(1);
 });
