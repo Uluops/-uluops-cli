@@ -240,3 +240,36 @@ describe('deps dependents', () => {
     output.restore();
   });
 });
+
+// CONTRACT ANCHOR — guards the default `--json` output shape of `deps get`.
+// This is the exact surface that regressed silently in v0.13.0 (the captive-user
+// EPI-ASS/H finding): the envelope's fields must not disappear without a major
+// bump. A change here should fail CI and force a conscious `kind` schemaVersion
+// bump. See src/formatters/json.ts "JSON Output Stability Contract".
+describe('deps get --json (stability anchor)', () => {
+  it('emits the full DependenciesEnvelope shape, not a degraded subset', async () => {
+    mockedCreateRegistryContext.mockReturnValue(
+      createMockRegistryContext({
+        client: mockClient as unknown as RegistryCliContext['client'],
+        json: true,
+      }),
+    );
+    mockClient.dependencies.get.mockResolvedValue({
+      definition: { type: 'workflow', name: 'my-wf', version: '1.0.0' },
+      graph: { id: 'root', type: 'workflow', name: 'my-wf', version: '1.0.0', dependencies: [] },
+      flat: [],
+      totalCount: 0,
+      maxDepth: 0,
+    });
+    const output = captureOutput();
+    await parse('deps', 'get', 'workflow', 'my-wf', '1.0.0');
+    const parsed = JSON.parse(output.stdout()) as Record<string, unknown>;
+    // The five fields a captive consumer parses. Dropping any is breaking.
+    expect(parsed).toHaveProperty('definition');
+    expect(parsed).toHaveProperty('graph');
+    expect(parsed).toHaveProperty('flat');
+    expect(parsed).toHaveProperty('totalCount');
+    expect(parsed).toHaveProperty('maxDepth');
+    output.restore();
+  });
+});

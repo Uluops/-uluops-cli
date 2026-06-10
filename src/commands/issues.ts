@@ -13,6 +13,7 @@ import {
   type GlobalOptions,
   handleOpsError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import { formatIssue, formatIssues } from '../formatters/ops.js';
 import {
   parseIntOption,
@@ -169,7 +170,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'issue.list');
         } else if (data.length === 0) {
           console.log('No issues found');
         } else {
@@ -198,7 +199,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(details, null, 2));
+            emitJson(ctx, details, 'issue.getFull');
           } else {
             console.log(formatIssue(details.issue));
 
@@ -237,7 +238,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(issue, null, 2));
+            emitJson(ctx, issue, 'issue.get');
           } else {
             console.log(formatIssue(issue));
           }
@@ -278,7 +279,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'issue.search');
         } else if (data.length === 0) {
           console.log('No issues found');
         } else {
@@ -318,7 +319,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(issue, null, 2));
+          emitJson(ctx, issue, 'issue.update');
         } else {
           console.log(
             `Issue ${id.slice(0, 8)} status changed to: ${issue.status}`,
@@ -354,7 +355,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(issue, null, 2));
+          emitJson(ctx, issue, 'issue.close');
         } else {
           console.log(`Issue ${id.slice(0, 8)} closed`);
         }
@@ -393,7 +394,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(note, null, 2));
+          emitJson(ctx, note, 'issue.addNote');
         } else {
           console.log(`Note added to issue ${id.slice(0, 8)}`);
         }
@@ -443,7 +444,7 @@ Examples:
               new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
           );
           if (ctx.json) {
-            console.log(JSON.stringify(sorted, null, 2));
+            emitJson(ctx, sorted, 'issue.historyList');
             return;
           }
           if (sorted.length === 0) {
@@ -501,7 +502,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(envelope, null, 2));
+          emitJson(ctx, envelope, 'issue.history');
           return;
         }
 
@@ -531,7 +532,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(issue, null, 2));
+          emitJson(ctx, issue, 'issue.undo');
         } else {
           console.log(`Issue ${id.slice(0, 8)} restored to: ${issue.status}`);
         }
@@ -597,7 +598,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(issue, null, 2));
+          emitJson(ctx, issue, 'issue.create');
         } else {
           console.log(formatIssue(issue));
         }
@@ -659,7 +660,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(issue, null, 2));
+          emitJson(ctx, issue, 'issue.edit');
         } else {
           console.log(formatIssue(issue));
         }
@@ -688,7 +689,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(issue, null, 2));
+          emitJson(ctx, issue, 'issue.restore');
         } else {
           console.log(
             `Issue ${id.slice(0, 8)} restored (status: ${issue.status})`,
@@ -740,7 +741,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(results, null, 2));
+          emitJson(ctx, results, 'issue.bulkUpdate');
         } else {
           console.log(
             `Updated ${results.updated} issues to: ${options.status}`,
@@ -772,7 +773,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(issue, null, 2));
+          emitJson(ctx, issue, 'issue.byFingerprint');
         } else {
           console.log(formatIssue(issue));
         }
@@ -815,7 +816,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'issue.updateByFingerprint');
         } else {
           console.log(
             `Issue ${result.id.slice(0, 8)}: ${result.previousStatus} → ${result.newStatus}`,

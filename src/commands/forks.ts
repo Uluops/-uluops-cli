@@ -5,6 +5,7 @@ import {
   type GlobalOptions,
   handleRegistryError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import { asFlexibleResponse, withSpinner } from '../utils.js';
 
 /**
@@ -41,7 +42,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'fork.list');
         } else {
           if (result.forks.length === 0) {
             console.log('No forks found');
@@ -97,7 +98,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(result, null, 2));
+            emitJson(ctx, result, 'fork.create');
           } else {
             console.log(
               `Forked as: ${result.definition.type}/${result.definition.name}@${result.definition.version}`,
@@ -126,7 +127,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'fork.check');
         } else {
           console.log(`Forkable: ${result.canFork ? 'Yes' : 'No'}`);
           if (result.reason) {
@@ -158,7 +159,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'fork.lineage');
         } else {
           // API may return { isFork, fork, source } or { chain, current, source }.
           // Both branches go through asFlexibleResponse for untyped access — the

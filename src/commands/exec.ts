@@ -18,6 +18,7 @@ import {
   formatDefinitionList,
   formatExecutionResult,
 } from '../formatters/core.js';
+import { emitJson } from '../formatters/json.js';
 import { parseFloatOption, parseIntOption, withSpinner } from '../utils.js';
 
 type ExecOptions = GlobalOptions &
@@ -385,7 +386,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(result, null, 2));
+            emitJson(ctx, result, 'exec.run');
           } else if (result.type === 'agent') {
             console.log(formatAgentResult(result));
           } else {
@@ -573,7 +574,7 @@ Examples:
             });
 
             if (ctx.json) {
-              console.log(JSON.stringify(result, null, 2));
+              emitJson(ctx, result, 'exec.agent');
             } else {
               console.log(formatAgentResult(result));
             }
@@ -650,7 +651,7 @@ Examples:
         }
 
         if (ctx.json) {
-          console.log(JSON.stringify({ succeeded, failed }, null, 2));
+          emitJson(ctx, { succeeded, failed }, 'exec.agentBatch');
         } else {
           for (const result of succeeded) {
             console.log('─'.repeat(60));
@@ -726,7 +727,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(result, null, 2));
+            emitJson(ctx, result, 'exec.command');
           } else {
             console.log(formatExecutionResult(result));
           }
@@ -775,7 +776,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(result, null, 2));
+            emitJson(ctx, result, 'exec.workflow');
           } else {
             console.log(formatExecutionResult(result));
           }
@@ -824,7 +825,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(result, null, 2));
+            emitJson(ctx, result, 'exec.pipeline');
           } else {
             console.log(formatExecutionResult(result));
           }
@@ -869,7 +870,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(items, null, 2));
+            emitJson(ctx, items, 'exec.list');
           } else {
             console.log(formatDefinitionList(items));
           }
@@ -932,7 +933,7 @@ Examples:
             );
 
             if (ctx.json) {
-              console.log(JSON.stringify(items, null, 2));
+              emitJson(ctx, items, 'exec.describeList');
             } else {
               console.log(formatDefinitionList(items));
             }
@@ -954,7 +955,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(details, null, 2));
+            emitJson(ctx, details, 'exec.describe');
           } else {
             console.log(formatDefinitionDetails(details));
           }

@@ -9,6 +9,7 @@ import {
   type GlobalOptions,
   handleRegistryError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import { formatVersionDiff, formatVersions } from '../formatters/registry.js';
 import { withSpinner } from '../utils.js';
 
@@ -47,7 +48,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'version.list');
         } else if (!data.versions || data.versions.length === 0) {
           console.log('No versions found');
         } else {
@@ -82,13 +83,16 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(result, null, 2));
+            emitJson(ctx, result, 'version.diff');
           } else {
             if ('fromYaml' in result || 'sectionsModified' in result) {
               console.log(
                 formatVersionDiff(result as VersionDiff | VersionDiffSummary),
               );
             } else {
+              // Human-mode fallback dump for an unrecognized diff shape — not a
+              // --json contract surface, so it stays a raw console.log (emitJson
+              // would suppress it here because ctx.json is false in this branch).
               console.log(JSON.stringify(result, null, 2));
             }
           }

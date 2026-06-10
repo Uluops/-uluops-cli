@@ -4,6 +4,7 @@ import {
   type GlobalOptions,
   handleOpsError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import { type Column, formatTable } from '../formatters/table.js';
 import {
   getFlexibleProperty,
@@ -60,7 +61,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'analytics.agents');
         } else if (data.length === 0) {
           console.log('No agent data found');
         } else {
@@ -119,7 +120,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'analytics.reliability');
         } else if (data.agents.length === 0) {
           console.log('No reliability data found');
         } else {
@@ -199,7 +200,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'analytics.hotspots');
         } else if (data.length === 0) {
           console.log('No hotspots found');
         } else {
@@ -262,7 +263,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'analytics.burndown');
         } else {
           console.log('Burndown by Failure Domain:\n');
 
@@ -322,7 +323,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'analytics.velocity');
         } else {
           console.log('Velocity by Failure Mode:\n');
 
@@ -379,7 +380,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'analytics.discovery');
         } else {
           console.log('Issue Discovery:\n');
 
@@ -429,7 +430,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'analytics.matrix');
         } else {
           console.log('Agent-Taxonomy Coverage:\n');
 
@@ -487,7 +488,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'analytics.resolution');
         } else if (data.length === 0) {
           console.log('No resolution data found');
         } else {
@@ -545,7 +546,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'analytics.taxonomy');
         } else if (data.length === 0) {
           console.log('No taxonomy data found');
         } else {
@@ -598,7 +599,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'analytics.fullTaxonomy');
         } else {
           console.log('Full Taxonomy Analytics:\n');
 
@@ -659,7 +660,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'analytics.trends');
         } else if (data.length === 0) {
           console.log('No trend data found');
         } else {

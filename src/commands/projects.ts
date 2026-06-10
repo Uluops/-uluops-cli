@@ -4,6 +4,7 @@ import {
   type GlobalOptions,
   handleOpsError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import {
   formatProject,
   formatProjectSummary,
@@ -51,7 +52,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'project.list');
         } else if (data.length === 0) {
           console.log('No projects found');
         } else {
@@ -91,7 +92,7 @@ Example:
         }
 
         if (ctx.json) {
-          console.log(JSON.stringify(project, null, 2));
+          emitJson(ctx, project, 'project.get');
         } else {
           console.log(formatProject(project));
         }
@@ -120,7 +121,7 @@ Example:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(project, null, 2));
+          emitJson(ctx, project, 'project.create');
         } else {
           console.log(formatProject(project));
         }
@@ -175,12 +176,10 @@ Example:
         }
 
         if (ctx.json) {
-          console.log(
-            JSON.stringify(
-              { success: true, name, hardDelete: !!options.force },
-              null,
-              2,
-            ),
+          emitJson(
+            ctx,
+            { success: true, name, hardDelete: !!options.force },
+            'project.delete',
           );
         } else if (!options.force) {
           console.log('Use "ulu projects restore" to recover this project');
@@ -210,7 +209,7 @@ Example:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(project, null, 2));
+          emitJson(ctx, project, 'project.restore');
         } else {
           console.log(formatProject(project));
         }
@@ -235,7 +234,7 @@ Example:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(summary, null, 2));
+          emitJson(ctx, summary, 'project.summary');
         } else {
           console.log(formatProjectSummary(summary));
         }
@@ -264,7 +263,7 @@ Example:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(trends, null, 2));
+          emitJson(ctx, trends, 'project.trends');
         } else if (trends.daily.length === 0) {
           console.log('No trend data available');
         } else {
@@ -311,7 +310,7 @@ Example:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(project, null, 2));
+          emitJson(ctx, project, 'project.rename');
         } else {
           console.log(`Project renamed: ${name} → ${project.name}`);
         }
@@ -356,7 +355,7 @@ Example:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(results, null, 2));
+          emitJson(ctx, results, 'project.bulkUpdateIssues');
         } else {
           console.log(`Updated ${results.updated} issues in project ${name}`);
         }
@@ -407,7 +406,7 @@ Example:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'project.mergeIssues');
         } else {
           console.log(
             `Merged ${result.mergedCount} issues into ${result.targetIssueId.slice(0, 8)}`,

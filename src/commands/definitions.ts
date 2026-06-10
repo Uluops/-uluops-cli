@@ -6,6 +6,7 @@ import {
   type GlobalOptions,
   handleRegistryError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import {
   formatDefinition,
   formatDefinitions,
@@ -110,7 +111,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'definition.list');
         } else if (!result.definitions || result.definitions.length === 0) {
           console.log('No definitions found');
         } else {
@@ -181,7 +182,7 @@ Examples:
               await writeFile(options.output, result.markdown, 'utf-8');
               console.log(`Written to ${options.output}`);
             } else if (ctx.json) {
-              console.log(JSON.stringify(result, null, 2));
+              emitJson(ctx, result, 'definition.getRendered');
             } else {
               console.log(result.markdown);
             }
@@ -205,7 +206,7 @@ Examples:
             );
 
             if (ctx.json) {
-              console.log(JSON.stringify(def, null, 2));
+              emitJson(ctx, def, 'definition.get');
             } else if (options.yaml) {
               console.log(def.yaml);
             } else {
@@ -250,7 +251,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(def, null, 2));
+          emitJson(ctx, def, 'definition.create');
         } else {
           console.log(formatDefinition(def));
         }
@@ -304,7 +305,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(def, null, 2));
+            emitJson(ctx, def, 'definition.update');
           } else {
             console.log(formatDefinition(def));
           }
@@ -341,7 +342,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'definition.publish');
         } else {
           console.log(formatDefinition(result.definition));
           if (result.warnings.length > 0) {
@@ -388,7 +389,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(def, null, 2));
+            emitJson(ctx, def, 'definition.deprecate');
           } else {
             console.log(formatDefinition(def));
           }
@@ -422,7 +423,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'definition.validate');
         } else {
           console.log(formatValidationResult(result));
         }
@@ -478,7 +479,7 @@ Examples:
           await writeFile(options.output, result.markdown, 'utf-8');
           console.log(`Written to ${options.output}`);
         } else if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'definition.render');
         } else {
           console.log(result.markdown);
         }
@@ -520,8 +521,10 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(
-              JSON.stringify({ success: true, type, name, version }, null, 2),
+            emitJson(
+              ctx,
+              { success: true, type, name, version },
+              'definition.delete',
             );
           }
         } catch (error) {

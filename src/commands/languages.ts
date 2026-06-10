@@ -5,6 +5,7 @@ import {
   type GlobalOptions,
   handleRegistryError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import { withSpinner } from '../utils.js';
 
 /**
@@ -52,7 +53,7 @@ Examples:
             );
 
             if (ctx.json) {
-              console.log(JSON.stringify(result, null, 2));
+              emitJson(ctx, result, 'language.list');
             } else {
               for (const lang of result.languages) {
                 console.log(
@@ -82,7 +83,7 @@ Examples:
                 `${language.abbreviation} v${language.currentVersion} schema written to ${options.output}`,
               );
             } else if (ctx.json) {
-              console.log(JSON.stringify(language, null, 2));
+              emitJson(ctx, language, 'language.get');
             } else {
               console.log(
                 `  ${language.displayName} (${language.abbreviation})`,

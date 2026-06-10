@@ -9,6 +9,7 @@ import {
   type GlobalOptions,
   handleOpsError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import { formatApiKeys } from '../formatters/ops.js';
 import {
   exitWithError,
@@ -180,7 +181,7 @@ Examples:
         }
 
         if (ctx.json) {
-          console.log(JSON.stringify({ success: true, profile }, null, 2));
+          emitJson(ctx, { success: true, profile }, 'auth.login');
         } else {
           console.log(`\nCredentials saved to profile: ${profile}`);
           console.log('You can now use other ulu commands.');
@@ -256,8 +257,10 @@ Examples:
       removeCredentials(profile);
 
       if (json) {
-        console.log(
-          JSON.stringify({ success: true, profile, sessionsRevoked }, null, 2),
+        emitJson(
+          { json },
+          { success: true, profile, sessionsRevoked },
+          'auth.logout',
         );
       } else {
         if (sessionsRevoked > 0) {
@@ -286,7 +289,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(user, null, 2));
+          emitJson(ctx, user, 'auth.whoami');
         } else {
           console.log(`Email: ${user.email}`);
           console.log(`Role: ${user.role}`);
@@ -328,7 +331,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'auth.register');
         } else {
           console.log(`Account registered for ${options.email}`);
           console.log('You can now login with: ulu auth login');
@@ -362,7 +365,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'auth.forgotPassword');
         } else {
           console.log(result.message);
         }
@@ -399,7 +402,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'auth.resetPassword');
         } else {
           console.log(result.message);
         }
@@ -434,7 +437,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'auth.changePassword');
         } else {
           console.log(result.message);
         }
@@ -459,7 +462,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'auth.profile');
         } else {
           const u = data.user;
           console.log(`Email: ${u.email}`);
@@ -512,7 +515,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'auth.updateProfile');
         } else {
           console.log(`Profile updated for ${data.user.email}`);
         }
@@ -553,7 +556,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(sessions, null, 2));
+          emitJson(ctx, sessions, 'auth.sessions.list');
         } else if (sessions.length === 0) {
           console.log('No active sessions');
         } else {
@@ -589,7 +592,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify({ success: true, sessionId }, null, 2));
+          emitJson(ctx, { success: true, sessionId }, 'auth.sessions.revoke');
         } else {
           console.log(`Session ${sessionId.slice(0, 8)} revoked`);
         }
@@ -631,7 +634,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(keys, null, 2));
+          emitJson(ctx, keys, 'auth.apiKeys.list');
         } else if (keys.length === 0) {
           console.log('No API keys found');
         } else {
@@ -668,7 +671,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'auth.apiKeys.create');
         } else {
           console.log('\n' + '='.repeat(60));
           console.log(
@@ -705,7 +708,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify({ success: true, keyId }, null, 2));
+          emitJson(ctx, { success: true, keyId }, 'auth.apiKeys.revoke');
         } else {
           console.log(`API key ${keyId} has been revoked`);
         }

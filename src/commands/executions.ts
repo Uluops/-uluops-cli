@@ -5,6 +5,7 @@ import {
   type GlobalOptions,
   handleRegistryError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import { parseIntOption, withSpinner } from '../utils.js';
 
 /**
@@ -56,7 +57,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(result, null, 2));
+            emitJson(ctx, result, 'execution.record');
           } else {
             console.log(`Execution recorded for ${type}/${name}@${version}`);
             console.log(`Count: ${result.executionCount}`);
@@ -95,7 +96,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(stats, null, 2));
+            emitJson(ctx, stats, 'execution.stats');
           } else {
             console.log(`Execution stats for ${type}/${name}@${version}:\n`);
             console.log(`  Total: ${stats.totalCount}`);

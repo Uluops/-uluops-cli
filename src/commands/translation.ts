@@ -5,6 +5,7 @@ import {
   type GlobalOptions,
   handleRegistryError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import { readFileOption, withSpinner } from '../utils.js';
 
 /**
@@ -43,7 +44,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(info, null, 2));
+          emitJson(ctx, info, 'translation.version');
         } else {
           console.log(`Translator version: ${info.translatorVersion}`);
           if (info.releaseDate) console.log(`Released: ${info.releaseDate}`);
@@ -87,7 +88,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(result, null, 2));
+            emitJson(ctx, result, 'translation.retranslate');
           } else {
             console.log(
               `Re-translated: ${result.type}/${result.name}@${result.version}`,
@@ -128,7 +129,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'translation.upgrade');
         } else {
           console.log(`Upgraded: ${type}/${name}@${result.version}`);
           if (result.changes && Object.keys(result.changes).length > 0) {

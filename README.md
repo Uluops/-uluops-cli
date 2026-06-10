@@ -154,7 +154,6 @@ Every command accepts these flags:
 ```
 --api-key <key>      Override API key (env: ULUOPS_API_KEY)
 --profile <name>     Config profile to use (default: 'default')
---base-url <url>     Override API base URL
 --timeout <ms>       Request timeout in milliseconds (default: 30000 for ops/registry, 600000 for exec)
 --json               Output raw JSON for scripting
 --debug              Enable debug output
@@ -638,7 +637,6 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | Option | Description |
 |--------|-------------|
 | `--local-definitions <dir>` | Local YAML definitions directory |
-| `--registry-url <url>` | Override registry URL |
 | `--project <name>` | Project name for result tracking |
 | `--no-tracking` | Disable validation service submission |
 | `--no-safety-warnings` | Suppress risk warnings and runtime advisories |
@@ -765,6 +763,56 @@ ulu projects get my-project --debug
 > print an error to stderr and **exit non-zero** rather than silently skipping
 > the deletion with a success code. Always pass `-y` when scripting a delete.
 
+## JSON Output Stability Contract
+
+`--json` output shapes are part of this CLI's **public API**. Automated and CI
+consumers parse them, and they cannot easily refuse an upgrade — so the contract
+is explicit:
+
+- **A change to any default `--json` output shape is a breaking change and
+  requires a major version bump.** Adding fields, removing fields, re-nesting,
+  or turning a bare array into an object (or vice-versa) all count.
+- The default `--json` output is **frozen** at its current shape. New stability
+  machinery is added additively and never alters the default bytes.
+
+### Detecting shape changes at runtime (opt-in envelope)
+
+Set `ULU_JSON_SCHEMA=1` (or pass the global `--json-envelope` flag) to wrap every
+`--json` payload in a versioned envelope so a script can detect a shape change
+instead of breaking silently:
+
+```bash
+ULU_JSON_SCHEMA=1 ulu deps get workflow ship 1.0.0 --json
+```
+
+```jsonc
+{
+  "schema": "uluops.cli/v1",   // envelope format id
+  "cliVersion": "0.15.0",
+  "kind": "deps.get",           // stable logical name of this output
+  "schemaVersion": 2,           // per-output shape version — bumps on a breaking change
+  "data": { /* the exact payload the default --json mode emits */ }
+}
+```
+
+Pin `kind` + `schemaVersion` in your CI. The `data` field is byte-for-byte what
+the default `--json` mode emits, so you can opt in without changing how you read
+the payload — only how you guard it. (`kind` values such as `issue.history` and
+`deps.get` are already at `schemaVersion: 2`, recording the breaking change they
+shipped in v0.13.0.)
+
+### For maintainers — changing a `--json` shape
+
+The source of truth is the `SCHEMA_VERSIONS` registry in
+[`src/formatters/json.ts`](src/formatters/json.ts); all `--json` output flows
+through the single `emitJson()` chokepoint. To change an output shape you must:
+
+1. Bump that `kind`'s `schemaVersion` in `SCHEMA_VERSIONS`.
+2. Add a CHANGELOG entry marked **BREAKING** and ship it under a major bump.
+3. Update the contract-anchor test for that surface (e.g. `deps get` /
+   `issues list` / `issues history`) — these tests pin the shape and will fail
+   CI on an unacknowledged change, which is the point.
+
 ## Environment Variables
 
 | Variable | Description | Default |
@@ -772,10 +820,8 @@ ulu projects get my-project --debug
 | `ULUOPS_API_KEY` | API key for authentication | - |
 | `ULUOPS_EMAIL` | Email for session auth | - |
 | `ULUOPS_PASSWORD` | Password for session auth | - |
-| `ULUOPS_BASE_URL` | Ops API base URL | `http://localhost:3100/api/v1` |
-| `ULUOPS_REGISTRY_URL` | Registry API base URL | `http://localhost:3001/api/v1` |
-| `ULUOPS_AUTH_BASE_URL` | Auth endpoint base URL (for login/register) | Same as `ULUOPS_BASE_URL` |
 | `ULUOPS_DEBUG` | Enable debug logging | `false` |
+| `ULU_JSON_SCHEMA` | Set to `1` to wrap `--json` output in the versioned stability envelope | - |
 | `ANTHROPIC_API_KEY` | API key for AI model execution (required for `ulu exec` commands) | - |
 | `ULUOPS_THINKING_BUDGET` | Token budget for extended thinking (optional) | - |
 
@@ -783,8 +829,6 @@ Create a `.env` file in your project directory:
 
 ```env
 ULUOPS_API_KEY=ulr_your-api-key-here
-ULUOPS_BASE_URL=https://api.uluops.ai/api/v1/ops
-ULUOPS_REGISTRY_URL=https://api.uluops.ai/api/v1/registry
 ```
 
 ## Error Handling
@@ -798,7 +842,7 @@ The CLI provides contextual error messages with actionable hints:
 | **404 Not Found** | Verify the resource name or ID |
 | **400 Validation** | Check command arguments — run with `--help` |
 | **429 Rate Limited** | Wait and retry — the CLI shows the retry delay |
-| **Network Error** | Check server status and base URL config |
+| **Network Error** | Check your network connection and server status |
 
 All errors include the HTTP status code and server error code when available. Use `--debug` for full request/response details.
 
@@ -815,18 +859,8 @@ ulu auth whoami
 ### "Connection refused" errors
 
 ```bash
-# Check the configured base URL
-echo $ULUOPS_BASE_URL
-
-# Test server connectivity
-curl http://localhost:3100/api/v1/health
-```
-
-### Commands targeting the wrong environment
-
-```bash
-# Override for a single command
-ulu projects list --base-url https://api.uluops.com/api/v1
+# Verify the service is reachable and your credentials are valid
+ulu auth whoami
 ```
 
 ### Shell completion not working

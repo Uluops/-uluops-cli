@@ -5,6 +5,7 @@ import {
   type GlobalOptions,
   handleRegistryError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import {
   formatAliases,
   formatAliasResolution,
@@ -65,7 +66,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'model.list');
         } else if (result.models.length === 0) {
           console.log('No models found');
         } else {
@@ -93,7 +94,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(model, null, 2));
+          emitJson(ctx, model, 'model.get');
         } else {
           console.log(formatModel(model));
         }
@@ -121,7 +122,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'model.providers');
         } else if (result.providers.length === 0) {
           console.log('No providers found');
         } else {
@@ -152,7 +153,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'model.aliases');
         } else if (result.aliases.length === 0) {
           console.log('No aliases found');
         } else {
@@ -181,7 +182,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(resolution, null, 2));
+          emitJson(ctx, resolution, 'model.resolve');
         } else {
           console.log(formatAliasResolution(resolution));
         }

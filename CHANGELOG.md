@@ -4,6 +4,46 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.15.0] - 2026-06-09
+
+> Minor bump (additive, non-breaking): the default `--json` output shape is
+> unchanged byte-for-byte. This release adds an **opt-in** versioned envelope and
+> a documented stability contract on top of it.
+
+### Added
+
+- **`--json` Output Stability Contract.** `--json` output shapes are now treated
+  as public API: a change to any default shape is breaking and requires a major
+  version bump. This addresses a captive-user finding (`EPI-ASS/H`) — in v0.13.0
+  the `issues history` and `deps get` `--json` shapes changed silently, breaking
+  automated consumers with no way to detect the change. See the new "JSON Output
+  Stability Contract" section in the README.
+- **Opt-in versioned `--json` envelope.** Set `ULU_JSON_SCHEMA=1` (or pass the
+  global `--json-envelope` flag) to wrap every `--json` payload as
+  `{ schema, cliVersion, kind, schemaVersion, data }`. Scripts can pin `kind` +
+  `schemaVersion` to detect a future shape change instead of failing silently.
+  `data` is byte-for-byte identical to the default `--json` payload, so opting in
+  changes how you *guard* the output, not how you *read* it. Default `--json`
+  output (no env var / flag) is **unchanged**.
+- **Per-output `schemaVersion` registry** (`SCHEMA_VERSIONS` in
+  `src/formatters/json.ts`) as the single source of truth for output-shape
+  versions. The two outputs that already shipped a breaking change in v0.13.0 —
+  `issue.history` and `deps.get` — start at `schemaVersion: 2` to record it.
+- **Contract-anchor tests** pinning representative `--json` shapes (`deps get`'s
+  full envelope, `issues list`'s bare array, `issues history`'s envelope) so a
+  future silent shape change fails CI.
+
+### Internal
+
+- All `--json` emission across the CLI now flows through a single `emitJson()`
+  chokepoint (`src/formatters/json.ts`), replacing ~100 inline
+  `console.log(JSON.stringify(...))` sites. This is the single point where output
+  versioning and the stability policy are enforced. Default-mode output is
+  byte-for-byte unchanged — proven by the full existing test suite passing with
+  zero test edits.
+- Extracted CLI version reading into a shared `getCliVersion()` (`src/version.ts`)
+  used by both the entry point and the JSON envelope.
+
 ## [0.14.0] - 2026-06-09
 
 > Minor bump (not patch): the non-interactive exit-code change below is breaking

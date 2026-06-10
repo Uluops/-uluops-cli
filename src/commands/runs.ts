@@ -6,6 +6,7 @@ import {
   type GlobalOptions,
   handleOpsError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import { formatRun, formatRuns } from '../formatters/ops.js';
 import {
   confirmOrExit,
@@ -87,7 +88,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(data, null, 2));
+          emitJson(ctx, data, 'run.list');
         } else if (data.length === 0) {
           console.log('No runs found');
         } else {
@@ -114,7 +115,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(run, null, 2));
+          emitJson(ctx, run, 'run.get');
         } else {
           console.log(formatRun(run));
         }
@@ -144,7 +145,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(run, null, 2));
+          emitJson(ctx, run, 'run.latest');
         } else {
           console.log(formatRun(run));
         }
@@ -179,7 +180,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(details, null, 2));
+          emitJson(ctx, details, 'run.details');
         } else {
           console.log(
             `Run #${details.run.runNumber} - ${details.run.workflowType}`,
@@ -274,7 +275,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'run.save');
         } else {
           console.log(`Run #${result.run.runNumber} saved successfully`);
           console.log('');
@@ -354,7 +355,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'run.validate');
         } else {
           const wouldCreate = getFlexibleProperty(result, 'wouldCreate', false);
           const wouldUpdate = getFlexibleProperty(result, 'wouldUpdate', false);
@@ -437,7 +438,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'run.diff');
         } else {
           console.log(`Comparing run #${options.base} → #${options.compare}\n`);
 
@@ -515,7 +516,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(result, null, 2));
+          emitJson(ctx, result, 'run.archive');
         } else {
           console.log(`Archived ${result.archived} runs`);
         }
@@ -580,7 +581,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(run, null, 2));
+          emitJson(ctx, run, 'run.update');
         } else {
           console.log(formatRun(run));
         }
@@ -612,7 +613,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify({ success: true, runId }, null, 2));
+          emitJson(ctx, { success: true, runId }, 'run.delete');
         }
       } catch (error) {
         handleOpsError(error, ctx);

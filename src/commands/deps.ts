@@ -5,6 +5,7 @@ import {
   type GlobalOptions,
   handleRegistryError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import { parseIntOption, stripAnsi, withSpinner } from '../utils.js';
 
 /**
@@ -60,7 +61,7 @@ Examples:
           );
 
           if (ctx.json) {
-            console.log(JSON.stringify(envelope, null, 2));
+            emitJson(ctx, envelope, 'deps.get');
             return;
           }
 
@@ -120,7 +121,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(envelope, null, 2));
+          emitJson(ctx, envelope, 'deps.dependents');
           return;
         }
 

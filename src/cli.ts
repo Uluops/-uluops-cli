@@ -1,7 +1,4 @@
 #!/usr/bin/env node
-import { readFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 // Load .env files early so all SDK contexts see them
 import { loadEnvFiles } from '@uluops/ops-sdk';
 import { Command } from 'commander';
@@ -25,6 +22,7 @@ import { registerRunCommands } from './commands/runs.js';
 import { registerTaxonomyCommands } from './commands/taxonomy.js';
 import { registerTranslationCommands } from './commands/translation.js';
 import { registerVersionCommands } from './commands/versions.js';
+import { getCliVersion } from './version.js';
 
 loadEnvFiles();
 
@@ -59,16 +57,13 @@ process.on('unhandledRejection', (reason) => {
   process.exit(1);
 });
 
-// Get package.json for version
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-const packageJsonPath = join(__dirname, '..', 'package.json');
-let version = '0.0.0';
-try {
-  const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf-8'));
-  version = packageJson.version;
-} catch {
-  // Broken install — use fallback version
+const version = getCliVersion();
+
+// Opt into the versioned --json envelope (additive; default --json shape is
+// unchanged). A convenience alias for `ULU_JSON_SCHEMA=1`; emitJson reads the
+// env var as the single source of truth, so set it before any command parses.
+if (process.argv.includes('--json-envelope')) {
+  process.env['ULU_JSON_SCHEMA'] = '1';
 }
 
 const program = new Command();
@@ -85,6 +80,10 @@ program
     'Request timeout in milliseconds (default: 30000 for ops/registry, 600000 for exec)',
   )
   .option('--json', 'Output in JSON format for scripting')
+  .option(
+    '--json-envelope',
+    'Wrap --json output in a versioned envelope ({ schema, cliVersion, kind, schemaVersion, data }); same as ULU_JSON_SCHEMA=1',
+  )
   .option('--debug', 'Enable debug output')
   .option('-q, --quiet', 'Suppress spinners and non-essential output')
   .showHelpAfterError(true);

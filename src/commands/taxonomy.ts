@@ -4,6 +4,7 @@ import {
   type GlobalOptions,
   handleOpsError,
 } from '../context.js';
+import { emitJson } from '../formatters/json.js';
 import { withSpinner } from '../utils.js';
 
 /**
@@ -43,7 +44,7 @@ Examples:
         );
 
         if (ctx.json) {
-          console.log(JSON.stringify(schema, null, 2));
+          emitJson(ctx, schema, 'taxonomy.get');
         } else {
           console.log('Failure Domains:');
           for (const domain of schema.domains) {

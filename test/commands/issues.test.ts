@@ -62,6 +62,28 @@ describe('issues list', () => {
     }));
     output.restore();
   });
+
+  // CONTRACT ANCHOR — `issues list --json` must stay a BARE ARRAY. Wrapping it
+  // in an envelope (the inverse of the v0.13.0 history regression) would break
+  // captive scripts doing `result[0]`/`Array.isArray(result)`. A change here
+  // should fail CI and force a conscious major bump + kind schemaVersion bump.
+  it('--json emits a bare array, not a wrapped object (stability anchor)', async () => {
+    mockedCreateOpsContext.mockReturnValue(
+      createMockOpsContext({
+        client: mockClient as unknown as OpsCliContext['client'],
+        json: true,
+      }),
+    );
+    mockClient.issues.listByProject.mockResolvedValue([
+      createIssue({ title: 'Anchor issue', status: 'open' }),
+    ]);
+    const output = captureOutput();
+    await parse('issues', 'list', 'my-proj');
+    const parsed = JSON.parse(output.stdout());
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed[0]).toHaveProperty('title', 'Anchor issue');
+    output.restore();
+  });
 });
 
 describe('issues get', () => {
