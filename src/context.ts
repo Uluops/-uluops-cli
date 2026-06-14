@@ -5,6 +5,7 @@ import type { UluOpsConfig } from '@uluops/core';
 import {
   ConfigurationError,
   ExecutionError,
+  IntegrityError,
   ModelNotFoundError,
   ParseError,
   PipelineError,
@@ -625,6 +626,32 @@ export function handleCoreError(
   if (error instanceof PipelineError) {
     console.error(`Error: ${error.message}`);
     process.exit(1);
+  }
+
+  // IntegrityError extends UluOpsError — must precede the generic branch.
+  // Exit code 4 is distinct from 1 (usage/config) and 2 (API/runtime) so
+  // scripts/CI can detect a refused execution specifically.
+  if (error instanceof IntegrityError) {
+    if (ctx.json) {
+      console.error(JSON.stringify(error.toJSON(), null, 2));
+    } else {
+      console.error(`Integrity check failed — execution refused.`);
+      console.error(`  ${error.message}`);
+      if (error.kind === 'unavailable') {
+        console.error(
+          `\nThis definition has no frozen rendered prompt to verify ` +
+            `(workflow/pipeline, local, or content-gated). Omit --prompt-hash for it.`,
+        );
+      } else {
+        if (error.expected !== undefined) {
+          console.error(`\n  expected (${error.kind}): ${error.expected}`);
+        }
+        if (error.actual !== undefined) {
+          console.error(`  actual   (${error.kind}): ${error.actual}`);
+        }
+      }
+    }
+    process.exit(4);
   }
 
   if (error instanceof UluOpsError) {

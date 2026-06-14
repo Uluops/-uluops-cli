@@ -301,6 +301,17 @@ function buildExecOptions(
     execOpts.timeoutMs = parseIntOption(execTimeout, '--exec-timeout');
     hasOptions = true;
   }
+  // Caller-pinned integrity hashes — verified fail-closed in core's resolve().
+  const expectedHash = optString(opts, 'hash');
+  if (expectedHash) {
+    execOpts.expectedHash = expectedHash;
+    hasOptions = true;
+  }
+  const expectedPromptHash = optString(opts, 'promptHash');
+  if (expectedPromptHash) {
+    execOpts.expectedPromptHash = expectedPromptHash;
+    hasOptions = true;
+  }
 
   return hasOptions ? execOpts : undefined;
 }
@@ -567,6 +578,18 @@ Examples:
     )
     .option('--threshold-pass <n>', 'Pass threshold score (agents)')
     .option('--threshold-warn <n>', 'Warning threshold score (agents)')
+    .option(
+      '--hash <sha256:...>',
+      'Optional. Pin the expected YAML hash (from a trusted channel). When given, ' +
+        'verifies the resolved definition source + config before executing and refuses ' +
+        'on mismatch (exit 4). For a workflow/pipeline the YAML pin alone fully covers execution.',
+    )
+    .option(
+      '--prompt-hash <sha256:...>',
+      'Optional. Pin the expected rendered-prompt hash. Pair with --hash for full ' +
+        'agent/command executed-prompt integrity. Omit for workflow/pipeline — they ' +
+        'have no rendered prompt, so supplying it is refused as "unavailable" (exit 4).',
+    )
     .option(
       '--report [path]',
       'Write a human-readable report to file (single agent only). ' +

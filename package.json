@@ -1,6 +1,6 @@
 {
   "name": "@uluops/cli",
-  "version": "0.17.1",
+  "version": "0.18.0",
   "description": "Unified CLI for UluOps - validation tracking and registry management",
   "type": "module",
   "bin": {
@@ -40,7 +40,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@uluops/core": "0.19.0",
+    "@uluops/core": "0.20.0",
     "@uluops/ops-sdk": "3.2.1",
     "@uluops/registry-sdk": "0.31.1",
     "commander": "13.1.0",

@@ -4,6 +4,16 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.18.0] - 2026-06-14
+
+### Added
+
+- **`exec agent --hash` / `--prompt-hash`** — caller-pinned integrity verification. Supply expected `sha256:` hashes from a trusted channel; the resolved definition is verified fail-closed before execution. `--hash` pins the YAML (source + config); `--prompt-hash` pins the rendered prompt and is required (with `--hash`) for full agent executed-prompt integrity. On mismatch the run is **refused with exit code 4** (distinct from 1=usage/config and 2=API/runtime), printing expected-vs-actual. The flags are agent-only; `exec workflow|pipeline` reject `--prompt-hash` (they have no rendered prompt — pin the YAML instead). Requires `@uluops/core@0.20.0`.
+
+### Changed
+
+- Bump `@uluops/core` to `0.20.0` (frozen-artifact execution + caller-pinned verification).
+
 ## [0.16.0] - 2026-06-09
 
 > Minor bump (breaking-for-scripts): `ulu exec` runs that previously tracked

@@ -122,12 +122,26 @@ vi.mock('@uluops/core', () => {
     trackedUpgradeUrl(source: string) { return `https://uluops.ai/upgrade?source=${source}`; }
     toJSON() { return { error: this.message, requiredTier: this.requiredTier, currentTier: this.currentTier }; }
   }
+  class IntegrityError extends UluOpsError {
+    kind: 'yaml' | 'prompt' | 'unavailable';
+    expected?: string;
+    actual?: string;
+    constructor(message: string, kind: 'yaml' | 'prompt' | 'unavailable', _name?: string, _version?: string, expected?: string, actual?: string) {
+      super(message);
+      this.name = 'IntegrityError';
+      this.kind = kind;
+      this.expected = expected;
+      this.actual = actual;
+    }
+    toJSON() { return { error: this.message, kind: this.kind, expected: this.expected, actual: this.actual }; }
+  }
 
   return {
     UluOpsClient: vi.fn().mockReturnValue({}),
     UluOpsError, SdkApiError, ConfigurationError, ModelNotFoundError,
     PreflightError, ParseError, SubmissionError,
     ExecutionError, WorkflowError, PipelineError, SubscriptionRequiredError,
+    IntegrityError,
   };
 });
 
@@ -141,7 +155,7 @@ import {
   SdkApiError, ConfigurationError, ModelNotFoundError, PreflightError,
   ParseError, SubmissionError as CoreSubmissionError,
   ExecutionError, WorkflowError, PipelineError, UluOpsError,
-  SubscriptionRequiredError,
+  SubscriptionRequiredError, IntegrityError,
 } from '@uluops/core';
 import {
   createOpsContext,
@@ -796,6 +810,36 @@ describe('handleCoreError', () => {
 
     expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Unknown SDK error');
+    output.restore();
+  });
+
+  it('should exit 4 on IntegrityError (yaml) with expected/actual + refusal', () => {
+    const output = captureOutput();
+    const error = new IntegrityError('pinned hash mismatch', 'yaml', 'a', '1.0.0', 'sha256:aaa', 'sha256:bbb');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(4)');
+    const err = output.stderr();
+    expect(err).toContain('execution refused');
+    expect(err).toContain('sha256:aaa');
+    expect(err).toContain('sha256:bbb');
+    output.restore();
+  });
+
+  it('should exit 4 on IntegrityError (unavailable) with a clear hint', () => {
+    const output = captureOutput();
+    const error = new IntegrityError('no rendered prompt', 'unavailable', 'wf', '1.0.0', 'sha256:ccc');
+
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(4)');
+    expect(output.stderr().toLowerCase()).toContain('omit --prompt-hash');
+    output.restore();
+  });
+
+  it('should emit IntegrityError as JSON in json mode (still exit 4)', () => {
+    const output = captureOutput();
+    const error = new IntegrityError('pinned hash mismatch', 'prompt', 'a', '1.0.0', 'sha256:aaa', 'sha256:bbb');
+
+    expect(() => handleCoreError(error, { json: true, debug: false })).toThrow('process.exit(4)');
+    expect(output.stderr()).toContain('"kind"');
     output.restore();
   });
 

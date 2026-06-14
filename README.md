@@ -674,6 +674,8 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `-c, --concurrency <n>` | Max concurrent agents for parallel execution (default: 5) |
 | `--threshold-pass <n>` | Pass threshold score (agents) |
 | `--threshold-warn <n>` | Warning threshold score (agents) |
+| `--hash <sha256:...>` | **Optional.** Pin the expected YAML hash (from a trusted channel). Verifies the resolved definition source + config before executing; refuses on mismatch (**exit 4**). |
+| `--prompt-hash <sha256:...>` | **Optional.** Pin the expected rendered-prompt hash. Pair with `--hash` for full agent executed-prompt integrity. Both pins are opt-in — omitting them runs unverified as before. Refuses on mismatch (**exit 4**). |
 | `--report [path]` | Write a human-readable, publication-quality report to file (single agent only). With no path, defaults to `./<agent>-report-<YYYYMMDDTHHmmss>.md` in cwd. Injects a report-mode directive into the agent's prompt and disables structured-output enforcement so the model can emit prose. **Mutually exclusive with tracker submission** (implies `--no-tracking`): the schema-validated path the tracker depends on is no longer guaranteed under report mode. Run without `--report` for tracker submission. |
 | `-o, --output <path>` | Explicit output path for `--report` (overrides the `--report` argument and the default) |
 | `--features-list <path>` | Write structured features/recommendations to file (single agent only) |
@@ -708,7 +710,18 @@ ulu exec workflow ship ./packages/api --no-tracking
 
 # Inspect what a definition expects
 ulu exec describe code-validator
+
+# Pin integrity hashes (from a trusted channel) — refuses with exit 4 on mismatch
+ulu exec agent code-validator -t ./src \
+  --hash sha256:… --prompt-hash sha256:…
 ```
+
+> **Integrity pins are optional.** `--hash` verifies the YAML (source + config);
+> `--prompt-hash` verifies the rendered prompt (agents/commands). Use both for
+> full agent integrity. On mismatch — or if `--prompt-hash` is given for a
+> definition with no rendered prompt — execution is **refused with exit code 4**
+> (distinct from `1` usage/config and `2` API/runtime). `exec workflow`/`pipeline`
+> have no rendered prompt; pin their YAML with `--hash` only.
 
 ---
 
