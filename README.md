@@ -186,7 +186,7 @@ ulu auth update-profile           # Update profile (display name, bio, avatar)
 ulu auth sessions list            # List active sessions
 ulu auth sessions revoke <id>     # Revoke a session
 ulu auth api-keys list            # List API keys
-ulu auth api-keys create          # Create new API key
+ulu auth api-keys create          # Create new API key (--name, --expires <ISO date>)
 ulu auth api-keys revoke <id>     # Revoke an API key
 ```
 
@@ -196,6 +196,7 @@ ulu auth api-keys revoke <id>     # Revoke an API key
 # Register and create an API key
 ulu auth register --email user@example.com --password mypassword
 ulu auth api-keys create --name "CI Pipeline"
+ulu auth api-keys create --name "CI Pipeline" --expires 2026-12-31  # optional expiry
 # Save this key: ulr_abc123... (shown once)
 
 # Login interactively
@@ -253,11 +254,11 @@ ulu runs list <project>           # List runs (--workflow, --limit)
 ulu runs get <runId>              # Get run by UUID
 ulu runs latest <project>         # Get latest run (--workflow)
 ulu runs details <project>        # Detailed run with agents/recommendations (-n for a specific run number)
-ulu runs save                     # Save run from JSON (--file or --stdin)
-ulu runs validate                 # Dry run — preview against the live tracker (requires auth)
+ulu runs save                     # Save run from JSON (--file or --stdin; -p/-w override input fields)
+ulu runs validate                 # Dry run — preview against the live tracker (requires auth; -p/-w override)
 ulu runs diff <project>           # Compare two runs (--base, --compare)
-ulu runs archive <project>        # Archive old runs (--before-run, --before-date, --keep-last)
-ulu runs update <project>         # Update run metadata (--number, --score, --file)
+ulu runs archive <project>        # Archive old runs (--before-run, --before-date, --keep-last, --reason)
+ulu runs update <project>         # Update run metadata (--number, --score, --passed, --file)
 ulu runs delete <runId>           # Delete a run
 ```
 
@@ -269,6 +270,9 @@ ulu runs save --file validation-results.json
 
 # Save from stdin (pipe from another tool)
 cat results.json | ulu runs save --stdin
+
+# Override the project or workflow type in the JSON without editing the file (handy in CI)
+ulu runs save --file results.json -p override-project -w post-implementation
 
 # Dry run to preview what would happen
 ulu runs validate --file results.json
@@ -284,6 +288,9 @@ ulu runs archive my-project --keep-last 10
 
 # Update token counts on a run after the fact
 ulu runs update my-project --number 5 --file token-update.json
+
+# Set the gates-passed flag on a run after the fact
+ulu runs update my-project --number 5 --passed true
 ```
 
 > **Note:** `runs update --score` is rejected on finalized runs ("Cannot rewrite averageScore"). Use the `--file` form to patch per-agent fields. Each agent entry in the file must include `name` and `decision` (any other fields like `tokens` are merged into the existing record).
@@ -331,15 +338,15 @@ Issue tracking and management. Alias: `i`.
 ```bash
 ulu issues list <project>         # List issues with filters
 ulu issues get <id>               # Get issue (--full for occurrences/notes)
-ulu issues search                 # Search across projects (--query)
-ulu issues create                 # Create user-submitted issue
+ulu issues search                 # Search across projects (--query, --projects to scope)
+ulu issues create                 # Create user-submitted issue (--failure-code, --domain link to taxonomy)
 ulu issues update <id>            # Update status (--status, --reason)
 ulu issues close <id>             # Mark as completed (--reason)
 ulu issues edit <id>              # Edit metadata (--title, --severity, etc.)
 ulu issues add-note <id>          # Add note (--message, --type)
 ulu issues history <id>                          # Show timeline by UUID
 ulu issues history <fingerprint> --project <slug> # Resolve fingerprint then show timeline
-ulu issues history --project <slug>              # Picker: list recent issues, then drill in
+ulu issues history --project <slug>              # Picker: list recent issues (--limit), then drill in
 ulu issues undo <id>              # Undo last status change
 ulu issues restore <id>           # Restore soft-deleted issue
 ulu issues bulk-update            # Bulk update statuses (--ids, --status)
@@ -353,15 +360,19 @@ ulu issues update-by-fingerprint <fp> --project <name> # Update by fingerprint
 # List open critical issues
 ulu issues list my-project --status open --priority critical
 
-# Search across all projects
+# Search across all projects (or scope to specific ones with --projects)
 ulu issues search --query "authentication" --status open
+ulu issues search --query "timeout" --projects my-app,my-api
 
-# Create an issue manually
+# Create an issue manually. Pass --failure-code and --domain to link it into
+# the failure taxonomy — without them the issue is excluded from domain/code analytics.
 ulu issues create --project my-project \
   --title "SQL injection in login" \
   --priority critical \
   --severity critical \
   --type security \
+  --failure-code SEM-VAL/H \
+  --domain SEM \
   --file-path src/auth/login.ts \
   --line 45
 
@@ -399,6 +410,7 @@ ulu issues history a1b2c3d4 --project my-project # then drill in by fingerprint
 | `--severity` | `critical`, `high`, `medium`, `low`, `info` |
 | `--agent` | Any agent name (e.g., `code-validator`) |
 | `--domain` | `STR`, `SEM`, `PRA`, `EPI` |
+| `--include-resolved` | Include resolved (completed/wontfix/deferred) issues in results |
 | `--limit` | Max results (default: 50) |
 
 ---
@@ -414,7 +426,7 @@ ulu analytics hotspots            # Files with most issues
 ulu analytics burndown            # Taxonomy burndown time series
 ulu analytics velocity            # Rate of change per failure mode
 ulu analytics discovery           # New vs recurring issues timeline
-ulu analytics matrix              # Agent-taxonomy coverage matrix
+ulu analytics matrix              # Agent-taxonomy coverage matrix (--min-issues to threshold)
 ulu analytics resolution          # Issue resolution rates by project (cross-project; no --project flag)
 ulu analytics taxonomy            # Taxonomy distribution
 ulu analytics full-taxonomy       # Full taxonomy analytics breakdown
@@ -441,6 +453,7 @@ ulu analytics discovery --project my-project --group-by week
 
 # Coverage gaps — which domains lack agent coverage?
 ulu analytics matrix --project my-project
+ulu analytics matrix --project my-project --min-issues 3  # only failure modes seen 3+ times
 
 # Reliability — which agents have high false positive rates?
 ulu analytics reliability --days 90
@@ -465,14 +478,14 @@ Displays the four failure domains (STR, SEM, PRA, EPI), their failure modes, sev
 Workflow definition management (registry API). Alias: `def`.
 
 ```bash
-ulu definitions list              # List definitions (--type, --status, --search, --domain, --limit, --offset)
-ulu definitions get <type> <name> [version]   # Get definition (--yaml, --rendered, --target, -o)
+ulu definitions list              # List definitions (--type, --status, --search, --domain, --visibility, --limit, --offset)
+ulu definitions get <type> <name> [version]   # Get definition (--yaml, --rendered, --target, --render-profile, --include-runtime, -o)
 ulu definitions create <type> <name>          # Create draft (--file)
 ulu definitions update <type> <name> <ver>    # Update draft (--file, --display-name, --description, --visibility); --change-type major|minor|patch creates a new version from a published one
 ulu definitions publish <type> <name> <ver>   # Publish definition
 ulu definitions deprecate <type> <name> <ver> # Deprecate (--reason, --successor)
 ulu definitions validate [type]               # Validate YAML (--file, type auto-detected)
-ulu definitions render [type]                 # Render YAML preview (--file, type auto-detected)
+ulu definitions render [type]                 # Render YAML preview (--file, --render-profile core|uluops-full, type auto-detected)
 ulu definitions delete <type> <name> <ver>    # Delete draft (--yes)
 ```
 
@@ -502,6 +515,9 @@ ulu def get agent code-validator --rendered -o ./code-validator.md
 # Validate and render a local YAML file (type auto-detected from filename)
 ulu def validate --file my-agent.agent.yaml
 ulu def render --file my-agent.agent.yaml
+
+# Render with the full UluOps profile (platform preamble) instead of the lean core profile
+ulu def render --file my-agent.agent.yaml --render-profile uluops-full
 
 # Create, validate, and publish a new agent
 ulu def validate agent --file my-agent.yaml
@@ -566,7 +582,7 @@ Definition forking and lineage.
 
 ```bash
 ulu forks list <type> <name> <version>       # List forks
-ulu forks create <type> <name> <version>     # Fork definition (--fork-name)
+ulu forks create <type> <name> <version>     # Fork definition (--fork-name, --visibility, --display-name, --description)
 ulu forks check <type> <name> <version>      # Check if forkable
 ulu forks lineage <type> <name> <version>    # Show fork ancestry chain
 ```
@@ -747,7 +763,7 @@ ulu exec agent code-validator -t ./src \
 Execution tracking for definitions.
 
 ```bash
-ulu executions record <type> <name> <version>   # Record execution (--source)
+ulu executions record <type> <name> <version>   # Record execution (--source, --run-id for idempotency)
 ulu executions stats <type> <name> <version>     # Get statistics (--window)
 ```
 

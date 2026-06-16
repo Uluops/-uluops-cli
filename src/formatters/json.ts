@@ -170,6 +170,11 @@ function envelopeEnabled(): boolean {
  * Default mode is byte-for-byte identical to `console.log(JSON.stringify(data,
  * null, 2))`. Envelope mode wraps as
  * `{ schema, cliVersion, kind, schemaVersion, data }`.
+ *
+ * @example
+ * // Emit a project list in --json mode, then skip the human-readable branch
+ * if (emitJson(ctx, projects, 'project.list')) return;
+ * console.log(formatProjects(projects));
  */
 export function emitJson(
   ctx: { json: boolean },

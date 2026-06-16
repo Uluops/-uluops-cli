@@ -159,6 +159,12 @@ const DEFAULT_TIMEOUT_MS = 30_000;
  */
 const DEFAULT_CORE_TIMEOUT_MS = 600_000;
 
+/**
+ * Create CLI context for ops commands (projects, runs, issues, analytics).
+ *
+ * @param options - Global flags (API key, base URL, profile, display flags).
+ * @returns An OpsCliContext holding the authenticated client and display flags.
+ */
 export function createOpsContext(options: GlobalOptions): OpsCliContext {
   const config = loadOpsConfig({
     apiKey: options.apiKey,
@@ -200,7 +206,10 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
 }
 
 /**
- * Create CLI context for registry commands
+ * Create CLI context for registry commands (definitions, versions, forks, etc.).
+ *
+ * @param options - Global flags (API key, base URL, profile, display flags).
+ * @returns A RegistryCliContext holding the authenticated client and display flags.
  */
 export function createRegistryContext(
   options: GlobalOptions,
@@ -254,7 +263,10 @@ export function createRegistryContext(
 }
 
 /**
- * Create context without requiring credentials (for commands like login)
+ * Create context without requiring credentials (for commands like login).
+ *
+ * @param options - Global flags; credentials are not required or validated.
+ * @returns The resolved base URL and display flags, with no authenticated client.
  */
 export function createUnauthenticatedContext(options: GlobalOptions): {
   baseUrl: string;
@@ -277,7 +289,14 @@ export function createUnauthenticatedContext(options: GlobalOptions): {
 }
 
 /**
- * Create CLI context for core SDK commands (exec)
+ * Create CLI context for core SDK commands (exec).
+ *
+ * @param options - Global flags plus exec-specific options (resolves API key,
+ *   base URL, profile, and timeout).
+ * @param modelOverride - When provided, overrides the model resolved from the
+ *   UluOps config for this execution context (e.g. the `--model` flag).
+ * @returns A CoreCliContext holding the authenticated client, submission URL,
+ *   and display flags used by the exec commands.
  */
 export function createCoreContext(
   options: GlobalOptions & CoreExecOptions,
@@ -412,7 +431,7 @@ function printApiErrorDetails(
       );
     } else if (error.code === 'VALIDATION_ERROR' || error.statusCode === 400) {
       console.error(
-        `\nHint: ${hints.validation ?? 'Invalid input. Check the command arguments.'}`,
+        `\nHint: ${hints.validation ?? 'Invalid input. Check the command arguments, or run the command with --help to see valid options and values.'}`,
       );
     } else if (
       error.code === 'SUBSCRIPTION_REQUIRED' ||
@@ -466,7 +485,11 @@ function printApiErrorDetails(
 }
 
 /**
- * Handle ops errors consistently
+ * Handle ops errors consistently.
+ *
+ * @param error - The thrown value to classify and report.
+ * @param ctx - Display flags (`json`, `debug`) that shape error output.
+ * @returns Never returns — exits the process after printing the error.
  */
 export function handleOpsError(
   error: unknown,
@@ -481,7 +504,11 @@ export function handleOpsError(
 }
 
 /**
- * Handle registry errors consistently
+ * Handle registry errors consistently.
+ *
+ * @param error - The thrown value to classify and report.
+ * @param ctx - Display flags (`json`, `debug`) that shape error output.
+ * @returns Never returns — exits the process after printing the error.
  */
 export function handleRegistryError(
   error: unknown,
@@ -501,7 +528,11 @@ export function handleRegistryError(
 }
 
 /**
- * Handle core SDK errors consistently
+ * Handle core SDK errors consistently.
+ *
+ * @param error - The thrown value to classify and report.
+ * @param ctx - Display flags (`json`, `debug`) that shape error output.
+ * @returns Never returns — exits the process after printing the error.
  */
 export function handleCoreError(
   error: unknown,
@@ -596,6 +627,9 @@ export function handleCoreError(
     if (error.code) {
       console.error(`\nSubmission error code: ${error.code}`);
     }
+    console.error(
+      '\nHint: Retry, or pass --no-tracking to run without tracker submission.',
+    );
     process.exit(1);
   }
 

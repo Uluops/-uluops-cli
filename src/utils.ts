@@ -10,9 +10,10 @@ import { createInterface } from 'node:readline';
 import ora, { type Ora } from 'ora';
 
 /**
- * Create a spinner for long-running operations
+ * Create a spinner for long-running operations. Internal helper for
+ * `withSpinner`; not exported because nothing outside this module uses it.
  */
-export function createSpinner(text: string): Ora {
+function createSpinner(text: string): Ora {
   return ora({
     text,
     spinner: 'dots',
@@ -32,7 +33,13 @@ export interface WithSpinnerOptions {
 }
 
 /**
- * Execute an async operation with spinner feedback
+ * Execute an async operation with spinner feedback.
+ *
+ * @param ctx - Display flags; the spinner is suppressed under `quiet` or `json`.
+ * @param options - Start/success/failure messages for the spinner.
+ * @param fn - The async operation to run.
+ * @returns The resolved value of `fn` on success; re-throws (after failing the
+ *   spinner) if `fn` rejects.
  */
 export async function withSpinner<T>(
   ctx: { quiet: boolean; json?: boolean },
@@ -124,7 +131,11 @@ export function getErrorCode(error: unknown): string | undefined {
 }
 
 /**
- * Redact sensitive values for display
+ * Redact sensitive values for display (shows the last `showLast` chars, masks
+ * the rest; fully redacts values shorter than or equal to `showLast`).
+ *
+ * @internal Not yet wired into a production output path; exported only for unit
+ * testing. Intended for masking API keys in future `--debug`/`whoami` output.
  */
 export function redact(value: string, showLast = 4): string {
   if (value.length <= showLast) return '[REDACTED]';
@@ -425,7 +436,13 @@ export async function confirmOrExit(
 /** Timeout for reading from stdin (30 seconds) */
 const STDIN_TIMEOUT_MS = 30_000;
 
-/** Strip UTF-8 BOM (byte order mark) that some editors prepend */
+/**
+ * Strip a leading UTF-8 BOM (byte order mark) that some editors prepend, which
+ * would otherwise break `JSON.parse` on the first character.
+ *
+ * @param content - Raw text that may begin with a BOM.
+ * @returns The content with a leading BOM removed, or unchanged if absent.
+ */
 export function stripBom(content: string): string {
   return content.charCodeAt(0) === 0xfeff ? content.slice(1) : content;
 }

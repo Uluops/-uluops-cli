@@ -387,7 +387,7 @@ export function applyReportModeDirective(
  *   2. `--report <path>` (the optional positional argument on --report)
  *   3. cwd default: ./<agent-name>-report-<YYYYMMDDTHHmmss>.md
  *
- * Returns null when --report is not set.
+ * @returns The resolved absolute report path, or null when --report is not set.
  *
  * @internal Exported for unit testing only.
  */
@@ -487,10 +487,10 @@ export function registerExecCommands(program: Command): void {
       'after',
       `
 Examples:
-  $ ulu exec agent code-validator ./src
-  $ ulu exec agent code-validator ./src --model sonnet --project my-project
-  $ ulu exec agent wittgenstein-analyst ./docs --report               # cwd default path
-  $ ulu exec agent wittgenstein-analyst ./docs --report -o ~/report.md
+  $ ulu exec agent code-validator -t ./src
+  $ ulu exec --project my-project agent code-validator -t ./src --model sonnet
+  $ ulu exec agent wittgenstein-analyst -t ./docs --report               # cwd default path
+  $ ulu exec agent wittgenstein-analyst -t ./docs --report -o ~/report.md
   $ ulu exec workflow ship ./src
   $ ulu exec pipeline foundations ./src
   $ ulu exec describe code-validator
