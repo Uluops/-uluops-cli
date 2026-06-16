@@ -4,6 +4,20 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.18.2] - 2026-06-15
+
+### Changed
+
+- Bump `@uluops/core` to `0.21.1` (agent-execution resilience hardening). Two behaviors surface through the CLI:
+  - **Global LLM concurrency cap.** `exec` runs now bound total in-flight LLM calls across all fan-out (workflow phases, parallel steps, inline pipeline agents) via a shared limiter in core. Tune with the `ULUOPS_MAX_CONCURRENCY` env var (default 8). This is separate from `exec agent -c/--concurrency`, which caps how many agent definitions the CLI runs in parallel, and from a workflow's per-level `max_parallel`.
+  - **maxSteps exhaustion is now explicit.** When an agent hits the `--max-steps` ceiling while still calling tools and returns no output, core throws a typed `MaxStepsExhaustedError` instead of emitting a silent low-confidence failure. The run surfaces a clear error (raise `--max-steps` or narrow the target) rather than a result indistinguishable from a crash.
+
+## [0.18.1] - 2026-06-15
+
+### Changed
+
+- Bump `@uluops/core` to `0.21.0` and `@uluops/registry-sdk` to `0.32.1` — capability-gated structured-output-with-tools (Option C) and non-destructive extraction-confidence handling (Option B). A correctly-parsed decision is no longer overwritten by a low-confidence extraction method.
+
 ## [0.18.0] - 2026-06-14
 
 ### Added
@@ -13,6 +27,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - Bump `@uluops/core` to `0.20.0` (frozen-artifact execution + caller-pinned verification).
+
+## [0.17.1] - 2026-06-11
+
+### Fixed
+
+- **`exec agent --report` fails closed for multiple agents.** `--report` writes a single human-readable report and is single-agent only; passing multiple agent names with `--report` now errors instead of silently reporting on just one (captive-user run #12, PRA-FRA/H).
+- Pin `@uluops/core` to `0.19.0` (per-model context-budget reconciliation).
+
+## [0.17.0] - 2026-06-09
+
+### Fixed
+
+- **Honest error surfacing and flag behavior** (captive-user run #11). Surface underlying error messages instead of opaque failures, document the API base URL and show which credential source is in use, and make `--report` / `--version` / `--timeout` behave as documented.
 
 ## [0.16.0] - 2026-06-09
 
