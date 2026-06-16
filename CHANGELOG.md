@@ -4,6 +4,12 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.19.1] - 2026-06-16
+
+### Dependencies
+
+- **Bumped `@uluops/ops-sdk` 3.3.0 → 3.4.0** (exact). Pulls in the CWE-20 defensive string-length ceilings on the issue-domain response schemas (`IssueResponseSchema`, `OccurrenceResponseSchema`, `IssueNoteResponseSchema`, `StatusHistoryResponseSchema`): a degenerate or malicious tracker server returning oversized fields now throws a `ZodError` at parse time instead of forcing a large heap allocation on the calling host. The CLI consumes these schemas in `issues history` picker mode and `formatIssue`, so the protection applies transparently to `ulu issues` / `ulu runs` reads. Compliant servers are unaffected. 460 tests green against 3.4.0.
+
 ## [0.19.0] - 2026-06-16
 
 ### Dependencies
