@@ -406,7 +406,8 @@ ulu issues history a1b2c3d4 --project my-project # then drill in by fingerprint
 | Flag | Values |
 |------|--------|
 | `--status` | `open`, `completed`, `deferred`, `wontfix`, `all` |
-| `--priority` | `critical`, `suggested`, `backlog`, `all` |
+| `--all` | Shorthand for `--status all` |
+| `--priority` | `critical`, `high`, `suggested`, `backlog` |
 | `--severity` | `critical`, `high`, `medium`, `low`, `info` |
 | `--agent` | Any agent name (e.g., `code-validator`) |
 | `--domain` | `STR`, `SEM`, `PRA`, `EPI` |
@@ -479,8 +480,8 @@ Workflow definition management (registry API). Alias: `def`.
 
 ```bash
 ulu definitions list              # List definitions (--type, --status, --search, --domain, --visibility, --limit, --offset)
-ulu definitions get <type> <name> [version]   # Get definition (--yaml, --rendered, --target, --render-profile, --include-runtime, -o)
-ulu definitions create <type> <name>          # Create draft (--file)
+ulu definitions get <type> <name> [version]   # Get definition (--yaml, --rendered, --target, --render-profile, --include-runtime, -m/--model, -o)
+ulu definitions create <type> <name>          # Create draft (--file, --visibility public|private)
 ulu definitions update <type> <name> <ver>    # Update draft (--file, --display-name, --description, --visibility); --change-type major|minor|patch creates a new version from a published one
 ulu definitions publish <type> <name> <ver>   # Publish definition
 ulu definitions deprecate <type> <name> <ver> # Deprecate (--reason, --successor)
@@ -508,6 +509,9 @@ ulu def get agent code-validator --rendered
 
 # Render for a specific harness (claude-code, opencode, codex, gemini-cli)
 ulu def get agent code-validator --rendered --target opencode
+
+# Render for a harness with a model-specific override
+ulu def get agent code-validator --rendered --target gemini-cli -m gemini-2.5-pro
 
 # Write rendered output to file instead of stdout
 ulu def get agent code-validator --rendered -o ./code-validator.md
@@ -786,11 +790,11 @@ ulu translation upgrade <type> <name>            # Upgrade legacy YAML (--file)
 Generate shell completion scripts.
 
 ```bash
-# Bash
-ulu completion bash >> ~/.bashrc
+# Bash — add to ~/.bashrc
+echo 'eval "$(ulu completion bash)"' >> ~/.bashrc
 
-# Zsh
-ulu completion zsh >> ~/.zshrc
+# Zsh — add to ~/.zshrc
+echo 'eval "$(ulu completion zsh)"' >> ~/.zshrc
 
 # Fish
 ulu completion fish > ~/.config/fish/completions/ulu.fish

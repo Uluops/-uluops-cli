@@ -340,7 +340,8 @@ export function resolveProject(explicit: string | undefined): string {
   if (explicit) return explicit;
 
   exitWithError(
-    'No project specified.\n' + 'Pass a project name with --project <name>.',
+    'No project specified.\n' +
+      'Pass the project name as the first argument (e.g. `ulu runs list <project>`).',
   );
 }
 

@@ -121,7 +121,7 @@ Examples:
 
   // ulu issues list [project]
   issues
-    .command('list [project]')
+    .command('list <project>')
     .description('List issues for a project (defaults to open issues)')
     .option(
       '-s, --status <status>',
@@ -131,7 +131,7 @@ Examples:
     .option('--all', 'Show all statuses (alias for --status all)')
     .option(
       '-p, --priority <priority>',
-      'Filter by priority (critical, suggested, backlog)',
+      'Filter by priority (critical, high, suggested, backlog)',
     )
     .option(
       '--severity <severity>',

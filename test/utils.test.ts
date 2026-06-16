@@ -626,7 +626,7 @@ describe('resolveProject', () => {
     resolveProject(undefined);
     expect(mockExit).toHaveBeenCalledWith(1);
     expect(mockError).toHaveBeenCalledWith(expect.stringContaining('No project specified'));
-    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('--project'));
+    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('as the first argument'));
 
     mockExit.mockRestore();
     mockError.mockRestore();

@@ -6,9 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- `runs list`/`details`/`archive`/`update` and `issues list` now declare the project as a required positional (`<project>`) instead of optional (`[project]`), so Commander reports a clear "missing required argument" error instead of falling through to a fallback message.
+
 ### Fixed
 
 - `exec` misplaced-option correction hint no longer appends a `<value>` placeholder for boolean inherited flags (e.g. `--no-tracking`, `--no-safety-warnings`); the placeholder now appears only for value-taking flags (`--project`, `--local-definitions`).
+- `resolveProject` "no project specified" error now points to the positional-argument form instead of a `--project` flag that those commands do not accept.
+- `issues list --priority` help and README now list the correct values (`critical`, `high`, `suggested`, `backlog`) — `high` was missing and the unsupported `all` was removed.
 
 ### Documentation
 
@@ -16,6 +22,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Fixed stale help-text examples: `runs details -n`, `runs save --project`, `def list --search`, and `issues close --reason` (removed the nonexistent `--status` flag).
 - Documented previously-undocumented surfaces: `--json-envelope`, `ULUOPS_PROJECT`, `ULUOPS_MAX_CONCURRENCY`, `definitions update` options (`--change-type`, `--visibility`, `--display-name`, `--description`), `runs details -n`, `runs archive --before-date`, and `definitions list` filters (`--domain`, `--limit`, `--offset`).
 - Clarified that `runs validate` previews against the live tracker and requires auth; added `ANTHROPIC_API_KEY` to the Quick Start at point of use.
+- Documented `def get -m/--model`, `definitions create --visibility`, and the `issues list --all` shorthand; added a model-targeted render example.
+- Shell-completion setup now uses `eval "$(ulu completion <shell>)"`, matching the tool's own `--help` and generated-script guidance.
 
 ## [0.18.3] - 2026-06-15
 

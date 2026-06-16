@@ -67,7 +67,7 @@ Examples:
 
   // ulu runs list [project]
   runs
-    .command('list [project]')
+    .command('list <project>')
     .description('List runs for a project')
     .option('-w, --workflow <type>', 'Filter by workflow type')
     .option('-l, --limit <number>', 'Maximum number of runs to return', '20')
@@ -156,7 +156,7 @@ Examples:
 
   // ulu runs details [project]
   runs
-    .command('details [project]')
+    .command('details <project>')
     .description(
       'Get detailed run information including agents and recommendations',
     )
@@ -479,7 +479,7 @@ Examples:
 
   // ulu runs archive [project]
   runs
-    .command('archive [project]')
+    .command('archive <project>')
     .description('Archive old runs')
     .option('--before-run <number>', 'Archive runs before this run number')
     .option(
@@ -533,7 +533,7 @@ Examples:
 
   // ulu runs update [project]
   runs
-    .command('update [project]')
+    .command('update <project>')
     .description(
       'Update run metadata (scores, tokens) by project and run number',
     )
