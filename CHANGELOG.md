@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [0.19.0] - 2026-06-16
 
+### Dependencies
+
+- **Bumped `@uluops/core` 0.22.1 → 0.22.7, `@uluops/registry-sdk` 0.32.1 → 0.35.0, `@uluops/ops-sdk` 3.2.1 → 3.3.0** (all exact). Pulls in the registry-sdk `ResponseValidationError` + safety/`riskProfile`/`RetranslateResult` root exports, and the sdk-core 0.13.0 runtime fixes (`retries: 0` makes one attempt with a typed error; actionable 401 with the server reason preserved; `isApiKey()` enforces minimum length) — all via the upgraded core/SDK chain. 460 tests green against the new versions.
+
 ### Added
 
 - **`ulu exec describe ... --version <v>` now fails closed** instead of silently printing the CLI version and exiting 0. Commander's program-level `-V/--version` is an immediate option that fires during parse (before any subcommand action or preAction hook), so a captive CI script that hardcoded `--version` against `describe` got the CLI version string + exit 0 rather than resolving the definition version. A pre-parse argv guard now detects this shadow and errors (exit 2) with a pointer to `--def-version` (or the `<name>@<version>` suffix). Bare `ulu --version` is untouched.
