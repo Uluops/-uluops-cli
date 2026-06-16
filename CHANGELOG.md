@@ -4,6 +4,19 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- `exec` misplaced-option correction hint no longer appends a `<value>` placeholder for boolean inherited flags (e.g. `--no-tracking`, `--no-safety-warnings`); the placeholder now appears only for value-taking flags (`--project`, `--local-definitions`).
+
+### Documentation
+
+- Corrected all `exec` examples (README and command help) for the v0.16.0 argument-order change — parent options (`--project`, `--no-tracking`, `--local-definitions`) now appear before the subcommand.
+- Fixed stale help-text examples: `runs details -n`, `runs save --project`, `def list --search`, and `issues close --reason` (removed the nonexistent `--status` flag).
+- Documented previously-undocumented surfaces: `--json-envelope`, `ULUOPS_PROJECT`, `ULUOPS_MAX_CONCURRENCY`, `definitions update` options (`--change-type`, `--visibility`, `--display-name`, `--description`), `runs details -n`, `runs archive --before-date`, and `definitions list` filters (`--domain`, `--limit`, `--offset`).
+- Clarified that `runs validate` previews against the live tracker and requires auth; added `ANTHROPIC_API_KEY` to the Quick Start at point of use.
+
 ## [0.18.3] - 2026-06-15
 
 ### Added

@@ -130,6 +130,13 @@ const INHERITED_EXEC_FLAGS = [
   '--no-safety-warnings',
 ];
 
+/** Subset of inherited exec flags that take a value (the rest are booleans). */
+const VALUE_TAKING_INHERITED_FLAGS = new Set([
+  '--project',
+  '--local-definitions',
+  '--registry-url',
+]);
+
 /** exec subcommands — used to locate where inherited options stop being valid. */
 const EXEC_SUBCOMMANDS = [
   'run',
@@ -211,8 +218,12 @@ export function guardInheritedOptionOrder(argv: string[] = process.argv): void {
       `subcommand — they are options of \`ulu exec\`, not the subcommand, so ` +
       `placed after it they are silently ignored.`,
   );
+  const firstFlag = offending[0]!;
+  const placeholder = VALUE_TAKING_INHERITED_FLAGS.has(firstFlag)
+    ? ' <value>'
+    : '';
   console.error(
-    `  Correct order:  ulu exec ${offending[0]} <value> <subcommand> [args]`,
+    `  Correct order:  ulu exec ${firstFlag}${placeholder} <subcommand> [args]`,
   );
   process.exit(1);
 }

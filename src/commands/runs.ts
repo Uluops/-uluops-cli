@@ -60,8 +60,8 @@ Examples:
   $ ulu runs list ops-sdk
   $ ulu runs latest ops-sdk
   $ ulu runs get abc12345
-  $ ulu runs details ops-sdk --run-number 42
-  $ ulu runs save ops-sdk --file results.json
+  $ ulu runs details ops-sdk -n 42
+  $ ulu runs save --file results.json --project ops-sdk
 `,
     );
 
@@ -262,6 +262,12 @@ Examples:
         }
         if (!Array.isArray(input.agents)) {
           exitWithError('Missing required field: agents (must be an array)');
+        }
+        // A run with no findings is valid — default to an empty list rather than
+        // failing server-side validation with an opaque "expected array,
+        // received undefined" error.
+        if (input.recommendations === undefined) {
+          input.recommendations = [];
         }
 
         const result = await withSpinner(

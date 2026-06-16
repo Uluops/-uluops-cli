@@ -115,7 +115,7 @@ Examples:
   $ ulu issues list ops-sdk
   $ ulu issues list ops-sdk --status open --domain EPI
   $ ulu issues get abc12345-...
-  $ ulu issues close abc12345-... --status completed --reason "Fixed in v2"
+  $ ulu issues close abc12345-... --reason "Fixed in v2"
 `,
     );
 

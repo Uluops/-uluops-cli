@@ -137,7 +137,8 @@ function requireCredentials(present: boolean, profile: string): void {
   exitWithError(
     'No credentials found.\n' +
       'Set ULUOPS_API_KEY environment variable, use --api-key flag,\n' +
-      'or run "ulu auth login" to authenticate.',
+      'or run "ulu auth login" to authenticate.\n' +
+      'New here? Run "ulu auth register" to create an account.',
   );
 }
 

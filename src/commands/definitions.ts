@@ -38,7 +38,7 @@ Examples:
   $ ulu def get agent code-validator --rendered --target opencode
   $ ulu def get agent code-validator --rendered --target gemini -m gemini-2.5-pro
   $ ulu def publish agent code-validator 1.2.0
-  $ ulu def search "security" --type agent
+  $ ulu def list --search "security" --type agent
 `,
     );
 

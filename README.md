@@ -25,6 +25,7 @@ export ULUOPS_API_KEY=ulr_your-api-key-here
 # Create a project and save a validation run
 ulu projects create my-project
 ulu runs save --file results.json
+# → Run #1 saved for my-project (3 agents, 12 recommendations)
 
 # Browse issues
 ulu issues list my-project --status open --priority critical
@@ -32,8 +33,11 @@ ulu issues list my-project --status open --priority critical
 # Check analytics
 ulu analytics burndown --project my-project --days 30
 
-# Run a validator agent
-ulu exec agent code-validator -t ./src --model sonnet --project my-project
+# Run a validator agent (requires ANTHROPIC_API_KEY; parent options like
+# --project come BEFORE the subcommand)
+export ANTHROPIC_API_KEY=sk-ant-your-key-here
+ulu exec --project my-project agent code-validator -t ./src --model sonnet
+# → code-validator: PASS (score 92) — results tracked under my-project
 ```
 
 ## Table of Contents
@@ -151,11 +155,12 @@ The CLI resolves credentials in this order:
 
 Every command accepts these flags:
 
-```
+```text
 --api-key <key>      Override API key (env: ULUOPS_API_KEY)
 --profile <name>     Config profile to use (default: 'default')
 --timeout <ms>       Request timeout in milliseconds (default: 30000 for ops/registry, 600000 for exec)
 --json               Output raw JSON for scripting
+--json-envelope      Wrap --json output in the versioned stability envelope (same as ULU_JSON_SCHEMA=1)
 --debug              Enable debug output
 -q, --quiet          Suppress spinners and non-essential output
 -V, --version        Show CLI version
@@ -247,11 +252,11 @@ Validation run management — save, compare, and archive pipeline results. Alias
 ulu runs list <project>           # List runs (--workflow, --limit)
 ulu runs get <runId>              # Get run by UUID
 ulu runs latest <project>         # Get latest run (--workflow)
-ulu runs details <project>        # Detailed run with agents/recommendations
+ulu runs details <project>        # Detailed run with agents/recommendations (-n for a specific run number)
 ulu runs save                     # Save run from JSON (--file or --stdin)
-ulu runs validate                 # Dry run — preview without saving
+ulu runs validate                 # Dry run — preview against the live tracker (requires auth)
 ulu runs diff <project>           # Compare two runs (--base, --compare)
-ulu runs archive <project>        # Archive old runs (--before-run, --keep-last)
+ulu runs archive <project>        # Archive old runs (--before-run, --before-date, --keep-last)
 ulu runs update <project>         # Update run metadata (--number, --score, --file)
 ulu runs delete <runId>           # Delete a run
 ```
@@ -460,10 +465,10 @@ Displays the four failure domains (STR, SEM, PRA, EPI), their failure modes, sev
 Workflow definition management (registry API). Alias: `def`.
 
 ```bash
-ulu definitions list              # List definitions (--type, --status, --search)
+ulu definitions list              # List definitions (--type, --status, --search, --domain, --limit, --offset)
 ulu definitions get <type> <name> [version]   # Get definition (--yaml, --rendered, --target, -o)
 ulu definitions create <type> <name>          # Create draft (--file)
-ulu definitions update <type> <name> <ver>    # Update draft (--file)
+ulu definitions update <type> <name> <ver>    # Update draft (--file, --display-name, --description, --visibility); --change-type major|minor|patch creates a new version from a published one
 ulu definitions publish <type> <name> <ver>   # Publish definition
 ulu definitions deprecate <type> <name> <ver> # Deprecate (--reason, --successor)
 ulu definitions validate [type]               # Validate YAML (--file, type auto-detected)
@@ -616,7 +621,7 @@ ulu exec command my-command ./src
 ulu exec workflow post-implementation ./
 
 # Execute a multi-stage pipeline
-ulu exec pipeline foundations ./ --project my-project
+ulu exec --project my-project pipeline foundations ./
 
 # List available definitions
 ulu exec list                          # All definitions
@@ -697,7 +702,7 @@ ulu exec describe --type pipeline                       # No name + --type → f
 
 ```bash
 # Run code-validator with a specific model
-ulu exec agent code-validator -t . --model sonnet --project my-project
+ulu exec --project my-project agent code-validator -t . --model sonnet
 
 # Generator: tell the agent what to create
 ulu exec agent aristotle-generator -t ./src \
@@ -708,9 +713,8 @@ ulu exec agent security-analyst -t ./src \
   -p "Focus on the authentication middleware and JWT handling"
 
 # Use local definitions instead of registry
-ulu exec agent my-validator -t ./src \
-  --local-definitions ./agent-defs \
-  --project my-project
+ulu exec --project my-project --local-definitions ./agent-defs \
+  agent my-validator -t ./src
 
 # Produce a publication-quality report (cwd default destination)
 ulu exec agent wittgenstein-analyst -t ./docs --report
@@ -719,7 +723,7 @@ ulu exec agent wittgenstein-analyst -t ./docs --report
 ulu exec agent wittgenstein-analyst -t ./docs --report -o ~/my-report.md
 
 # Execute without tracking results
-ulu exec workflow ship ./packages/api --no-tracking
+ulu exec --no-tracking workflow ship ./packages/api
 
 # Inspect what a definition expects
 ulu exec describe code-validator
@@ -858,12 +862,13 @@ through the single `emitJson()` chokepoint. To change an output shape you must:
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `ULUOPS_API_KEY` | API key for authentication | - |
+| `ULUOPS_PROJECT` | Project name for `ulu exec` result tracking when `--project` is not passed (useful in CI) | - |
 | `ULUOPS_EMAIL` | Email for session auth | - |
 | `ULUOPS_PASSWORD` | Password for session auth | - |
-| `ULUOPS_BASE_URL` | API base URL (overrides the built-in default) | `https://api.uluops.ai/api/v1` (production); `http://localhost:3100/api/v1` only when `NODE_ENV=development` |
 | `ULUOPS_DEBUG` | Enable debug logging (also expands the global unhandled-error handler's output) | `false` |
 | `ULU_JSON_SCHEMA` | Set to `1` to wrap `--json` output in the versioned stability envelope | - |
 | `ANTHROPIC_API_KEY` | API key for AI model execution (required for `ulu exec` commands) | - |
+| `ULUOPS_MAX_CONCURRENCY` | Engine-wide cap on concurrent in-flight LLM calls for `ulu exec` (distinct from `exec agent -c/--concurrency`); honored by `@uluops/core` | `8` |
 | `ULUOPS_THINKING_BUDGET` | Token budget for extended thinking (optional) | - |
 
 Create a `.env` file in your project directory:
