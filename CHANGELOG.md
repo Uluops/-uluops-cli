@@ -4,11 +4,12 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## [Unreleased]
+## [0.18.4] - 2026-06-16
 
 ### Changed
 
 - `runs list`/`details`/`archive`/`update` and `issues list` now declare the project as a required positional (`<project>`) instead of optional (`[project]`), so Commander reports a clear "missing required argument" error instead of falling through to a fallback message.
+- Bumped `@uluops/core` to `0.22.1`.
 
 ### Fixed
 
