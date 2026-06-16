@@ -304,6 +304,44 @@ describe('issues history', () => {
     output.restore();
   });
 
+  it('picker mode: --json emits a bare, sorted issue array (stability anchor — kind issue.historyList)', async () => {
+    // Picker --json (kind `issue.historyList`) is a distinct frozen surface from
+    // the `issue.history` envelope above. Without this anchor a regression that
+    // wrapped it in an object, or dropped the DESC-by-updatedAt sort, would pass
+    // silently. Pinning the bare-array shape + order makes the contract checked.
+    mockedCreateOpsContext.mockReturnValue(
+      createMockOpsContext({
+        client: mockClient as unknown as OpsCliContext['client'],
+        json: true,
+      }),
+    );
+    mockClient.issues.listByProject.mockResolvedValue([
+      createIssue({
+        title: 'Older issue',
+        fingerprint: 'aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111aaaa1111',
+        status: 'open',
+        updatedAt: '2026-06-05T10:00:00Z',
+      }),
+      createIssue({
+        title: 'Newer issue',
+        fingerprint: 'bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222bbbb2222',
+        status: 'completed',
+        updatedAt: '2026-06-08T15:00:00Z',
+      }),
+    ]);
+    const output = captureOutput();
+    await parse('issues', 'history', '--project', 'uluops-plans');
+    const parsed = JSON.parse(output.stdout()) as Array<Record<string, unknown>>;
+    // Bare array, NOT a wrapped object.
+    expect(Array.isArray(parsed)).toBe(true);
+    expect(parsed).toHaveLength(2);
+    // Sorted DESC by updatedAt — newer first.
+    expect(parsed[0]).toMatchObject({ title: 'Newer issue', status: 'completed' });
+    expect(parsed[1]).toMatchObject({ title: 'Older issue', status: 'open' });
+    expect(mockClient.issues.getHistory).not.toHaveBeenCalled();
+    output.restore();
+  });
+
   it('errors when no arg and no --project', async () => {
     const output = captureOutput();
     await parse('issues', 'history');

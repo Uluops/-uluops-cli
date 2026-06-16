@@ -229,6 +229,50 @@ export function guardInheritedOptionOrder(argv: string[] = process.argv): void {
 }
 
 /**
+ * Fail closed on the `--version` shadow trap.
+ *
+ * Commander's program-level -V/--version is an "immediate" option: encountered
+ * anywhere in argv it prints the CLI version and exits 0 — BEFORE any subcommand
+ * action or preAction hook runs (so this cannot live in a preAction hook like
+ * guardInheritedOptionOrder; it must scan raw argv before program.parse()).
+ *
+ * `exec describe` resolves a definition version via --def-version precisely
+ * because a bare --version would be shadowed. A captive CI script that hardcoded
+ * `exec describe <name> --version <v>` therefore silently prints the CLI version
+ * and exits 0 instead of resolving the definition — silent wrong output for a
+ * write-once caller. We cannot remove the global flag without breaking
+ * `ulu --version`, so we detect the shadowed misuse here and error with a pointer
+ * to --def-version. Bare `ulu --version` / `ulu -V` (no `exec describe`) is
+ * untouched, and the `name@version` suffix form remains the shadow-proof path.
+ */
+export function guardShadowedVersionFlag(argv: string[] = process.argv): void {
+  const execIdx = argv.findIndex((a) => a === 'exec' || a === 'x');
+  if (execIdx === -1) return;
+  // `describe` is the only exec subcommand that defines --def-version today.
+  const describeIdx = argv.indexOf('describe', execIdx + 1);
+  if (describeIdx === -1) return;
+  const versionIdx = argv.findIndex(
+    (a, i) =>
+      i > describeIdx && (a === '--version' || a.startsWith('--version=')),
+  );
+  if (versionIdx === -1) return;
+  const tok = argv[versionIdx]!;
+  const eq = tok.indexOf('=');
+  const value = eq !== -1 ? tok.slice(eq + 1) : (argv[versionIdx + 1] ?? '');
+  const suggestion =
+    value && !value.startsWith('-') ? ` ${value}` : ' <version>';
+  console.error(
+    `'--version' is the global CLI version flag and is shadowed here — ` +
+      '`ulu exec describe` takes the definition version via --def-version ' +
+      '(or the <name>@<version> suffix), not --version.',
+  );
+  console.error(
+    `  Did you mean:  ulu exec describe <name> --def-version${suggestion}`,
+  );
+  process.exit(2);
+}
+
+/**
  * Help text shown on every exec subcommand so users discover options that
  * Commander would otherwise hide because they're declared on the parent
  * `exec` command. Without this, `ulu exec agent --help` looks like agents
@@ -583,9 +627,9 @@ Examples:
     .option(
       '--exec-timeout <ms>',
       'Execution timeout in ms for this run. Overrides the --timeout ceiling: ' +
-        'in exec, --timeout sets the default execution timeout (600s); for ' +
+        'in exec, --timeout sets the default execution timeout (600s/10min); for ' +
         'ops/registry commands --timeout is the 30s HTTP timeout instead. ' +
-        'Precedence: --exec-timeout > definition default > --timeout > 5m SDK fallback.',
+        'Precedence: --exec-timeout > definition default > --timeout (default 600s/10min).',
     )
     .option('--threshold-pass <n>', 'Pass threshold score (agents)')
     .option('--threshold-warn <n>', 'Warning threshold score (agents)')
@@ -604,9 +648,9 @@ Examples:
     .option(
       '--report [path]',
       'Write a human-readable report to file (single agent only). ' +
-        'Mutually exclusive with tracker submission: report mode disables the ' +
-        'structured-output enforcement that tracking requires, so --report runs ' +
-        'do not produce a tracker record. ' +
+        'Disables tracker submission (implies --no-tracking): report mode turns ' +
+        'off the structured-output enforcement that tracking requires, so a ' +
+        '--report run produces no tracker record even if --project is set. ' +
         'If no path is given, defaults to ./<agent-name>-report-<timestamp>.md in cwd. ' +
         'Use -o/--output to override the destination explicitly.',
     )
@@ -669,11 +713,12 @@ Examples:
             prompt,
             reportRequested,
           );
-          // Report mode and tracking are mutually exclusive: report mode signals
-          // the executor to disable structured-output enforcement, which tracker
-          // submission requires. Report mode wins, so --report forces no-tracking.
-          // See agent-reporting-spec-v0_1_1.md Phase 2 Formal Cause #2 and
-          // Phase 4.4 for the rationale.
+          // Report mode disables tracking — this is asymmetric precedence, not a
+          // symmetric mutual-exclusion guard: report mode signals the executor to
+          // disable structured-output enforcement, which tracker submission
+          // requires, so --report silently wins and forces no-tracking (no hard
+          // error even if --project is also passed). See
+          // agent-reporting-spec-v0_1_1.md Phase 2 Formal Cause #2 and Phase 4.4.
           let effectiveExecOpts: ExecutionOptions | undefined = execOpts;
           if (reportRequested) {
             effectiveExecOpts = {
@@ -681,7 +726,15 @@ Examples:
               reportMode: true,
               trackResults: false,
             };
-            if (!ctx.quiet) {
+            // The disclosure that makes the asymmetry honest must survive -q in
+            // exactly the case where it matters most: the CI shape
+            // `--report --project X -q`, where the caller expressed tracking
+            // intent (explicit --project or ULUOPS_PROJECT) yet report silently
+            // wins. Otherwise it gets neither a tracker record nor a notice.
+            const trackingIntent =
+              Boolean(options.project) ||
+              Boolean(process.env['ULUOPS_PROJECT']);
+            if (!ctx.quiet || trackingIntent) {
               console.error(
                 'Report mode enabled — tracking disabled. ' +
                   'For tracker submission, run without --report.',

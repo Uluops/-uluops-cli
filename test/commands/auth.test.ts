@@ -115,6 +115,44 @@ describe('auth whoami', () => {
     expect(output.stdout()).toContain('Username: testuser');
     output.restore();
   });
+
+  it('labels credential source as inferred, not authoritative', async () => {
+    mockClient.auth.getMe.mockResolvedValue({
+      email: 'user@example.com',
+      role: 'developer',
+      subscriptionTier: 'pro',
+    });
+    const output = captureOutput();
+    await parse('auth', 'whoami');
+    expect(output.stdout()).toContain('Credential Source (inferred):');
+    output.restore();
+  });
+
+  it('emits the inferred credential source to stderr in --json mode, leaving stdout frozen', async () => {
+    // The global --json flag is not registered on the bare test harness program,
+    // so drive json mode through the context mock (quiet:false so the stderr
+    // diagnostic is not muted).
+    mockedCreateOpsContext.mockReturnValue(
+      createMockOpsContext({
+        client: mockClient as unknown as OpsCliContext['client'],
+        json: true,
+        quiet: false,
+      }),
+    );
+    mockClient.auth.getMe.mockResolvedValue({
+      email: 'user@example.com',
+      role: 'developer',
+      subscriptionTier: 'pro',
+    });
+    const output = captureOutput();
+    await parse('auth', 'whoami');
+    // Frozen stdout contract: the source must NOT appear in the JSON payload.
+    expect(output.stdout()).not.toContain('Credential Source');
+    expect(output.stdout()).not.toContain('inferred');
+    // But it IS available to a CI debugger in the same invocation, on stderr.
+    expect(output.stderr()).toContain('Credential Source (inferred):');
+    output.restore();
+  });
 });
 
 describe('auth api-keys list', () => {

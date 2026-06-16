@@ -19,20 +19,28 @@ import {
 } from '../utils.js';
 
 /**
- * Resolve which credential SOURCE the SDK used, by mirroring the exact
- * precedence ladder in @uluops/sdk-core loadCredentials (explicit flag > env
- * vars > stored profile). Returns a human-readable LABEL only — never the
- * credential value — matching the codebase's no-secret-leak discipline
- * (sdk-core's loader deliberately avoids echoing credential-file content).
+ * INFER which credential source the precedence resolution would select, by
+ * re-deriving the same ladder @uluops/sdk-core loadCredentials uses (explicit
+ * flag > env vars > stored profile). This is an INFERENCE, not an observation:
+ * loadCredentials returns the resolved credential but NOT which tier it came
+ * from, so this label is reconstructed from globalOpts + env and is never
+ * reported by the SDK. It is surfaced to users as "Credential Source (inferred)"
+ * precisely so it is not mistaken for an authoritative SDK readout. Returns a
+ * human-readable LABEL only — never the credential value — matching the
+ * codebase's no-secret-leak discipline (sdk-core's loader deliberately avoids
+ * echoing credential-file content).
  *
  * `.env` files are loaded into process.env at startup (loadEnvFiles), so a
  * credential set via .env is reported as an environment variable — there is no
  * separate ".env" tier to distinguish at this layer.
  *
- * This MIRRORS sdk-core; if that precedence changes, update both. Each tier is
- * pinned by a unit test. Only reached after createOpsContext has confirmed
- * credentials resolved (requireCredentials exits otherwise), so the final
- * else-branch is necessarily the stored profile.
+ * Because this MIRRORS sdk-core rather than observing it, a precedence change in
+ * sdk-core that is not mirrored here will make the inferred label drift — the
+ * "(inferred)" qualifier is what keeps that honest until/unless loadCredentials
+ * is taught to report its resolved source. Each tier is pinned by a unit test.
+ * Only reached after createOpsContext has confirmed credentials resolved
+ * (requireCredentials exits otherwise), so the final else-branch is necessarily
+ * the stored profile.
  *
  * @internal Exported for unit testing only.
  */
@@ -323,10 +331,19 @@ Examples:
         );
 
         if (ctx.json) {
-          // Default --json shape is a frozen public contract (README JSON
-          // Output Stability) — do NOT add credentialSource here. The source
-          // label is a human-readable convenience only.
+          // The default --json shape is a frozen public contract (README JSON
+          // Output Stability) — adding a field to it is a breaking change, so
+          // credentialSource is deliberately NOT in the stdout payload. But the
+          // most-captive population (CI debugging which identity authenticated)
+          // needs the source without a second non-JSON invocation, so emit the
+          // inferred label to STDERR: it reaches the debugging caller in the same
+          // run while leaving the frozen stdout bytes a parser pins untouched.
           emitJson(ctx, user, 'auth.whoami');
+          if (!ctx.quiet) {
+            console.error(
+              `Credential Source (inferred): ${resolveCredentialSource(globalOpts)}`,
+            );
+          }
         } else {
           console.log(`Email: ${user.email}`);
           console.log(`Role: ${user.role}`);
@@ -335,7 +352,7 @@ Examples:
           if (user.name) console.log(`Name: ${user.name}`);
           console.log(`Auth Type: ${ctx.client.getAuthType()}`);
           console.log(
-            `Credential Source: ${resolveCredentialSource(globalOpts)}`,
+            `Credential Source (inferred): ${resolveCredentialSource(globalOpts)}`,
           );
         }
       } catch (error) {

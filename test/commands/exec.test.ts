@@ -20,6 +20,7 @@ import {
   applyReportModeDirective,
   confirmInferredProjectOrExit,
   guardInheritedOptionOrder,
+  guardShadowedVersionFlag,
   REPORT_MODE_DIRECTIVE,
 } from '../../src/commands/exec.js';
 import type { GlobalOptions, CoreExecOptions } from '../../src/context.js';
@@ -444,6 +445,40 @@ describe('guardInheritedOptionOrder', () => {
   });
 });
 
+// ── --version shadow guard (PRA-FRA/M #1bce7152) ──────────────────────────
+
+describe('guardShadowedVersionFlag', () => {
+  it('errors (exit 2) on `exec describe <name> --version <v>` and points to --def-version', () => {
+    const argv = ['node', 'ulu', 'exec', 'describe', 'foo', '--version', '2.1.0'];
+    expect(() => guardShadowedVersionFlag(argv)).toThrow('process.exit(2)');
+    expect(output.stderr()).toContain('shadowed');
+    expect(output.stderr()).toContain('--def-version 2.1.0');
+  });
+
+  it('handles the --version=<v> form', () => {
+    const argv = ['node', 'ulu', 'exec', 'describe', 'foo', '--version=2.1.0'];
+    expect(() => guardShadowedVersionFlag(argv)).toThrow('process.exit(2)');
+    expect(output.stderr()).toContain('--def-version 2.1.0');
+  });
+
+  it('does not fire for bare `ulu --version` (no exec describe)', () => {
+    expect(() =>
+      guardShadowedVersionFlag(['node', 'ulu', '--version']),
+    ).not.toThrow();
+  });
+
+  it('does not fire when --def-version is used correctly', () => {
+    const argv = ['node', 'ulu', 'exec', 'describe', 'foo', '--def-version', '2.1.0'];
+    expect(() => guardShadowedVersionFlag(argv)).not.toThrow();
+  });
+
+  it('is a no-op for other exec subcommands', () => {
+    expect(() =>
+      guardShadowedVersionFlag(['node', 'ulu', 'exec', 'agent', 'foo', '--version']),
+    ).not.toThrow();
+  });
+});
+
 // ── exec list ────────────────────────────────────────────────────────────
 
 describe('exec list', () => {
@@ -842,10 +877,12 @@ describe('--report forces reportMode + no-tracking (v0.1.1)', () => {
     expect(output.stderr()).not.toContain('Report mode enabled');
   });
 
-  it('--report with ctx.quiet=true → notice suppressed but flags still forced', async () => {
+  it('--report with ctx.quiet=true and NO tracking intent → notice suppressed but flags still forced', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
     // ctx.quiet=true (the default in this suite's beforeEach) gates the notice
-    // off without affecting the underlying flag mutation.
+    // off when there is no tracking intent to disclose against. Remove the
+    // suite-default ULUOPS_PROJECT so trackingIntent is false.
+    delete process.env['ULUOPS_PROJECT'];
     await parse('exec', 'agent', '-t', './src', 'wittgenstein-analyst', '--report');
 
     expect(mockClient.runAgent).toHaveBeenCalledWith(
@@ -854,6 +891,24 @@ describe('--report forces reportMode + no-tracking (v0.1.1)', () => {
       expect.objectContaining({ reportMode: true, trackResults: false }),
     );
     expect(output.stderr()).not.toContain('Report mode enabled');
+  });
+
+  it('--report with ctx.quiet=true but tracking intent (ULUOPS_PROJECT set) → notice SURVIVES -q', async () => {
+    mockClient.runAgent.mockResolvedValue(createAgentResult());
+    // The CI shape `--report --project X -q`: the caller expressed tracking
+    // intent (here via the suite-default ULUOPS_PROJECT='test-proj'), yet report
+    // mode silently wins. The disclosure that makes the asymmetry honest must
+    // survive -q in exactly this case — otherwise the run gets neither a tracker
+    // record nor a notice.
+    await parse('exec', 'agent', '-t', './src', 'wittgenstein-analyst', '--report');
+
+    expect(mockClient.runAgent).toHaveBeenCalledWith(
+      'wittgenstein-analyst',
+      expect.anything(),
+      expect.objectContaining({ reportMode: true, trackResults: false }),
+    );
+    expect(output.stderr()).toContain('Report mode enabled');
+    expect(output.stderr()).toContain('tracking disabled');
   });
 
   it('--report with multiple agents → hard error (exit 1), nothing runs', async () => {

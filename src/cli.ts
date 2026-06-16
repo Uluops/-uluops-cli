@@ -11,7 +11,10 @@ import { registerCompletionCommands } from './commands/completion.js';
 import { registerDefinitionCommands } from './commands/definitions.js';
 import { registerDepsCommands } from './commands/deps.js';
 // Core SDK commands
-import { registerExecCommands } from './commands/exec.js';
+import {
+  guardShadowedVersionFlag,
+  registerExecCommands,
+} from './commands/exec.js';
 import { registerExecutionCommands } from './commands/executions.js';
 import { registerForkCommands } from './commands/forks.js';
 import { registerIssueCommands } from './commands/issues.js';
@@ -124,6 +127,11 @@ registerCompletionCommands(program);
 program.action(() => {
   program.help();
 });
+
+// Catch the `--version` shadow trap before Commander's immediate version
+// handler fires during parse (`exec describe ... --version <v>` would otherwise
+// silently print the CLI version and exit 0).
+guardShadowedVersionFlag();
 
 // Parse and execute
 program.parse();

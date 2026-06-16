@@ -418,6 +418,16 @@ Examples:
       'Picker mode: max issues to list. Server returns by priority then recency, so the picker biases toward critical/high issues with recent activity.',
       '20',
     )
+    .addHelpText(
+      'after',
+      `
+Examples:
+  $ ulu issues history --project ops-sdk            # picker: recent issues to pick from
+  $ ulu issues history 1a2b3c4d --project ops-sdk   # resolve fingerprint prefix, then show timeline
+  $ ulu issues history <issue-uuid>                 # show timeline directly by id
+  $ ulu issues history --project ops-sdk --json     # picker list as JSON (kind: issue.historyList)
+`,
+    )
     .action(async (idOrFingerprint: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
@@ -426,7 +436,9 @@ Examples:
         // Picker mode: --project alone, no positional → list recent issues.
         if (!idOrFingerprint && options.project) {
           const limit = parseIntOption(options.limit, '--limit');
-          const issues = await withSpinner(
+          // Named recentIssues (not `issues`) to avoid shadowing the outer
+          // `issues` command builder declared at the top of this function.
+          const recentIssues = await withSpinner(
             ctx,
             {
               start: 'Fetching recent activity...',
@@ -439,7 +451,7 @@ Examples:
                 limit,
               }),
           );
-          const sorted = [...issues].sort(
+          const sorted = [...recentIssues].sort(
             (a, b) =>
               new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(),
           );

@@ -4,6 +4,30 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.19.0] - 2026-06-16
+
+### Added
+
+- **`ulu exec describe ... --version <v>` now fails closed** instead of silently printing the CLI version and exiting 0. Commander's program-level `-V/--version` is an immediate option that fires during parse (before any subcommand action or preAction hook), so a captive CI script that hardcoded `--version` against `describe` got the CLI version string + exit 0 rather than resolving the definition version. A pre-parse argv guard now detects this shadow and errors (exit 2) with a pointer to `--def-version` (or the `<name>@<version>` suffix). Bare `ulu --version` is untouched.
+- **`ulu auth whoami --json` now emits the inferred credential source to stderr.** The default `--json` stdout shape stays frozen (adding a field is a breaking change under the JSON Output Stability Contract), but the most-captive population — CI debugging which identity authenticated — gets the source in the same invocation via stderr instead of being forced into a second non-JSON call.
+
+### Changed
+
+- **`auth whoami` credential-source label is now "Credential Source (inferred)"** (was "Credential Source"). The label is re-derived from flags/env by mirroring sdk-core's precedence ladder, not reported by the SDK; the "(inferred)" qualifier makes that honest and prevents the label from reading as an authoritative readout that could silently drift if sdk-core's precedence changes.
+- **`exec --report` wording corrected from "mutually exclusive" to "disables tracker submission."** The relationship is asymmetric (report mode silently wins and forces no-tracking, with no hard-error guard even when `--project` is set), not a symmetric mutual-exclusion. README, option help, and the inline comment are reconciled.
+- **The "Report mode enabled — tracking disabled" notice now survives `-q`** when tracking intent is explicit (`--project` or `ULUOPS_PROJECT`). Previously `--report --project X -q` (the CI shape) got neither a tracker record nor the disclosure that explains why.
+- **`--exec-timeout` help corrected**: removed the unreachable/mislabeled "5m SDK fallback" precedence tier (exec's `--timeout` always provides a 600s/10min default, so the fallback can never be reached). Precedence now reads `--exec-timeout > definition default > --timeout (default 600s/10min)`.
+- **`ulu issues history` now ships an examples help block** (`--help`), matching the other `issues` subcommands.
+
+### Fixed
+
+- Picker-mode `--json` output (`ulu issues history --project <slug>`, kind `issue.historyList`) now has a contract-anchor test pinning its bare-array shape and DESC-by-`updatedAt` sort.
+
+### Internal
+
+- Renamed a shadowing `issues` local in the history picker action to `recentIssues` (was shadowing the outer `issues` command builder).
+- Test suite 460 cases (was 454): +2 whoami (inferred label + stderr-in-json), +5 `--version` shadow guard, +1 picker-`--json` anchor, report-notice test split into intent/no-intent paths.
+
 ## [0.18.4] - 2026-06-16
 
 ### Changed
@@ -256,9 +280,6 @@ Suite 414 → 417.  Build + typecheck + lint clean.
   - `note` events with note type, author, and a truncated content body
   A `⚠ Truncated to most recent N of M events` warning surfaces when the server applies the 1000-event ceiling.
 - **BREAKING (JSON output):** `--json ulu issues history` now emits the `IssueHistoryEnvelope` shape (`{issueId, events, totalEvents, truncated}`) instead of a flat `StatusHistory[]`. Scripts consuming `result[0]` or `Array.isArray(result)` need to switch to `result.events`. The bare-array shape was lossy on F10 (occurrences + notes were dropped on the server side, then undo destroyed status rows) so most real consumers were already getting `[]` before the fix landed.
-
-### Changed
-
 - **`ulu deps get` / `ulu deps dependents` now render the real envelope shapes** (live-tests T2 §3.5, R12). registry-sdk v0.31.0 fixed both endpoints to return real structured graphs/lists instead of the silent `{}` they used to parse to. The CLI used to defend against the broken contract with `data.nodes ?? data.flat ?? []` fallbacks; that scaffolding is gone. `deps get` now prints a flat indented list by default (each line tagged with its `(depth N)`) and accepts `--tree` to render the recursive graph as an indented tree with `[context]` labels per edge (`[invokes.agent]`, `[stage "Final Checks"]`, `[dependencies.requires]`, etc). `deps dependents` now shows `← context` arrows so operators can see which reference type each consumer uses.
 - Removed: the unused `cycleDetected` / `cycles` warning — the registry API never tracked those.
 
