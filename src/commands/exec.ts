@@ -539,7 +539,7 @@ Examples:
           if (ctx.json) {
             emitJson(ctx, result, 'exec.run');
           } else if (result.type === 'agent') {
-            console.log(formatAgentResult(result));
+            console.log(formatAgentResult(result, { verbose: ctx.debug }));
           } else {
             console.log(formatExecutionResult(result));
           }
@@ -767,7 +767,7 @@ Examples:
             if (ctx.json) {
               emitJson(ctx, result, 'exec.agent');
             } else {
-              console.log(formatAgentResult(result));
+              console.log(formatAgentResult(result, { verbose: ctx.debug }));
             }
 
             try {
@@ -846,7 +846,7 @@ Examples:
         } else {
           for (const result of succeeded) {
             console.log('─'.repeat(60));
-            console.log(formatAgentResult(result));
+            console.log(formatAgentResult(result, { verbose: ctx.debug }));
             console.log('');
           }
 

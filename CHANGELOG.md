@@ -4,6 +4,16 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.18.3] - 2026-06-15
+
+### Added
+
+- **Run completeness in agent output.** `exec agent` now prints a `Completeness:` badge next to the decision when a run did not fully finish its work (`PARTIAL` / `FAILED`); clean runs are unchanged. This is distinct from the decision — a `PASS · PARTIAL` flags a positive verdict reached on incomplete coverage. With `--debug`, the underlying degradation markers (`budget.forced-wrap-up`, `steps.near-exhaustion`, `extraction.low-confidence`, etc.) and their detail are listed.
+
+### Changed
+
+- Bump `@uluops/core` to `0.22.0` (execution completeness & typed degradation markers). The engine-wide concurrency cap added in core 0.21.1 is tunable via `ULUOPS_MAX_CONCURRENCY` (default 8) — distinct from `exec agent -c/--concurrency`, which caps how many agent definitions run in parallel.
+
 ## [0.18.2] - 2026-06-15
 
 ### Changed

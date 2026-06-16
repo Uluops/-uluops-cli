@@ -680,6 +680,19 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `-o, --output <path>` | Explicit output path for `--report` (overrides the `--report` argument and the default) |
 | `--features-list <path>` | Write structured features/recommendations to file (single agent only) |
 
+> **Run completeness.** Agent output shows a `Completeness:` badge next to the
+> decision when a run did not fully finish its work — `PARTIAL` or `FAILED`
+> (clean runs stay uncluttered). This is **separate from the decision**: a
+> `PASS · PARTIAL` means a positive verdict reached on incomplete coverage.
+> Run with `--debug` to list the underlying degradation markers (e.g.
+> `budget.forced-wrap-up`, `steps.near-exhaustion`, `extraction.low-confidence`)
+> and why each fired. Requires `@uluops/core@0.22.0`.
+>
+> **Concurrency.** `-c/--concurrency` caps how many agent *definitions* run in
+> parallel. A separate, engine-wide ceiling on concurrent in-flight LLM calls
+> (across workflow phases, parallel steps, and inline agents) is set by the
+> `ULUOPS_MAX_CONCURRENCY` env var (default 8).
+
 **Examples:**
 
 ```bash

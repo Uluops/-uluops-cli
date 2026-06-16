@@ -172,6 +172,35 @@ describe('formatAgentResult', () => {
     expect(result).toContain('Fix lint error');
     expect(result).toContain('Critical (1):');
   });
+
+  it('shows a completeness badge when the run is not complete', () => {
+    const result = formatAgentResult(createGenericAgentResult({ decision: 'PASS', completeness: 'partial' }));
+    expect(result).toContain('Decision: PASS  ·  Completeness: PARTIAL');
+  });
+
+  it('omits the completeness badge for a complete run', () => {
+    const result = formatAgentResult(createGenericAgentResult({ decision: 'PASS', completeness: 'complete' }));
+    expect(result).not.toContain('Completeness:');
+    expect(result).toContain('Decision: PASS');
+  });
+
+  it('omits the completeness badge when completeness is absent', () => {
+    const result = formatAgentResult(createGenericAgentResult({ decision: 'PASS' }));
+    expect(result).not.toContain('Completeness:');
+  });
+
+  it('lists degradation markers only under verbose', () => {
+    const withMarkers = createGenericAgentResult({
+      completeness: 'partial',
+      degradationMarkers: [
+        { code: 'budget.forced-wrap-up', phase: 'execution', severity: 'degraded', detail: 'coverage may be partial' },
+      ],
+    });
+    expect(formatAgentResult(withMarkers)).not.toContain('Degradations:');
+    const verbose = formatAgentResult(withMarkers, { verbose: true });
+    expect(verbose).toContain('Degradations:');
+    expect(verbose).toContain('[DEGRADED] budget.forced-wrap-up — coverage may be partial');
+  });
 });
 
 // ── formatExecutionResult ────────────────────────────────────────────────

@@ -12,14 +12,27 @@ import { truncate } from '../utils.js';
 import { type Column, formatKeyValue, formatTable } from './table.js';
 
 /**
- * Format an agent execution result
+ * Format an agent execution result.
+ *
+ * @param opts.verbose - when true, list the run's degradation markers (code + detail).
+ *   The completeness badge is always shown when the run is not `complete`.
  */
-export function formatAgentResult(result: AgentResult): string {
+export function formatAgentResult(
+  result: AgentResult,
+  opts?: { verbose?: boolean },
+): string {
   const lines: string[] = [];
 
-  // Header
+  // Header. Surface completeness alongside the decision only when the run did
+  // not fully complete its work — a clean run stays uncluttered.
   lines.push(`Agent: ${result.name} v${result.version}`);
-  lines.push(`Decision: ${result.decision}`);
+  if (result.completeness && result.completeness !== 'complete') {
+    lines.push(
+      `Decision: ${result.decision}  ·  Completeness: ${result.completeness.toUpperCase()}`,
+    );
+  } else {
+    lines.push(`Decision: ${result.decision}`);
+  }
 
   if (result.score !== undefined) {
     lines.push(`Score: ${result.score}/${result.maxScore}`);
@@ -73,6 +86,22 @@ export function formatAgentResult(result: AgentResult): string {
   if (result.recommendations.length > 0) {
     lines.push('');
     lines.push(formatRecommendations(result.recommendations));
+  }
+
+  // Degradation markers (why the run is partial/failed) — verbose only.
+  if (
+    opts?.verbose &&
+    result.degradationMarkers &&
+    result.degradationMarkers.length > 0
+  ) {
+    lines.push('');
+    lines.push('Degradations:');
+    for (const marker of result.degradationMarkers) {
+      const sev = marker.severity.toUpperCase();
+      lines.push(
+        `  - [${sev}] ${marker.code}${marker.detail ? ` — ${marker.detail}` : ''}`,
+      );
+    }
   }
 
   // Token usage
