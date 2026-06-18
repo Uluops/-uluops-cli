@@ -4,6 +4,17 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.19.2] - 2026-06-17
+
+### Dependencies
+
+- **Bumped `@uluops/ops-sdk` 4.0.0 → 4.0.1** (exact). Pulls in the username slug
+  validator fix: `ulu auth update-profile --username <name>` now accepts
+  hyphenated slugs like `ulu-labs` (previously rejected client-side by the old
+  letter-start, underscore-only pattern). With the ops-api fold-in, setting a
+  username via this command also confirms it — clearing the registry publish
+  gate from the CLI. 460 tests green against 4.0.1.
+
 ## [0.19.1] - 2026-06-16
 
 ### Dependencies
