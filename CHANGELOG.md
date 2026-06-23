@@ -4,6 +4,16 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Dependencies
+
+- **Bumped `@uluops/ops-sdk` 4.0.1 → 5.0.0** (exact). The SDK's response schema now allows nullable `maxScore`; on 4.0.1 a scoreless run (null `max_score`) would throw a ZodError when parsed by `runs get-details` / `runs save`. Completes the score-nullability transition on the CLI's read path (the formatters were already null-aware as of 0.20.0).
+
+### Changed
+
+- `runs get-details` agent line renders `—` for scoreless agents (generators, executors) instead of a fabricated `null/100`.
+
 ## [0.20.0] - 2026-06-22
 
 ### Dependencies
