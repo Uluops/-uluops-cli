@@ -4,6 +4,20 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.20.0] - 2026-06-22
+
+### Dependencies
+
+- **Bumped `@uluops/core` 0.22.8 → 0.23.0** (exact). Core makes agent `score`/`maxScore` nullable — generators and executors produce artifacts, not scores, and now report `null` instead of a fabricated `0`/`100`. See `@uluops/core@0.23.0` for the full contract.
+
+### Changed
+
+- **The CLI now renders scoreless results honestly.** A generator/executor run no longer prints a fabricated `Score: 0/100` — the score line is omitted (and `--json` shows `score: null`, with `maxScore` absent). Per-category scores render `—` when null. Batch `exec agent` runs **exclude scoreless agents** from the "Average score" rollup (a null is no longer folded in as `0`, which previously dragged the average toward zero).
+
+### Internal
+
+- Followed `@uluops/core`'s `AgentResult` widening (`score`/`maxScore`/category/finding fields → `number | null`): null-guarded the result formatter and the `exec` batch summary; widened the category table column types. No change to scored (validator/analyst/forecaster) output.
+
 ## [0.19.2] - 2026-06-17
 
 ### Dependencies

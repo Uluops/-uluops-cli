@@ -34,8 +34,8 @@ export function formatAgentResult(
     lines.push(`Decision: ${result.decision}`);
   }
 
-  if (result.score !== undefined) {
-    lines.push(`Score: ${result.score}/${result.maxScore}`);
+  if (result.score != null) {
+    lines.push(`Score: ${result.score}/${result.maxScore ?? '—'}`);
     if (result.threshold !== undefined) {
       lines.push(`Threshold: ${result.threshold}`);
     }
@@ -54,15 +54,15 @@ export function formatAgentResult(
     lines.push('Categories:');
     const catColumns: Column<{
       name: string;
-      score: number;
-      maxScore: number;
+      score: number | null;
+      maxScore: number | null;
       findings: number;
     }>[] = [
       { header: 'CATEGORY', accessor: 'name', width: 30 },
       {
         header: 'SCORE',
-        accessor: (c: { score: number; maxScore: number }) =>
-          `${c.score}/${c.maxScore}`,
+        accessor: (c: { score: number | null; maxScore: number | null }) =>
+          c.score == null ? '—' : `${c.score}/${c.maxScore ?? '—'}`,
         width: 10,
         align: 'right',
       },

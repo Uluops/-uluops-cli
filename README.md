@@ -724,7 +724,8 @@ ulu exec describe --type pipeline                       # No name + --type → f
 # Run code-validator with a specific model
 ulu exec --project my-project agent code-validator -t . --model sonnet
 
-# Generator: tell the agent what to create
+# Generator: tell the agent what to create (generators produce artifacts, not
+# scores — the result has no score; `--json` shows score: null)
 ulu exec agent aristotle-generator -t ./src \
   -p "Create a health check endpoint for the Express API"
 

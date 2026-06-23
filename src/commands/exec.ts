@@ -870,8 +870,7 @@ Examples:
                     result.decisionCategory === 'positive'
                       ? '\u2713'
                       : '\u2717';
-                  const score =
-                    result.score !== undefined ? ` ${result.score}` : '';
+                  const score = result.score != null ? ` ${result.score}` : '';
                   console.log(
                     `  ${marker} ${name}: ${result.decision}${score}`,
                   );
@@ -922,13 +921,15 @@ Examples:
             }
           }
 
-          // Summary
+          // Summary — average over scored agents only; scoreless (generator/executor)
+          // agents are excluded, not folded in as 0.
           console.log('─'.repeat(60));
+          const scored = succeeded.filter((r) => r.score != null);
           const avgScore =
-            succeeded.length > 0
+            scored.length > 0
               ? (
-                  succeeded.reduce((sum, r) => sum + (r.score ?? 0), 0) /
-                  succeeded.length
+                  scored.reduce((sum, r) => sum + (r.score as number), 0) /
+                  scored.length
                 ).toFixed(1)
               : '-';
           console.log(
