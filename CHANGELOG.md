@@ -4,6 +4,23 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+## [0.21.0] - 2026-06-23
+
+### Added
+
+- **Surfaces tracking failures instead of silently dropping them.** When a run executes successfully but recording it to the tracker fails (e.g. a free-tier `402 PROJECT_LIMIT` or `SUBSCRIPTION_REQUIRED`), `ulu exec agent`/`command`/`workflow`/`pipeline` now print a non-alarming `Run not recorded: <message>` line — and, for cap/tier failures carrying an `upgradeUrl`, append ` — upgrade: <url>`. Previously the dashboard link was silently omitted, leaving no signal the run wasn't recorded. Renders the new typed `trackingError` from `@uluops/core`. The run itself still succeeds — this is a notice, not an error.
+
+### Changed
+
+- `runs get-details` agent line renders `—` for scoreless agents (generators, executors) instead of a fabricated `null/100`.
+
+### Dependencies
+
+- **Bumped `@uluops/core` 0.23.0 → 0.24.1** (exact). Adds the typed `trackingError` (`{ code, statusCode, message, requestId, details }`) on agent/execution results that the new tracking-failure render consumes. (0.24.1 fixes the root-level `TrackingError` export that was missing from 0.24.0.)
+- **Bumped `@uluops/ops-sdk` 4.0.1 → 5.0.0** (exact). The SDK's response schema now allows nullable `maxScore`; on 4.0.1 a scoreless run (null `max_score`) would throw a ZodError when parsed by `runs get-details` / `runs save`. Completes the score-nullability transition on the CLI's read path (the formatters were already null-aware as of 0.20.0).
+
 ## [0.20.0] - 2026-06-22
 
 ### Dependencies

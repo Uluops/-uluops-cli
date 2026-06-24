@@ -7,9 +7,26 @@ import type {
   DefinitionType,
   ExecutionResult,
   Recommendation,
+  TrackingError,
 } from '@uluops/core';
 import { truncate } from '../utils.js';
 import { type Column, formatKeyValue, formatTable } from './table.js';
+
+/**
+ * Render a single-line tracking-failure notice. The run itself succeeded — only
+ * recording it to the tracker failed — so this is a non-fatal notice, not an error.
+ * Surfaces an upgrade link for cap/tier failures (PROJECT_LIMIT/SUBSCRIPTION_REQUIRED).
+ */
+function formatTrackingError(err: TrackingError): string {
+  const upgradeCodes = new Set(['PROJECT_LIMIT', 'SUBSCRIPTION_REQUIRED']);
+  const upgradeUrl =
+    err.code !== undefined &&
+    upgradeCodes.has(err.code) &&
+    typeof err.details?.['upgradeUrl'] === 'string'
+      ? (err.details['upgradeUrl'] as string)
+      : undefined;
+  return `Run not recorded: ${err.message}${upgradeUrl ? ` — upgrade: ${upgradeUrl}` : ''}`;
+}
 
 /**
  * Format an agent execution result.
@@ -46,6 +63,9 @@ export function formatAgentResult(
 
   if (result.dashboardUrl) {
     lines.push(`Dashboard: ${result.dashboardUrl}`);
+  }
+  if (result.trackingError) {
+    lines.push(formatTrackingError(result.trackingError));
   }
 
   // Categories (validators only)
@@ -144,6 +164,9 @@ export function formatExecutionResult(result: ExecutionResult): string {
 
   if (result.dashboardUrl) {
     lines.push(`Dashboard: ${result.dashboardUrl}`);
+  }
+  if (result.trackingError) {
+    lines.push(formatTrackingError(result.trackingError));
   }
 
   if (result.recommendations.length > 0) {

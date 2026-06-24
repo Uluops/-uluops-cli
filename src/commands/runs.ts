@@ -193,8 +193,13 @@ Examples:
             console.log('Agents:');
             for (const v of details.agents) {
               const marker = v.decision === 'PASS' ? '\u2713' : '\u2717';
+              // Scoreless agents (generators, executors) have null score/maxScore.
+              const scoreDisplay =
+                v.score == null
+                  ? '\u2014'
+                  : `${v.score}/${v.maxScore ?? '\u2014'}`;
               console.log(
-                `  ${marker} ${v.name}: ${v.score}/${v.maxScore ?? 100} (${v.decision})`,
+                `  ${marker} ${v.name}: ${scoreDisplay} (${v.decision})`,
               );
             }
           }

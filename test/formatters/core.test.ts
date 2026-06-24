@@ -122,6 +122,32 @@ describe('formatAgentResult', () => {
     expect(result).not.toContain('Dashboard:');
   });
 
+  it('renders a trackingError notice with an upgrade URL for PROJECT_LIMIT', () => {
+    const result = formatAgentResult(
+      createValidatorResult({
+        dashboardUrl: undefined,
+        trackingError: {
+          code: 'PROJECT_LIMIT',
+          statusCode: 402,
+          message: 'Organization has reached its project limit (3).',
+          details: { upgradeUrl: 'https://registry.uluops.ai/orgs/acme/settings/billing?source=api' },
+        },
+      }),
+    );
+    expect(result).toContain('Run not recorded:');
+    expect(result).toContain('project limit');
+    expect(result).toContain('upgrade: https://registry.uluops.ai/orgs/acme/settings/billing?source=api');
+    expect(result).not.toContain('Dashboard:');
+  });
+
+  it('omits the upgrade URL for a non-cap trackingError', () => {
+    const result = formatAgentResult(
+      createValidatorResult({ trackingError: { statusCode: 500, message: 'server error' } }),
+    );
+    expect(result).toContain('Run not recorded: server error');
+    expect(result).not.toContain('upgrade:');
+  });
+
   it('renders token usage', () => {
     const result = formatAgentResult(createValidatorResult());
     expect(result).toContain('Token Usage:');
