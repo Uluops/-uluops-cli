@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-06-24
+
+### Fixed
+
+- **Locally-resolved workflows now run (via `@uluops/core` 0.24.3).** `ulu exec workflow <name> --local-definitions <dir>` previously returned a silent `BLOCK` (score 0, 0 agents): core's local resolution skipped the WDL `steps[]` → `commands[]`/`agentRefs[]` normalization (0.24.2), and command-steps naming a definition published as both an agent and its per-agent command — every cognitive-lens analyst — threw on ambiguous resolution (0.24.3). Bumps `@uluops/core` `0.24.1` → `0.24.3`; no CLI code changes. Validated end-to-end on sonnet (`foundations` BLOCK/0-agents → HOLD/4-agents).
+
 ## [0.21.0] - 2026-06-23
 
 ### Added
