@@ -80,6 +80,7 @@ ulu exec --project my-project agent code-validator -t ./src --model sonnet
 - **Machine-friendly output**: `--json` flag on every command for scripting and CI/CD integration
 - **Shell completion**: Tab completion for bash, zsh, and fish
 - **Contextual error hints**: Actionable suggestions on auth failures, 404s, rate limits, and network errors — usage and examples shown on every error
+- **Honest tracking signals**: When a run succeeds but recording it to the tracker fails (e.g. a free-tier project-limit cap), the result surfaces `Run not recorded: …` with an upgrade link instead of silently dropping the dashboard link
 - **Spinner feedback**: Progress indicators for long operations (suppress with `-q`)
 
 ## Installation
