@@ -658,6 +658,8 @@ ulu exec describe                                       # No name → list all d
 ulu exec describe --type pipeline                       # No name + --type → filter the list
 ```
 
+> **Tracking notice.** When a run executes successfully but recording it to the tracker fails (e.g. a free-tier `402 PROJECT_LIMIT` or `SUBSCRIPTION_REQUIRED`), the result prints a non-fatal `Run not recorded: <message>` line — with ` — upgrade: <url>` appended for cap/tier failures — in place of the dashboard link. The run itself still succeeds.
+
 **Parent options** (apply to all subcommands):
 
 | Option | Description |
