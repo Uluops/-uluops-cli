@@ -180,21 +180,27 @@ const VALUE_TAKING_FLAGS = new Set([
 ]);
 
 /**
- * Fail loudly when an inherited `ulu exec` option is placed AFTER the
- * subcommand. Such options are declared on the `exec` parent command, so
- * Commander parses them but never surfaces them to the subcommand — they are
- * silently ignored, falling through to project inference and tracking under the
- * wrong name with no signal (captive-user PRA-FRA/M).
+ * Make inherited `ulu exec` options work whether they appear BEFORE or AFTER
+ * the subcommand. They are declared on the `exec` parent, so Commander would
+ * otherwise silently drop them when placed after the subcommand — the natural
+ * spot, matching `--model` — and fall through to project inference / tracking
+ * under the wrong name with no signal (captive-user PRA-FRA/M). Rather than
+ * reject that ordering, relocate any inherited option (and its value) found
+ * after the subcommand to just before it, so Commander parses it correctly.
  *
- * Deterministic argv scan (parser-independent): find the exec subcommand, then
- * flag any known inherited option appearing after it. Values of value-taking
- * options are skipped so e.g. `-p "--project"` is not a false positive.
+ * Deterministic argv scan (parser-independent). A token immediately after a
+ * subcommand value-taking option is its value and is left in place, so e.g.
+ * `-m "--project"` is not mistaken for a misplaced option. Pure: returns a
+ * (possibly) reordered copy of argv; returns the input unchanged if nothing
+ * needs moving.
  *
  * @internal Exported for unit testing only.
  */
-export function guardInheritedOptionOrder(argv: string[] = process.argv): void {
+export function reorderInheritedExecOptions(
+  argv: string[] = process.argv,
+): string[] {
   const execIdx = argv.findIndex((a) => a === 'exec' || a === 'x');
-  if (execIdx === -1) return;
+  if (execIdx === -1) return argv;
   let subIdx = -1;
   for (let i = execIdx + 1; i < argv.length; i++) {
     if (EXEC_SUBCOMMANDS.includes(argv[i]!)) {
@@ -202,30 +208,35 @@ export function guardInheritedOptionOrder(argv: string[] = process.argv): void {
       break;
     }
   }
-  if (subIdx === -1) return;
-  const offending: string[] = [];
+  if (subIdx === -1) return argv;
+
+  const moved: string[] = [];
+  const tail: string[] = [];
   for (let i = subIdx + 1; i < argv.length; i++) {
-    if (VALUE_TAKING_FLAGS.has(argv[i - 1]!)) continue; // this token is a value
+    // A token right after a subcommand value-taking option is its value.
+    if (VALUE_TAKING_FLAGS.has(argv[i - 1]!)) {
+      tail.push(argv[i]!);
+      continue;
+    }
     const tok = argv[i]!;
     const flag = tok.includes('=') ? tok.slice(0, tok.indexOf('=')) : tok;
-    if (INHERITED_EXEC_FLAGS.includes(flag) && !offending.includes(flag)) {
-      offending.push(flag);
+    if (INHERITED_EXEC_FLAGS.includes(flag)) {
+      moved.push(tok);
+      // Pull the value too for space-separated value-taking inherited flags.
+      if (
+        VALUE_TAKING_INHERITED_FLAGS.has(flag) &&
+        !tok.includes('=') &&
+        i + 1 < argv.length
+      ) {
+        moved.push(argv[i + 1]!);
+        i++;
+      }
+      continue;
     }
+    tail.push(tok);
   }
-  if (offending.length === 0) return;
-  console.error(
-    `Inherited exec option(s) ${offending.join(', ')} must appear BEFORE the ` +
-      `subcommand — they are options of \`ulu exec\`, not the subcommand, so ` +
-      `placed after it they are silently ignored.`,
-  );
-  const firstFlag = offending[0]!;
-  const placeholder = VALUE_TAKING_INHERITED_FLAGS.has(firstFlag)
-    ? ' <value>'
-    : '';
-  console.error(
-    `  Correct order:  ulu exec ${firstFlag}${placeholder} <subcommand> [args]`,
-  );
-  process.exit(1);
+  if (moved.length === 0) return argv;
+  return [...argv.slice(0, subIdx), ...moved, argv[subIdx]!, ...tail];
 }
 
 /**
@@ -233,8 +244,8 @@ export function guardInheritedOptionOrder(argv: string[] = process.argv): void {
  *
  * Commander's program-level -V/--version is an "immediate" option: encountered
  * anywhere in argv it prints the CLI version and exits 0 — BEFORE any subcommand
- * action or preAction hook runs (so this cannot live in a preAction hook like
- * guardInheritedOptionOrder; it must scan raw argv before program.parse()).
+ * action or preAction hook runs, so this must scan raw argv before
+ * program.parse() — like reorderInheritedExecOptions, not a preAction hook).
  *
  * `exec describe` resolves a definition version via --def-version precisely
  * because a bare --version would be shadowed. A captive CI script that hardcoded
@@ -279,7 +290,7 @@ export function guardShadowedVersionFlag(argv: string[] = process.argv): void {
  * cannot be tracked or scoped to a project, which is the opposite of true.
  */
 const EXEC_INHERITED_HELP = `
-Inherited options (from \`ulu exec\`, must appear before the subcommand):
+Inherited options (from \`ulu exec\`, work before OR after the subcommand):
   --local-definitions <dir>  Local YAML definitions directory
   --registry-url <url>       Override registry URL
   --project <name>           Project name for result tracking
@@ -541,11 +552,9 @@ Examples:
 `,
     );
 
-  // Catch inherited exec options placed after the subcommand (where Commander
-  // silently swallows them) before any subcommand action runs.
-  exec.hook('preAction', () => {
-    guardInheritedOptionOrder();
-  });
+  // Inherited exec options placed after the subcommand are relocated ahead of
+  // it before parse (reorderInheritedExecOptions in cli.ts), so they work at
+  // the tail just like `--model` — no ordering footgun.
 
   // ── exec run ────────────────────────────────────────────────────────────
 

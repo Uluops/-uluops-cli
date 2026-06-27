@@ -34,7 +34,7 @@ ulu issues list my-project --status open --priority critical
 ulu analytics burndown --project my-project --days 30
 
 # Run a validator agent (requires ANTHROPIC_API_KEY; parent options like
-# --project come BEFORE the subcommand)
+# --project work before OR after the subcommand, like --model)
 export ANTHROPIC_API_KEY=sk-ant-your-key-here
 ulu exec --project my-project agent code-validator -t ./src --model sonnet
 # → code-validator: PASS (score 92) — results tracked under my-project
@@ -670,11 +670,12 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `--no-tracking` | Disable validation service submission |
 | `--no-safety-warnings` | Suppress risk warnings and runtime advisories |
 
-> **Parent options must come BEFORE the subcommand.** They belong to `ulu exec`,
-> not the subcommand — `ulu exec --project foo agent code-validator ./src`, not
-> `ulu exec agent code-validator ./src --project foo`. Placed after the
-> subcommand they were previously *silently ignored*; the CLI now detects this
-> and errors with the correct order.
+> **Parent options work before OR after the subcommand** (since 0.21.2). They
+> belong to `ulu exec`, not the subcommand, but the CLI relocates them
+> automatically — both `ulu exec --project foo agent code-validator ./src` and
+> `ulu exec agent code-validator ./src --project foo` work. (Placed after the
+> subcommand they were once silently ignored, then loudly rejected; now they
+> just work, like `--model`.)
 >
 > **Tracking requires a named project.** When tracking is on and no project is
 > resolved (`--project` or `ULUOPS_PROJECT`), the CLI shows the project name the

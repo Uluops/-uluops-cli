@@ -1,6 +1,6 @@
 {
   "name": "@uluops/cli",
-  "version": "0.21.1",
+  "version": "0.21.2",
   "description": "Unified CLI for UluOps - validation tracking and registry management",
   "type": "module",
   "bin": {

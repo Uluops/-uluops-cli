@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.21.2] - 2026-06-27
+
+### Changed
+
+- **Inherited `ulu exec` options now work at the tail, like `--model`.** `--no-tracking`, `--project`, `--local-definitions`, `--registry-url`, and `--no-safety-warnings` are declared on the `exec` parent, so Commander silently dropped them when placed *after* the subcommand (the natural spot — e.g. `ulu exec agent foo -t . --model … --no-tracking`). The previous behavior detected the misordering and **failed loudly** ("must appear BEFORE the subcommand"); now they are transparently relocated ahead of the subcommand before parse, so either position just works. A token immediately after a subcommand value-taking option (e.g. the model after `--model`) is left in place, so it is never mistaken for a misplaced option. Replaces `guardInheritedOptionOrder` (reject) with `reorderInheritedExecOptions` (accept); help text updated. No behavior change when options are already placed before the subcommand.
+
 ## [0.21.1] - 2026-06-24
 
 ### Fixed

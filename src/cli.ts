@@ -13,6 +13,7 @@ import { registerDepsCommands } from './commands/deps.js';
 // Core SDK commands
 import {
   guardShadowedVersionFlag,
+  reorderInheritedExecOptions,
   registerExecCommands,
 } from './commands/exec.js';
 import { registerExecutionCommands } from './commands/executions.js';
@@ -133,5 +134,6 @@ program.action(() => {
 // silently print the CLI version and exit 0).
 guardShadowedVersionFlag();
 
-// Parse and execute
-program.parse();
+// Relocate inherited `ulu exec` options placed after the subcommand so they
+// work at the tail (like `--model`), then parse.
+program.parse(reorderInheritedExecOptions(process.argv));
