@@ -19,7 +19,7 @@ import {
   resolveReportPath,
   applyReportModeDirective,
   confirmInferredProjectOrExit,
-  guardInheritedOptionOrder,
+  reorderInheritedExecOptions,
   guardShadowedVersionFlag,
   REPORT_MODE_DIRECTIVE,
 } from '../../src/commands/exec.js';
@@ -413,35 +413,43 @@ describe('confirmInferredProjectOrExit', () => {
   });
 });
 
-// ── inherited-option ordering guard (PRA-FRA/M #3) ────────────────────────
+// ── inherited-option reorder (PRA-FRA/M #3) ───────────────────────────────
 
-describe('guardInheritedOptionOrder', () => {
-  it('errors (exit 1) when --project appears after the subcommand', () => {
+describe('reorderInheritedExecOptions', () => {
+  it('moves --project (with its value) from after the subcommand to before it', () => {
     const argv = ['node', 'ulu', 'exec', 'agent', 'foo', '-t', '.', '--project', 'x'];
-    expect(() => guardInheritedOptionOrder(argv)).toThrow('process.exit(1)');
-    expect(output.stderr()).toContain('--project');
-    expect(output.stderr()).toContain('BEFORE the subcommand');
+    expect(reorderInheritedExecOptions(argv)).toEqual([
+      'node', 'ulu', 'exec', '--project', 'x', 'agent', 'foo', '-t', '.',
+    ]);
   });
 
-  it('passes when --project appears before the subcommand', () => {
+  it('leaves argv unchanged when --project is already before the subcommand', () => {
     const argv = ['node', 'ulu', 'exec', '--project', 'x', 'agent', 'foo', '-t', '.'];
-    expect(() => guardInheritedOptionOrder(argv)).not.toThrow();
+    expect(reorderInheritedExecOptions(argv)).toEqual(argv);
   });
 
-  it('does not false-positive on a flag-like value of --prompt', () => {
+  it('does not move a flag-like value of a subcommand option (-p "--project")', () => {
     const argv = ['node', 'ulu', 'exec', 'agent', 'foo', '-t', '.', '-p', '--project'];
-    expect(() => guardInheritedOptionOrder(argv)).not.toThrow();
+    expect(reorderInheritedExecOptions(argv)).toEqual(argv);
   });
 
-  it('catches --no-tracking after the subcommand', () => {
+  it('moves --no-tracking after the subcommand to before it', () => {
     const argv = ['node', 'ulu', 'exec', 'workflow', 'ship', './src', '--no-tracking'];
-    expect(() => guardInheritedOptionOrder(argv)).toThrow('process.exit(1)');
+    expect(reorderInheritedExecOptions(argv)).toEqual([
+      'node', 'ulu', 'exec', '--no-tracking', 'workflow', 'ship', './src',
+    ]);
+  });
+
+  it('moves a tail --no-tracking that follows --model (the natural spot)', () => {
+    const argv = ['node', 'ulu', 'exec', 'agent', 'foo', '-t', '.', '--model', 'google:gemini-3-flash-preview', '--no-tracking'];
+    expect(reorderInheritedExecOptions(argv)).toEqual([
+      'node', 'ulu', 'exec', '--no-tracking', 'agent', 'foo', '-t', '.', '--model', 'google:gemini-3-flash-preview',
+    ]);
   });
 
   it('is a no-op outside exec invocations', () => {
-    expect(() =>
-      guardInheritedOptionOrder(['node', 'ulu', 'issues', 'list', '--project', 'x']),
-    ).not.toThrow();
+    const argv = ['node', 'ulu', 'issues', 'list', '--project', 'x'];
+    expect(reorderInheritedExecOptions(argv)).toEqual(argv);
   });
 });
 
