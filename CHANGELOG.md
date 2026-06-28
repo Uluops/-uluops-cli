@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.21.3] - 2026-06-28
+
+### Added
+
+- **`def get` now shows `uniqueExecutionCount` alongside `executionCount`.** The registry exposes two execution counts — `executionCount` (total runs) and `uniqueExecutionCount` (distinct actors, gaming-resistant) — and the formatted definition view surfaces both.
+
+### Changed
+
+- **Bumped `@uluops/registry-sdk` `0.36.0` → `0.37.0`** (adds `uniqueExecutionCount` to the definition shapes and `SORT_FIELDS`).
+
 ## [0.21.2] - 2026-06-28
 
 ### Changed

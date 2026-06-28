@@ -50,6 +50,7 @@ export function formatDefinition(def: Definition): string {
       tier: def.tier,
       tags: def.tags?.join(', '),
       executionCount: def.executionCount,
+      uniqueExecutionCount: def.uniqueExecutionCount,
       forkCount: def.forkCount,
       starCount: def.starCount,
       createdAt: formatDisplayDate(def.createdAt),
