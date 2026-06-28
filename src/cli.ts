@@ -13,8 +13,8 @@ import { registerDepsCommands } from './commands/deps.js';
 // Core SDK commands
 import {
   guardShadowedVersionFlag,
-  reorderInheritedExecOptions,
   registerExecCommands,
+  reorderInheritedExecOptions,
 } from './commands/exec.js';
 import { registerExecutionCommands } from './commands/executions.js';
 import { registerForkCommands } from './commands/forks.js';
