@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-07-03
+
+### Dependencies
+
+- **`@uluops/core` 0.27.0 → 0.28.1.** Two tracking-quality fixes land in `ulu exec`:
+  - `systemMetrics` in tracked analysis summaries now carries the agent's
+    cognitive measurements only (analysis-block `system_metrics`, else
+    `domainMetrics`, else `null`) — the execution envelope
+    (tokens/model/duration/cost) is no longer merged in; that telemetry
+    already travels first-class on `agents[]`. Extraction facts move to
+    `epistemicAssessment` (core 0.28.0).
+  - Off-vocabulary analysis-record severities (register-style values like
+    `structural` or `NOTABLE` from cognitive lens agents) no longer cause the
+    SDK to reject the entire tracking save — severities are sanitized onto
+    the tracker enum with the original preserved as `data.rawSeverity`
+    (core 0.28.1). Previously such runs completed but went unrecorded.
+
 ## [0.22.0] - 2026-07-02
 
 Closes the sdk-core 0.14.0 security-observability rollout at the CLI — the top of
