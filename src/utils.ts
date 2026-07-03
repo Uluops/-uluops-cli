@@ -8,6 +8,7 @@ import {
 import * as path from 'node:path';
 import { createInterface } from 'node:readline';
 import ora, { type Ora } from 'ora';
+import type { SecurityEvent, SecurityEventHandler } from '@uluops/core';
 
 /**
  * Create a spinner for long-running operations. Internal helper for
@@ -117,6 +118,53 @@ export function stripAnsi(str: string): string {
 export function exitWithError(message: string, code = 1): never {
   console.error(`Error: ${message}`);
   process.exit(code);
+}
+
+/**
+ * Build an `onSecurityEvent` handler that surfaces security-relevant events to
+ * the user. Wired into every SDK/core client the CLI constructs.
+ *
+ * Prints to **stderr** so stdout stays clean for `--json` and piped output.
+ * Suppressed under `--quiet`. `redirect_rejected` (a possible MITM / misroute
+ * signal) is the highest-value event — it can fire even on best-effort paths
+ * (e.g. result tracking) where the command itself does not error, so it would
+ * otherwise be invisible. `auth_strategy_replaced` is internal login mechanics
+ * and only shown under `--debug`.
+ */
+export function createSecurityEventHandler(
+  opts: { quiet?: boolean; debug?: boolean } = {},
+): SecurityEventHandler {
+  return (event: SecurityEvent): void => {
+    if (opts.quiet) return;
+    switch (event.type) {
+      case 'redirect_rejected':
+        console.error(
+          `\n⚠ Security: blocked an unexpected redirect from ${event.baseUrl}. ` +
+            'The request was NOT followed — this can indicate a man-in-the-middle, ' +
+            'a moved endpoint, or a captive portal. Verify the URL and your network.',
+        );
+        break;
+      case 'auth_failure':
+        console.error(
+          `⚠ Security: the server rejected your ${event.authType} credential (401)` +
+            `${event.requestId ? ` [request ${event.requestId}]` : ''}.`,
+        );
+        break;
+      case 'token_refresh_failed':
+        console.error(
+          '⚠ Security: session token refresh failed — your session may be expired or ' +
+            'revoked. Re-authenticate with `ulu auth login`.',
+        );
+        break;
+      case 'auth_strategy_replaced':
+        if (opts.debug) {
+          console.error(
+            `(debug) auth strategy replaced: ${event.previousType} → ${event.newType}`,
+          );
+        }
+        break;
+    }
+  };
 }
 
 /**

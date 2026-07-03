@@ -12,6 +12,7 @@ import {
 import { emitJson } from '../formatters/json.js';
 import { formatApiKeys } from '../formatters/ops.js';
 import {
+  createSecurityEventHandler,
   exitWithError,
   promptInput,
   withSpinner,
@@ -196,6 +197,10 @@ Examples:
               debug: ctx.debug,
               email,
               password,
+              onSecurityEvent: createSecurityEventHandler({
+                quiet: globalOpts.quiet,
+                debug: globalOpts.debug,
+              }),
             });
             return client.login(email!, password!);
           },
@@ -277,6 +282,10 @@ Examples:
                 creds.type === 'session' ? creds.sessionToken : undefined,
               baseUrl: config.baseUrl,
               debug,
+              onSecurityEvent: createSecurityEventHandler({
+                quiet: globalOpts.quiet,
+                debug: globalOpts.debug,
+              }),
             });
             const spinnerCtx = { json, debug, quiet: false };
             const result = await withSpinner(
@@ -379,7 +388,13 @@ Examples:
             failure: 'Registration failed',
           },
           async () => {
-            const client = new OpsClient({ baseUrl: ctx.baseUrl });
+            const client = new OpsClient({
+              baseUrl: ctx.baseUrl,
+              onSecurityEvent: createSecurityEventHandler({
+                quiet: globalOpts.quiet,
+                debug: globalOpts.debug,
+              }),
+            });
             return client.auth.register({
               email: options.email,
               password: options.password,
@@ -416,7 +431,13 @@ Examples:
             failure: 'Failed to send reset email',
           },
           async () => {
-            const client = new OpsClient({ baseUrl: ctx.baseUrl });
+            const client = new OpsClient({
+              baseUrl: ctx.baseUrl,
+              onSecurityEvent: createSecurityEventHandler({
+                quiet: globalOpts.quiet,
+                debug: globalOpts.debug,
+              }),
+            });
             return client.auth.forgotPassword(options.email);
           },
         );
@@ -450,7 +471,13 @@ Examples:
             failure: 'Failed to reset password',
           },
           async () => {
-            const client = new OpsClient({ baseUrl: ctx.baseUrl });
+            const client = new OpsClient({
+              baseUrl: ctx.baseUrl,
+              onSecurityEvent: createSecurityEventHandler({
+                quiet: globalOpts.quiet,
+                debug: globalOpts.debug,
+              }),
+            });
             return client.auth.resetPassword({
               token: options.token,
               password: options.password,

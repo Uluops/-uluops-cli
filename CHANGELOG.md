@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-07-02
+
+Closes the sdk-core 0.14.0 security-observability rollout at the CLI — the top of
+the dependency tree — by both adopting the release and surfacing its security
+events to the user.
+
+### Added
+
+- **Security-event warnings.** The CLI now wires `onSecurityEvent` into every
+  ops/registry/core client it constructs (including the `auth` login/register
+  flows) and surfaces events to the user on **stderr** (stdout stays clean for
+  `--json` and pipes). A blocked upstream redirect prints a prominent
+  possible-MITM warning; a rejected credential (401) and a failed token refresh
+  print concise notices. Highest value on best-effort paths (e.g. result
+  tracking) where the command itself does not error, so the event would
+  otherwise be invisible. Suppressed under `--quiet`; the internal
+  `auth_strategy_replaced` event is shown only under `--debug`.
+
+### Dependencies
+
+- **Bump `@uluops/core` 0.25.1 → 0.27.0, `@uluops/ops-sdk` 5.0.0 → 5.4.0,
+  `@uluops/registry-sdk` 0.37.0 → 0.38.0.** Puts the entire CLI dependency tree on
+  a single `@uluops/sdk-core@0.14.0` (redirect hardening, `baseUrl`
+  embedded-credential rejection, sanitized `requestId`). `core@0.27.0` is what
+  exposes the `onSecurityEvent` passthrough the CLI now consumes.
+
 ## [0.21.3] - 2026-06-28
 
 ### Added

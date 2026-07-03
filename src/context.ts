@@ -25,7 +25,11 @@ import {
 import { RegistryClient } from '@uluops/registry-sdk';
 import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
 import { RegistryApiError } from '@uluops/registry-sdk/errors';
-import { exitWithError, parseIntOption } from './utils.js';
+import {
+  exitWithError,
+  parseIntOption,
+  createSecurityEventHandler,
+} from './utils.js';
 
 /**
  * Global CLI options passed from commander
@@ -192,6 +196,10 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
       baseUrl: config.baseUrl,
       debug: config.debug,
       timeout,
+      onSecurityEvent: createSecurityEventHandler({
+        quiet: options.quiet,
+        debug: options.debug,
+      }),
     });
   } catch (error) {
     exitWithError(error instanceof Error ? error.message : String(error));
@@ -249,6 +257,10 @@ export function createRegistryContext(
       authBaseUrl: config.authBaseUrl,
       debug: config.debug,
       timeout,
+      onSecurityEvent: createSecurityEventHandler({
+        quiet: options.quiet,
+        debug: options.debug,
+      }),
     });
   } catch (error) {
     exitWithError(error instanceof Error ? error.message : String(error));
@@ -346,6 +358,10 @@ export function createCoreContext(
     ? parseIntOption(options.timeout, '--timeout')
     : DEFAULT_CORE_TIMEOUT_MS;
   config.timeout = timeout;
+  config.onSecurityEvent = createSecurityEventHandler({
+    quiet: options.quiet,
+    debug: options.debug,
+  });
 
   let client: UluOpsClient;
   try {
