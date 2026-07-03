@@ -80,6 +80,7 @@ ulu exec --project my-project agent code-validator -t ./src --model sonnet
 - **Machine-friendly output**: `--json` flag on every command for scripting and CI/CD integration
 - **Shell completion**: Tab completion for bash, zsh, and fish
 - **Contextual error hints**: Actionable suggestions on auth failures, 404s, rate limits, and network errors — usage and examples shown on every error
+- **Security-event warnings**: Surfaces `⚠ Security:` notices on stderr for a blocked upstream redirect (possible MITM), a rejected credential, or a failed token refresh — even on best-effort paths where the command itself does not error (suppress with `-q`)
 - **Honest tracking signals**: When a run succeeds but recording it to the tracker fails (e.g. a free-tier project-limit cap), the result surfaces `Run not recorded: …` with an upgrade link instead of silently dropping the dashboard link
 - **Spinner feedback**: Progress indicators for long operations (suppress with `-q`)
 
@@ -167,6 +168,18 @@ Every command accepts these flags:
 -V, --version        Show CLI version
 -h, --help           Show help for any command
 ```
+
+### Security warnings
+
+The CLI surfaces security-relevant events (from `@uluops/sdk-core@0.14.0`) as `⚠ Security:` notices on **stderr**, so stdout stays clean for `--json` and pipes. They complement the normal error — you get both the plain-language notice and the detailed error — and are most valuable on best-effort paths (e.g. result tracking) where the command itself does not error, so the event would otherwise be invisible.
+
+| Notice | Meaning |
+|--------|---------|
+| Blocked redirect | The configured API origin returned a 3xx the CLI refuses to follow — a possible man-in-the-middle, moved endpoint, or captive portal. The request is **not** sent to the redirect target (its body, which can carry credentials on login, is never replayed). |
+| Credential rejected (401) | The server rejected your credential — expired, revoked, or invalid. Includes the server request id for correlation. |
+| Token refresh failed | A session token could not be refreshed. Re-authenticate with `ulu auth login`. |
+
+Suppress all of them with `-q, --quiet`.
 
 ## Command Reference
 
