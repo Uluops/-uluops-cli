@@ -26,9 +26,9 @@ import { RegistryClient } from '@uluops/registry-sdk';
 import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
 import { RegistryApiError } from '@uluops/registry-sdk/errors';
 import {
+  createSecurityEventHandler,
   exitWithError,
   parseIntOption,
-  createSecurityEventHandler,
 } from './utils.js';
 
 /**

@@ -7,8 +7,8 @@ import {
 } from 'node:fs';
 import * as path from 'node:path';
 import { createInterface } from 'node:readline';
-import ora, { type Ora } from 'ora';
 import type { SecurityEvent, SecurityEventHandler } from '@uluops/core';
+import ora, { type Ora } from 'ora';
 
 /**
  * Create a spinner for long-running operations. Internal helper for
