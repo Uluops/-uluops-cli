@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.22.2] - 2026-07-06
+
+### Dependencies
+
+- **Advanced to the sdk-core 0.15.0 coherent set:** `@uluops/core` `0.28.1` →
+  `0.28.2`, `@uluops/ops-sdk` `5.4.0` → `5.6.0`, `@uluops/registry-sdk` `0.38.0` →
+  `0.39.0`. sdk-core 0.15.0 adds the streaming transport (`requestStream`/`getStream`),
+  inherited on the ops/registry low-level clients; the CLI does not consume it, so
+  this is a pin-alignment patch — one `sdk-core@0.15.0` across the tree, no
+  behavior change.
+
 ## [0.22.1] - 2026-07-03
 
 ### Dependencies
