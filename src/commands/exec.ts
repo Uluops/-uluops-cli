@@ -765,7 +765,20 @@ Examples:
                     | Array<Record<string, unknown>>
                     | undefined;
                   const level = profile.aggregateRiskLevel as string;
-                  if (
+                  // A failed sync scan carries aggregateRiskLevel 'none' as a
+                  // sentinel \u2014 silence here would read as "clean" (perverse-
+                  // outcome finding P6). Surface the incomplete scan instead.
+                  // (core types riskProfile as an opaque Record; canonical
+                  // predicate is isVerdictTrustworthy in @uluops/registry-sdk.)
+                  const scanStatus = profile.scanStatus as string | undefined;
+                  if (scanStatus === 'failed') {
+                    const reason = profile.scanFailedReason as
+                      | string
+                      | undefined;
+                    console.error(
+                      `\n  \u26A0\uFE0F  Safety scan incomplete${reason ? ` (${reason})` : ''} \u2014 could not determine; absence of signals is not a clean verdict.\n`,
+                    );
+                  } else if (
                     signals?.length &&
                     (level === 'medium' || level === 'high')
                   ) {

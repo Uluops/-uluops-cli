@@ -12,6 +12,7 @@ import type {
   VersionDiffSummary,
   VersionListItem,
 } from '@uluops/registry-sdk';
+import { isVerdictTrustworthy } from '@uluops/registry-sdk';
 import { formatDisplayDate, truncate } from '../utils.js';
 import { type Column, formatKeyValue, formatTable } from './table.js';
 
@@ -107,8 +108,19 @@ export function formatDefinition(def: Definition): string {
     if (caps?.temperature !== undefined)
       lines.push(`Temperature: ${String(caps.temperature)}`);
 
-    // Risk signals
-    if (!signals?.length) {
+    // Risk signals. A failed sync scan carries aggregateRiskLevel 'none' as a
+    // sentinel ("could not determine"), NOT a clean verdict \u2014 never render the
+    // absence of signals as "No risk signals." (perverse-outcome finding P6)
+    if (!isVerdictTrustworthy(profile)) {
+      const reason = profile.scanFailedReason
+        ? ` (${profile.scanFailedReason})`
+        : '';
+      lines.push('');
+      lines.push(
+        `\u26A0\uFE0F  Safety scan incomplete${reason} \u2014 could not determine.`,
+      );
+      lines.push('    Absence of signals is not a clean verdict.');
+    } else if (!signals?.length) {
       lines.push('No risk signals.');
     } else {
       lines.push('');
@@ -132,6 +144,9 @@ export function formatDefinition(def: Definition): string {
     }
     if (!profile.deep) {
       lines.push('Deep analysis pending.');
+    } else if (profile.deep.status === 'error') {
+      // Deep run errored \u2014 empty findings are a sentinel, not a clean verdict.
+      lines.push('Deep analysis incomplete \u2014 could not determine.');
     }
   }
 

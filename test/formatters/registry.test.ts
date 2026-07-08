@@ -82,6 +82,60 @@ describe('formatDefinition', () => {
     const result = formatDefinition(minimal as Parameters<typeof formatDefinition>[0]);
     expect(result).toContain('code-validator');
   });
+
+  const makeProfile = (overrides: Record<string, unknown>) => ({
+    sync: {
+      version: '1.0.0',
+      scannedAt: '2026-01-01T00:00:00Z',
+      capabilities: { tools: [], preflightCommands: 0 },
+      signals: [],
+      riskLevel: 'none',
+    },
+    deep: null,
+    aggregateRiskLevel: 'none',
+    lastUpdated: '2026-01-01T00:00:00Z',
+    ...overrides,
+  });
+
+  it('renders a failed scan as incomplete, never as "No risk signals" (P6)', () => {
+    const def = {
+      ...mockDefinition,
+      riskProfile: makeProfile({ scanStatus: 'failed', scanFailedReason: 'timeout' }),
+    };
+    const result = formatDefinition(def as Parameters<typeof formatDefinition>[0]);
+    expect(result).toContain('Safety scan incomplete');
+    expect(result).toContain('timeout');
+    expect(result).not.toContain('No risk signals');
+  });
+
+  it('renders a complete clean scan as "No risk signals"', () => {
+    const def = {
+      ...mockDefinition,
+      riskProfile: makeProfile({ scanStatus: 'complete' }),
+    };
+    const result = formatDefinition(def as Parameters<typeof formatDefinition>[0]);
+    expect(result).toContain('No risk signals');
+    expect(result).not.toContain('Safety scan incomplete');
+  });
+
+  it('flags a deep-analysis error as incomplete', () => {
+    const def = {
+      ...mockDefinition,
+      riskProfile: makeProfile({
+        scanStatus: 'complete',
+        deep: {
+          version: '1.0.0',
+          analyzedAt: '2026-01-01T00:00:00Z',
+          findings: [],
+          riskLevel: 'none',
+          status: 'error',
+          errorReason: 'no_output',
+        },
+      }),
+    };
+    const result = formatDefinition(def as Parameters<typeof formatDefinition>[0]);
+    expect(result).toContain('Deep analysis incomplete');
+  });
 });
 
 describe('formatModels', () => {

@@ -6,8 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.22.3] - 2026-07-07
+
+### Fixed
+
+- **A failed safety scan no longer renders as "clean"** (perverse-outcome finding P6). A sync
+  scan that aborts (parse error, timeout) carries `aggregateRiskLevel: 'none'` as a sentinel
+  meaning "could not determine", not a clean verdict. Previously `ulu def get` printed "No
+  risk signals." and `ulu exec` stayed silent:
+  - `def get` now prints "⚠️  Safety scan incomplete (reason) — could not determine." and a
+    deep-analysis `error` status prints "Deep analysis incomplete — could not determine."
+  - `exec` emits an incomplete-scan advisory before running (suppressible via
+    `--no-safety-warnings`).
+
+  Uses the new `isVerdictTrustworthy` predicate from `@uluops/registry-sdk` (0.42.0).
+
 ### Dependencies
 
+- `@uluops/registry-sdk` `0.39.0` → `0.42.0` (safety-verdict trustworthiness surface).
 - Bump `@uluops/core` `0.29.1` → `0.30.0` — decision-category threading: custom-vocabulary
   negative verdicts (EXPOSED, BEWITCHED, WDL-remapped BLOCK) now gate pipeline stages,
   commands, and workflow phases via the propagated `decisionCategory` instead of literal
