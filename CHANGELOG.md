@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Dependencies
+
+- Bump `@uluops/core` `0.29.1` → `0.30.0` — decision-category threading: custom-vocabulary
+  negative verdicts (EXPOSED, BEWITCHED, WDL-remapped BLOCK) now gate pipeline stages,
+  commands, and workflow phases via the propagated `decisionCategory` instead of literal
+  decision-string comparisons, plus the CWE-345 core-register-remap guard. Additive
+  surface (`resolveDecisionCategory`, `ExecutionResult.decisionCategory`); CLI builds and
+  463 tests pass unchanged against the new version.
+
 ## [0.22.2] - 2026-07-06
 
 ### Dependencies
