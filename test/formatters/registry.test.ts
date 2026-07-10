@@ -134,7 +134,22 @@ describe('formatDefinition', () => {
       }),
     };
     const result = formatDefinition(def as Parameters<typeof formatDefinition>[0]);
-    expect(result).toContain('Deep analysis incomplete');
+    // Deep-aware isVerdictTrustworthy (registry-sdk 0.43.0): the deep error is
+    // named as the failing layer, with its reason, and never rendered clean.
+    expect(result).toContain('Deep analysis failed (no_output)');
+    expect(result).toContain('not a clean verdict');
+    expect(result).not.toContain('No risk signals');
+  });
+
+  it('does not flag deep: null (pending) as failed', () => {
+    const def = {
+      ...mockDefinition,
+      riskProfile: makeProfile({ scanStatus: 'complete', deep: null }),
+    };
+    const result = formatDefinition(def as Parameters<typeof formatDefinition>[0]);
+    expect(result).toContain('Deep analysis pending');
+    expect(result).not.toContain('Deep analysis failed');
+    expect(result).toContain('No risk signals');
   });
 });
 

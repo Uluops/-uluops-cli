@@ -668,6 +668,53 @@ describe('exec agent safety warnings', () => {
     expect(output.stderr()).not.toContain('Risk signal');
   });
 
+  it('warns when deep analysis errored on a sync-clean definition', async () => {
+    mockClient.describe.mockResolvedValue({
+      name: 'deep-errored-agent',
+      riskProfile: {
+        sync: { signals: [] },
+        deep: { status: 'error', errorReason: 'no_json', findings: [], riskLevel: 'none' },
+        aggregateRiskLevel: 'none',
+        scanStatus: 'complete',
+      },
+    });
+    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'deep-errored-agent' }));
+    await parse('exec', 'agent', '-t', './src', 'deep-errored-agent');
+    expect(output.stderr()).toContain('Deep safety analysis failed');
+    expect(output.stderr()).toContain('sync-only');
+  });
+
+  it('does not warn on deep: null (pending) with a clean sync scan', async () => {
+    mockClient.describe.mockResolvedValue({
+      name: 'pending-deep-agent',
+      riskProfile: {
+        sync: { signals: [] },
+        deep: null,
+        aggregateRiskLevel: 'none',
+        scanStatus: 'complete',
+      },
+    });
+    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'pending-deep-agent' }));
+    await parse('exec', 'agent', '-t', './src', 'pending-deep-agent');
+    expect(output.stderr()).not.toContain('Deep safety analysis failed');
+  });
+
+  it('sync risk signal outranks the deep-error advisory', async () => {
+    mockClient.describe.mockResolvedValue({
+      name: 'risky-deep-errored-agent',
+      riskProfile: {
+        sync: { signals: [{ title: 'Shell exploitation pattern' }] },
+        deep: { status: 'error', errorReason: 'timeout', findings: [], riskLevel: 'none' },
+        aggregateRiskLevel: 'high',
+        scanStatus: 'complete',
+      },
+    });
+    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'risky-deep-errored-agent' }));
+    await parse('exec', 'agent', '-t', './src', 'risky-deep-errored-agent');
+    expect(output.stderr()).toContain('Risk signal');
+    expect(output.stderr()).not.toContain('Deep safety analysis failed');
+  });
+
   it('shows runtime advisory for shell-capable agent targeting sensitive path', async () => {
     mockClient.describe.mockResolvedValue({
       name: 'shell-agent',

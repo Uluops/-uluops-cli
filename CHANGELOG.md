@@ -6,6 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.22.4] - 2026-07-10
+
+### Fixed
+
+- **Deep-analysis errors no longer render as clean** (registry-sdk 0.43.0 deep-aware
+  `isVerdictTrustworthy`; deep-error laundering, registry-api 06afd6ad):
+  - `ulu def get`: a deep-errored profile prints "Deep analysis failed (reason) — could
+    not determine" instead of reaching the clean/complete rendering; `deep: null` still
+    prints "Deep analysis pending."
+  - `exec agent`: new pre-run advisory "Deep safety analysis failed — verdict is
+    sync-only" for sync-clean definitions whose deep audit errored. An actual sync risk
+    signal outranks the advisory; `--no-safety-warnings` suppresses it as before.
+
 ## [0.22.3] - 2026-07-07
 
 ### Fixed

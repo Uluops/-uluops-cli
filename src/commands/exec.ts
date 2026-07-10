@@ -771,6 +771,10 @@ Examples:
                   // (core types riskProfile as an opaque Record; canonical
                   // predicate is isVerdictTrustworthy in @uluops/registry-sdk.)
                   const scanStatus = profile.scanStatus as string | undefined;
+                  const deep = profile.deep as
+                    | Record<string, unknown>
+                    | null
+                    | undefined;
                   if (scanStatus === 'failed') {
                     const reason = profile.scanFailedReason as
                       | string
@@ -785,6 +789,15 @@ Examples:
                     const firstSignal = signals[0]!;
                     console.error(
                       `\n  \u26A0\uFE0F  Risk signal: ${firstSignal.title as string}\n`,
+                    );
+                  } else if (deep?.['status'] === 'error') {
+                    // Deep analysis errored \u2014 the aggregate stays at the sync
+                    // level, so a sync-clean definition would otherwise read
+                    // as clean here (deep-error laundering, registry-api
+                    // 06afd6ad). deep: null (pending/skipped) is NOT flagged;
+                    // an actual sync risk signal outranks this advisory.
+                    console.error(
+                      `\n  \u26A0\uFE0F  Deep safety analysis failed \u2014 verdict is sync-only; absence of deep findings is not a clean verdict.\n`,
                     );
                   }
 
