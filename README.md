@@ -696,6 +696,15 @@ ulu exec describe --type pipeline                       # No name + --type → f
 > inventing one from the target directory. In a non-interactive context (CI,
 > piped stdin) it **fails closed** (exit 1) instead of prompting; pass
 > `--project <name>`, set `ULUOPS_PROJECT`, or `--no-tracking`.
+>
+> **Safety advisories.** Registry definitions carry a publish-time safety scan;
+> `ulu def get` renders it, and `exec agent` prints a pre-run advisory when the
+> definition has risk signals or when the scan **cannot be trusted as clean**:
+> "Safety scan incomplete — could not determine" (sync scan aborted, 0.22.3) and
+> "Deep safety analysis failed — verdict is sync-only" (background deep audit
+> errored, 0.23.0). Absence of signals is not a clean verdict in either state;
+> an actual sync risk signal outranks both advisories. `--no-safety-warnings`
+> suppresses them.
 
 **Shared options** (all `exec` subcommands):
 
