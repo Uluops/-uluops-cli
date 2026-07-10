@@ -676,10 +676,13 @@ describe('handleCoreError', () => {
     expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
     const stderr = output.stderr();
     expect(stderr).toContain('Multiple definitions named');
-    expect(stderr).toContain('--type agent');
-    expect(stderr).toContain('--type command');
-    expect(stderr).not.toContain('--type workflow');
-    expect(stderr).not.toContain('--type pipeline');
+    // The hint must name commands that actually exist — exec run has no
+    // --type flag; the typed subcommands are the disambiguation mechanism.
+    expect(stderr).toContain('ulu exec agent socrates-explorer -t <target>');
+    expect(stderr).toContain('ulu exec command socrates-explorer <target>');
+    expect(stderr).not.toContain('exec workflow');
+    expect(stderr).not.toContain('exec pipeline');
+    expect(stderr).not.toContain('--type');
     expect(stderr).not.toContain('ANTHROPIC_API_KEY');
     output.restore();
   });
@@ -692,9 +695,9 @@ describe('handleCoreError', () => {
 
     expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
     const stderr = output.stderr();
-    expect(stderr).toContain('--type agent');
-    expect(stderr).toContain('--type command');
-    expect(stderr).not.toContain('--type garbage');
+    expect(stderr).toContain('ulu exec agent x -t <target>');
+    expect(stderr).toContain('ulu exec command x <target>');
+    expect(stderr).not.toContain('garbage');
     output.restore();
   });
 
