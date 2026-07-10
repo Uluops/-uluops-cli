@@ -137,8 +137,18 @@ describe('exec run', () => {
   it('executes a definition by name and displays formatted result', async () => {
     mockClient.run.mockResolvedValue(createAgentResult());
     await parse('exec', 'run', 'code-validator', './src');
-    expect(mockClient.run).toHaveBeenCalledWith('code-validator', { target: './src', prompt: undefined });
+    expect(mockClient.run).toHaveBeenCalledWith('code-validator', { target: './src', prompt: undefined }, undefined);
     expect(output.stdout()).toContain('code-validator');
+  });
+
+  it('forwards --hash/--prompt-hash as integrity pins', async () => {
+    mockClient.run.mockResolvedValue(createAgentResult());
+    await parse('exec', 'run', 'code-validator', './src', '--hash', 'sha256:aaa', '--prompt-hash', 'sha256:bbb');
+    expect(mockClient.run).toHaveBeenCalledWith(
+      'code-validator',
+      { target: './src', prompt: undefined },
+      { expectedHash: 'sha256:aaa', expectedPromptHash: 'sha256:bbb' },
+    );
   });
 
   it('displays JSON output when context is json mode', async () => {
@@ -259,6 +269,26 @@ describe('exec command', () => {
     mockClient.runCommand.mockRejectedValue(err);
     await expect(parse('exec', 'command', 'my-command', './src')).rejects.toThrow('Command failed');
   });
+
+  it('merges --hash pins into the overrides bag alongside --model', async () => {
+    mockClient.runCommand.mockResolvedValue(createExecutionResult());
+    await parse('exec', 'command', 'my-command', './src', '--model', 'haiku', '--hash', 'sha256:aaa');
+    expect(mockClient.runCommand).toHaveBeenCalledWith(
+      'my-command',
+      { target: './src', prompt: undefined },
+      { model: 'haiku', expectedHash: 'sha256:aaa' },
+    );
+  });
+
+  it('passes pins without --model as an overrides bag of pins only', async () => {
+    mockClient.runCommand.mockResolvedValue(createExecutionResult());
+    await parse('exec', 'command', 'my-command', './src', '--hash', 'sha256:aaa', '--prompt-hash', 'sha256:bbb');
+    expect(mockClient.runCommand).toHaveBeenCalledWith(
+      'my-command',
+      { target: './src', prompt: undefined },
+      { expectedHash: 'sha256:aaa', expectedPromptHash: 'sha256:bbb' },
+    );
+  });
 });
 
 // ── exec workflow ────────────────────────────────────────────────────────
@@ -267,7 +297,17 @@ describe('exec workflow', () => {
   it('executes a workflow and displays formatted result', async () => {
     mockClient.runWorkflow.mockResolvedValue(createExecutionResult({ type: 'workflow', name: 'ship' }));
     await parse('exec', 'workflow', 'ship', './src');
-    expect(mockClient.runWorkflow).toHaveBeenCalledWith('ship', { target: './src', prompt: undefined });
+    expect(mockClient.runWorkflow).toHaveBeenCalledWith('ship', { target: './src', prompt: undefined }, undefined);
+  });
+
+  it('forwards --hash as a YAML integrity pin', async () => {
+    mockClient.runWorkflow.mockResolvedValue(createExecutionResult({ type: 'workflow', name: 'ship' }));
+    await parse('exec', 'workflow', 'ship', './src', '--hash', 'sha256:aaa');
+    expect(mockClient.runWorkflow).toHaveBeenCalledWith(
+      'ship',
+      { target: './src', prompt: undefined },
+      { expectedHash: 'sha256:aaa' },
+    );
   });
 
   it('delegates errors to handleCoreError', async () => {
@@ -285,10 +325,23 @@ describe('exec pipeline', () => {
       createExecutionResult({ type: 'pipeline', name: 'foundations' }),
     );
     await parse('exec', 'pipeline', 'foundations', './src');
-    expect(mockClient.runPipeline).toHaveBeenCalledWith('foundations', {
-      target: './src',
-      prompt: undefined,
-    });
+    expect(mockClient.runPipeline).toHaveBeenCalledWith(
+      'foundations',
+      { target: './src', prompt: undefined },
+      undefined,
+    );
+  });
+
+  it('forwards --hash as a YAML integrity pin', async () => {
+    mockClient.runPipeline.mockResolvedValue(
+      createExecutionResult({ type: 'pipeline', name: 'foundations' }),
+    );
+    await parse('exec', 'pipeline', 'foundations', './src', '--hash', 'sha256:aaa');
+    expect(mockClient.runPipeline).toHaveBeenCalledWith(
+      'foundations',
+      { target: './src', prompt: undefined },
+      { expectedHash: 'sha256:aaa' },
+    );
   });
 
   it('passes the operator prompt through', async () => {
@@ -303,10 +356,11 @@ describe('exec pipeline', () => {
       '--prompt',
       'focus on security',
     );
-    expect(mockClient.runPipeline).toHaveBeenCalledWith('foundations', {
-      target: './src',
-      prompt: 'focus on security',
-    });
+    expect(mockClient.runPipeline).toHaveBeenCalledWith(
+      'foundations',
+      { target: './src', prompt: 'focus on security' },
+      undefined,
+    );
   });
 
   it('emits JSON in json mode', async () => {

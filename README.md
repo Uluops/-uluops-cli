@@ -703,6 +703,8 @@ ulu exec describe --type pipeline                       # No name + --type → f
 |--------|-------------|
 | `-p, --prompt <text>` | Operator directive or context for the agent |
 | `-m, --model <model>` | Model override (alias, tier, or provider:modelId) |
+| `--hash <sha256:...>` | **Optional.** Pin the expected YAML hash (from a trusted channel). Verifies the resolved definition source + config before executing; refuses on mismatch (**exit 4**). Available on `run`, `agent`, `command`, `workflow`, and `pipeline` (requires `@uluops/core@0.32.0`). |
+| `--prompt-hash <sha256:...>` | **Optional.** Pin the expected rendered-prompt hash. Pair with `--hash` for full agent/command executed-prompt integrity. Only `run`, `agent`, and `command` — workflows/pipelines have no rendered prompt, so supplying it for one is refused as "unavailable" (**exit 4**). |
 
 **Agent-specific options** (`exec agent` only):
 
@@ -716,8 +718,6 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `-c, --concurrency <n>` | Max concurrent agents for parallel execution (default: 5) |
 | `--threshold-pass <n>` | Pass threshold score (agents) |
 | `--threshold-warn <n>` | Warning threshold score (agents) |
-| `--hash <sha256:...>` | **Optional.** Pin the expected YAML hash (from a trusted channel). Verifies the resolved definition source + config before executing; refuses on mismatch (**exit 4**). |
-| `--prompt-hash <sha256:...>` | **Optional.** Pin the expected rendered-prompt hash. Pair with `--hash` for full agent executed-prompt integrity. Both pins are opt-in — omitting them runs unverified as before. Refuses on mismatch (**exit 4**). |
 | `--report [path]` | Write a human-readable, publication-quality report to file (single agent only). With no path, defaults to `./<agent>-report-<YYYYMMDDTHHmmss>.md` in cwd. Injects a report-mode directive into the agent's prompt and disables structured-output enforcement so the model can emit prose. **Disables tracker submission** (implies `--no-tracking`): the schema-validated path the tracker depends on is no longer guaranteed under report mode, so `--report` silently wins over `--project` rather than erroring. With `--project` (or `ULUOPS_PROJECT`) set, a "tracking disabled" notice prints even under `-q`. Run without `--report` for tracker submission. |
 | `-o, --output <path>` | Explicit output path for `--report` (overrides the `--report` argument and the default) |
 | `--features-list <path>` | Write structured features/recommendations to file (single agent only) |
@@ -769,14 +769,21 @@ ulu exec describe code-validator
 # Pin integrity hashes (from a trusted channel) — refuses with exit 4 on mismatch
 ulu exec agent code-validator -t ./src \
   --hash sha256:… --prompt-hash sha256:…
+
+# Pin a pipeline or command the same way (CI: pin what you run, especially
+# with bash enabled — the YAML pin covers the whole workflow/pipeline runtime)
+ulu exec pipeline api-server-validate ./src --hash sha256:…
+ulu exec command validate ./src --hash sha256:… --prompt-hash sha256:…
 ```
 
 > **Integrity pins are optional.** `--hash` verifies the YAML (source + config);
 > `--prompt-hash` verifies the rendered prompt (agents/commands). Use both for
-> full agent integrity. On mismatch — or if `--prompt-hash` is given for a
-> definition with no rendered prompt — execution is **refused with exit code 4**
+> full agent/command integrity. On mismatch — or if `--prompt-hash` is given for
+> a definition with no rendered prompt — execution is **refused with exit code 4**
 > (distinct from `1` usage/config and `2` API/runtime). `exec workflow`/`pipeline`
-> have no rendered prompt; pin their YAML with `--hash` only.
+> have no rendered prompt; pin their YAML with `--hash` only — for WDL/PDL the
+> YAML *is* the runtime, so that pin alone fully covers execution (stage/phase
+> refs resolve downstream and are not individually pinned).
 
 ---
 

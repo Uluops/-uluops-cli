@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-07-10
+
+### Added
+
+- **Integrity pins on every exec surface.** `--hash` is now accepted by `exec run`,
+  `exec command`, `exec workflow`, and `exec pipeline` (previously `exec agent` only),
+  and `--prompt-hash` by `exec run` and `exec command`. Pins verify the resolved
+  definition fail-closed before anything executes and refuse with **exit 4** on
+  mismatch — closing the gap where the CI-recommended surfaces (`command`, `pipeline`)
+  could not pin what they ran (core tracker 1a49ad7a). For workflows/pipelines the
+  YAML pin alone fully covers execution; they have no rendered prompt, so
+  `--prompt-hash` is deliberately not offered there.
+
+### Dependencies
+
+- Bump `@uluops/core` `0.30.0` → `0.32.0`:
+  - **PDL stage gates enacted** — `gate.on_failure: abort` now hard-stops a pipeline
+    (previously parsed but never read; hard build gates silently auto-passed). An
+    abort-gated `steps:` stage that cannot execute because `allowStageSteps` is off
+    fails the run loudly with the remedy instead of stamping PASS. `exec pipeline`
+    surfaces the abort as a failed run; skipped downstream stages report `skipReason:
+    'gate_abort' | 'gate_skip' | 'gate_early_exit'`.
+  - **Stage output forwarding (0.31.0)** — multi-stage pipelines forward upstream
+    results into downstream agents' prompts by default (kill switch:
+    `ULUOPS_DISABLE_STAGE_FORWARDING=1`).
+  - Integrity pins accepted by every core execution entrypoint (the API surface the
+    new CLI flags ride on).
+
 ## [0.22.3] - 2026-07-07
 
 ### Fixed
