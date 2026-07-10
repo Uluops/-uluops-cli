@@ -291,15 +291,24 @@ Examples:
           console.log(`Run #${result.run.runNumber} saved successfully`);
           console.log('');
           console.log('Correlation:');
-          console.log(
-            `  New issues: ${getFlexibleProperty(result.correlation, 'newIssues', 0)}`,
-          );
-          console.log(
-            `  Recurring: ${getFlexibleProperty(result.correlation, 'recurringIssues', 0)}`,
-          );
-          console.log(
-            `  Regressions: ${getFlexibleProperty(result.correlation, 'regressions', 0)}`,
-          );
+          // correlation is nullable since ops-sdk 5.7.0: null means the counts
+          // were never persisted (dedup replay of a pre-counts run), not zero.
+          const correlation = result.correlation;
+          if (correlation == null) {
+            console.log(
+              '  (counts unavailable — replay of a run saved before correlation counts were persisted)',
+            );
+          } else {
+            console.log(
+              `  New issues: ${getFlexibleProperty(correlation, 'newIssues', 0)}`,
+            );
+            console.log(
+              `  Recurring: ${getFlexibleProperty(correlation, 'recurringIssues', 0)}`,
+            );
+            console.log(
+              `  Regressions: ${getFlexibleProperty(correlation, 'regressions', 0)}`,
+            );
+          }
           if (result.deduplicated) {
             console.log(
               '\n(Deduplicated: run with same idempotency key already existed)',
