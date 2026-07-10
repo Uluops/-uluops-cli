@@ -383,6 +383,24 @@ function buildExecOptions(
 }
 
 /**
+ * Build integrity-pin options from --hash/--prompt-hash flags for the
+ * command/workflow/pipeline/run entrypoints (core ≥0.32.0 accepts pins on
+ * every execution surface). Returns undefined when unpinned so the resolve
+ * path stays exactly as before.
+ */
+function toPinOptions(
+  opts: Record<string, unknown>,
+): { expectedHash?: string; expectedPromptHash?: string } | undefined {
+  const expectedHash = optString(opts, 'hash');
+  const expectedPromptHash = optString(opts, 'promptHash');
+  if (!expectedHash && !expectedPromptHash) return undefined;
+  return {
+    ...(expectedHash ? { expectedHash } : {}),
+    ...(expectedPromptHash ? { expectedPromptHash } : {}),
+  };
+}
+
+/**
  * Steering directive prepended to the operator prompt when `--report` is set.
  *
  * Announces report mode to the agent and asks it to compose a publication-quality
@@ -572,6 +590,17 @@ Examples:
       '-p, --prompt <text>',
       'Operator directive or context for the agent',
     )
+    .option(
+      '--hash <sha256:...>',
+      'Optional. Pin the expected YAML hash (from a trusted channel). Verifies the ' +
+        'resolved definition source + config before executing and refuses on mismatch (exit 4).',
+    )
+    .option(
+      '--prompt-hash <sha256:...>',
+      'Optional. Pin the expected rendered-prompt hash. Only meaningful when the name ' +
+        'resolves to an agent/command — workflows/pipelines have no rendered prompt, so ' +
+        'supplying it for one is refused as "unavailable" (exit 4).',
+    )
     .action(
       async (
         name: string,
@@ -597,7 +626,7 @@ Examples:
               success: `Execution complete`,
               failure: `Execution failed`,
             },
-            () => ctx.client.run(name, { target, prompt }),
+            () => ctx.client.run(name, { target, prompt }, toPinOptions(cmdOpts)),
           );
 
           if (ctx.json) {
@@ -975,6 +1004,17 @@ Examples:
       '-p, --prompt <text>',
       'Operator directive or context for the agent',
     )
+    .option(
+      '--hash <sha256:...>',
+      'Optional. Pin the expected YAML hash (from a trusted channel). When given, ' +
+        'verifies the resolved definition source + config before executing and refuses ' +
+        'on mismatch (exit 4). Recommended for CI, especially with bash enabled.',
+    )
+    .option(
+      '--prompt-hash <sha256:...>',
+      'Optional. Pin the expected rendered-prompt hash. Pair with --hash for full ' +
+        'executed-prompt integrity.',
+    )
     .action(
       async (
         name: string,
@@ -993,6 +1033,12 @@ Examples:
         const prompt = optString(cmdOpts, 'prompt');
 
         try {
+          // Model override and integrity pins share runCommand's overrides bag.
+          const pins = toPinOptions(cmdOpts);
+          const overrides =
+            modelOverride || pins
+              ? { ...(modelOverride ? { model: modelOverride } : {}), ...pins }
+              : undefined;
           const result = await withSpinner(
             ctx,
             {
@@ -1000,12 +1046,7 @@ Examples:
               success: `Command execution complete`,
               failure: `Command execution failed`,
             },
-            () =>
-              ctx.client.runCommand(
-                name,
-                { target, prompt },
-                modelOverride ? { model: modelOverride } : undefined,
-              ),
+            () => ctx.client.runCommand(name, { target, prompt }, overrides),
           );
 
           if (ctx.json) {
@@ -1033,6 +1074,13 @@ Examples:
       '-p, --prompt <text>',
       'Operator directive or context for the agent',
     )
+    .option(
+      '--hash <sha256:...>',
+      'Optional. Pin the expected YAML hash (from a trusted channel). Verifies the ' +
+        'resolved definition before executing and refuses on mismatch (exit 4). ' +
+        'For a workflow the YAML pin alone fully covers execution — phase refs are ' +
+        'resolved downstream and are not individually pinned.',
+    )
     .action(
       async (
         name: string,
@@ -1058,7 +1106,7 @@ Examples:
               success: `Workflow execution complete`,
               failure: `Workflow execution failed`,
             },
-            () => ctx.client.runWorkflow(name, { target, prompt }),
+            () => ctx.client.runWorkflow(name, { target, prompt }, toPinOptions(cmdOpts)),
           );
 
           if (ctx.json) {
@@ -1086,6 +1134,13 @@ Examples:
       '-p, --prompt <text>',
       'Operator directive or context for the agent',
     )
+    .option(
+      '--hash <sha256:...>',
+      'Optional. Pin the expected YAML hash (from a trusted channel). Verifies the ' +
+        'resolved definition before executing and refuses on mismatch (exit 4). ' +
+        'For a pipeline the YAML pin alone fully covers execution — stage refs are ' +
+        'resolved downstream and are not individually pinned.',
+    )
     .action(
       async (
         name: string,
@@ -1111,7 +1166,7 @@ Examples:
               success: `Pipeline execution complete`,
               failure: `Pipeline execution failed`,
             },
-            () => ctx.client.runPipeline(name, { target, prompt }),
+            () => ctx.client.runPipeline(name, { target, prompt }, toPinOptions(cmdOpts)),
           );
 
           if (ctx.json) {
