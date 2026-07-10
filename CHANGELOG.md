@@ -20,6 +20,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Dependencies
 
+- Bump `@uluops/core` `0.32.0` → `0.33.0`. Two engine behavior changes surface
+  through the CLI (both observed on live pre-publish smoke runs; full detail in
+  core's 0.33.0 changelog):
+  - **Composites with a low-confidence child no longer report
+    `allGatesPassed: true`.** Command/workflow/pipeline results now carry the
+    WORST child's extraction confidence; a run whose weakest agent was
+    regex-parsed below the trust threshold (0.7) keeps its decision (e.g.
+    `PASS`) but reports `allGatesPassed: false` to the tracker. CI jobs gating
+    on `allGatesPassed` will see previously-passing regex-parsed runs stop
+    passing — intended: a PASS parsed at confidence 0.4 was never trustworthy
+    evidence of a pass.
+  - **Hard-abort steps gates refuse to run without the shell opt-in.** A
+    pipeline stage with `steps:` and `gate.on_failure: abort` now fails the
+    run loudly when `allowStageSteps` is disabled (previously the unexecuted
+    stage passed through). Remedy is in the error text: set
+    `ULUOPS_ALLOW_STAGE_STEPS=true` (or `config.allowStageSteps`), or
+    downgrade the gate to `on_failure: warn`. Affects `ulu exec pipeline`
+    on pipelines with steps-based preflight gates (e.g. `dao-li`).
+  - Also visible in output: `Completeness: PARTIAL` now reflects the new
+    coverage markers (`context.evicted`, `usage.provider-metadata-shape-drift`
+    is info-only); a crashed parallel agent in a multi-agent command fails the
+    command instead of vanishing behind the survivors' average; a scored
+    lens-negative (e.g. DISORDERED@82) caps a command at `WARN`; malformed
+    local `.agent.yaml` files fail as `ConfigurationError` naming the file
+    instead of a raw `TypeError`; short `ulr_` keys fail fast at config time.
+
 - Bump `@uluops/ops-sdk` `5.6.0` → `5.8.0`:
   - `recommendations[].issueStatus` on run details survives the SDK's response
     parse (5.8.0 declares it; older SDKs stripped the unknown key). Each
