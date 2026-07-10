@@ -414,15 +414,33 @@ const VALID_DEFINITION_TYPES = new Set([
   'pipeline',
 ]);
 
-function extractAmbiguousTypes(message: string): string[] {
-  const match = /multiple definitions named .+? found \(([^)]+)\)/i.exec(
+/** Typed exec subcommand invocation per definition type, for the
+ *  ambiguous-name hint. `exec agent` takes its target via -t; the others
+ *  take it positionally. The typed subcommands ARE the disambiguation
+ *  mechanism — `exec run` deliberately has no --type flag (it would just
+ *  duplicate them), so the hint must name commands that actually exist. */
+const EXEC_SUBCOMMAND_SHAPE: Record<string, (name: string) => string> = {
+  agent: (n) => `ulu exec agent ${n} -t <target>`,
+  command: (n) => `ulu exec command ${n} <target>`,
+  workflow: (n) => `ulu exec workflow ${n} <target>`,
+  pipeline: (n) => `ulu exec pipeline ${n} <target>`,
+};
+
+function extractAmbiguousTypes(message: string): {
+  name: string;
+  types: string[];
+} {
+  const match = /multiple definitions named "?([^"]+?)"? found \(([^)]+)\)/i.exec(
     message,
   );
-  if (!match?.[1]) return [];
-  return match[1]
-    .split(',')
-    .map((t) => t.trim().toLowerCase())
-    .filter((t) => VALID_DEFINITION_TYPES.has(t));
+  if (!match?.[2]) return { name: '<name>', types: [] };
+  return {
+    name: match[1] ?? '<name>',
+    types: match[2]
+      .split(',')
+      .map((t) => t.trim().toLowerCase())
+      .filter((t) => VALID_DEFINITION_TYPES.has(t)),
+  };
 }
 
 function printApiErrorDetails(
@@ -597,11 +615,14 @@ export function handleCoreError(
         '\nHint: Check ULUOPS_API_KEY and ANTHROPIC_API_KEY environment variables.',
       );
     } else {
-      const types = extractAmbiguousTypes(error.message);
+      const { name, types } = extractAmbiguousTypes(error.message);
       if (types.length > 0) {
-        console.error('\nHint: Specify type to disambiguate. Add one of:');
+        console.error(
+          '\nHint: The name matches multiple definition types — run it with the typed subcommand:',
+        );
         for (const type of types) {
-          console.error(`  --type ${type}`);
+          const shape = EXEC_SUBCOMMAND_SHAPE[type];
+          if (shape) console.error(`  ${shape(name)}`);
         }
       }
     }

@@ -19,6 +19,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   YAML pin alone fully covers execution; they have no rendered prompt, so
   `--prompt-hash` is deliberately not offered there.
 
+### Fixed
+
+- **Ambiguous-name hint now names commands that exist.** When a name resolves to
+  multiple definition types, the hint said "Add one of: `--type pipeline`" — but
+  `exec run` has no `--type` flag (it belongs to `exec list`/`describe`), so the
+  suggestion was un-followable. The typed subcommands are the disambiguation
+  mechanism, and the hint now says so with the actual name filled in
+  (`ulu exec pipeline academy-pipeline <target>`), including `exec agent`'s
+  `-t` target shape.
+
 ### Dependencies
 
 - Bump `@uluops/core` `0.30.0` → `0.32.0`:
