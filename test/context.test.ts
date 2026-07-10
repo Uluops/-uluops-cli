@@ -697,7 +697,9 @@ describe('handleCoreError', () => {
     const stderr = output.stderr();
     expect(stderr).toContain('ulu exec agent x -t <target>');
     expect(stderr).toContain('ulu exec command x <target>');
-    expect(stderr).not.toContain('garbage');
+    // The raw error line legitimately echoes "garbage" — only the HINT must
+    // filter it: no suggested invocation may carry an unknown type.
+    expect(stderr).not.toMatch(/ulu exec \S*garbage/);
     output.restore();
   });
 

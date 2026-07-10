@@ -31,6 +31,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Dependencies
 
+- Bump `@uluops/registry-sdk` `0.42.0` → `0.43.0` — `isVerdictTrustworthy` is now
+  deep-aware: a sync-clean definition whose background deep analysis **errored** no
+  longer reads as trustworthy-clean (deep-error laundering, registry-api issue
+  06afd6ad). The CLI's incomplete-scan advisories (`def get`, `exec`) inherit the
+  fix through the predicate with no code change; `deep: null` (pending/skipped)
+  stays trusted.
 - Bump `@uluops/core` `0.30.0` → `0.32.0`:
   - **PDL stage gates enacted** — `gate.on_failure: abort` now hard-stops a pipeline
     (previously parsed but never read; hard build gates silently auto-passed). An
