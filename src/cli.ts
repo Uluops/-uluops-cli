@@ -54,7 +54,7 @@ process.on('unhandledRejection', (reason) => {
   // Honor both the --debug flag and ULUOPS_DEBUG env: captive CI that cannot
   // re-run to add the flag can set the env once and still get the stack.
   const debug =
-    process.argv.includes('--debug') || process.env['ULUOPS_DEBUG'] === 'true';
+    process.argv.includes('--debug') || process.env.ULUOPS_DEBUG === 'true';
   // Always surface the error message — it is the one actionable line a captive
   // caller (CI, agent harness) gets, and they often cannot reproduce to add
   // --debug. Only the full stack is gated behind debug mode.
@@ -74,7 +74,7 @@ const version = getCliVersion();
 // unchanged). A convenience alias for `ULU_JSON_SCHEMA=1`; emitJson reads the
 // env var as the single source of truth, so set it before any command parses.
 if (process.argv.includes('--json-envelope')) {
-  process.env['ULU_JSON_SCHEMA'] = '1';
+  process.env.ULU_JSON_SCHEMA = '1';
 }
 
 const program = new Command();

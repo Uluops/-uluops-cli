@@ -330,7 +330,7 @@ export function createCoreContext(
     requireCredentials(false, options.profile ?? 'default');
   }
 
-  const thinkingBudgetEnv = process.env['ULUOPS_THINKING_BUDGET'];
+  const thinkingBudgetEnv = process.env.ULUOPS_THINKING_BUDGET;
   const thinkingBudget = thinkingBudgetEnv
     ? parseInt(thinkingBudgetEnv, 10)
     : undefined;
@@ -339,7 +339,7 @@ export function createCoreContext(
     localDefinitions: options.localDefinitions,
     trackingEnabled: options.tracking,
     defaultProject: options.project,
-    submissionUrl: process.env['ULUOPS_SUBMISSION_URL'] ?? opsConfig.baseUrl,
+    submissionUrl: process.env.ULUOPS_SUBMISSION_URL ?? opsConfig.baseUrl,
     debug: options.debug,
     ...(thinkingBudget !== undefined && !Number.isNaN(thinkingBudget)
       ? { defaultThinkingBudget: thinkingBudget }
@@ -430,9 +430,8 @@ function extractAmbiguousTypes(message: string): {
   name: string;
   types: string[];
 } {
-  const match = /multiple definitions named "?([^"]+?)"? found \(([^)]+)\)/i.exec(
-    message,
-  );
+  const match =
+    /multiple definitions named "?([^"]+?)"? found \(([^)]+)\)/i.exec(message);
   if (!match?.[2]) return { name: '<name>', types: [] };
   return {
     name: match[1] ?? '<name>',
@@ -481,13 +480,13 @@ function printApiErrorDetails(
       console.error('');
       console.error('┌─────────────────────────────────────────────────┐');
       console.error(
-        `│  Subscription required${requiredTier ? `: ${requiredTier} tier or higher` : ''}`.padEnd(
+        `${`│  Subscription required${requiredTier ? `: ${requiredTier} tier or higher` : ''}`.padEnd(
           50,
-        ) + '│',
+        )}│`,
       );
       console.error('│                                                 │');
       if (trackedUrl) {
-        console.error(`│  Upgrade: ${trackedUrl}`.padEnd(50) + '│');
+        console.error(`${`│  Upgrade: ${trackedUrl}`.padEnd(50)}│`);
       }
       console.error('└─────────────────────────────────────────────────┘');
     } else if (error.code === 'RATE_LIMITED' || error.statusCode === 429) {
@@ -586,13 +585,13 @@ export function handleCoreError(
       console.error('');
       console.error('┌─────────────────────────────────────────────────┐');
       console.error(
-        `│  Upgrade to ${error.requiredTier} to access this content`.padEnd(
+        `${`│  Upgrade to ${error.requiredTier} to access this content`.padEnd(
           50,
-        ) + '│',
+        )}│`,
       );
       console.error('│                                                 │');
       if (trackedUrl) {
-        console.error(`│  ${trackedUrl}`.padEnd(50) + '│');
+        console.error(`${`│  ${trackedUrl}`.padEnd(50)}│`);
       }
       console.error('└─────────────────────────────────────────────────┘');
     }

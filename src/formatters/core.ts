@@ -22,8 +22,8 @@ function formatTrackingError(err: TrackingError): string {
   const upgradeUrl =
     err.code !== undefined &&
     upgradeCodes.has(err.code) &&
-    typeof err.details?.['upgradeUrl'] === 'string'
-      ? (err.details['upgradeUrl'] as string)
+    typeof err.details?.upgradeUrl === 'string'
+      ? (err.details.upgradeUrl as string)
       : undefined;
   return `Run not recorded: ${err.message}${upgradeUrl ? ` — upgrade: ${upgradeUrl}` : ''}`;
 }

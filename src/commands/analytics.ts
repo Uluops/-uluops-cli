@@ -682,5 +682,5 @@ Examples:
  */
 function truncatePath(path: string, maxWidth: number): string {
   if (path.length <= maxWidth) return path;
-  return '...' + path.slice(-(maxWidth - 3));
+  return `...${path.slice(-(maxWidth - 3))}`;
 }

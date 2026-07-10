@@ -17,7 +17,7 @@ function padCell(
   align: 'left' | 'right' | 'center',
 ): string {
   const truncated =
-    text.length > width ? text.slice(0, width - 1) + '\u2026' : text;
+    text.length > width ? `${text.slice(0, width - 1)}\u2026` : text;
   const padding = width - truncated.length;
 
   if (padding <= 0) return truncated;

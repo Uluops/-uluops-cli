@@ -94,7 +94,7 @@ export async function confirmInferredProjectOrExit(
   if (skip) return;
   if (options.tracking === false) return;
   if (options.project) return;
-  if (process.env['ULUOPS_PROJECT']) return;
+  if (process.env.ULUOPS_PROJECT) return;
   if (!target) return;
   const inferred = basename(resolve(target));
   if (!process.stdin.isTTY) {
@@ -612,7 +612,7 @@ Examples:
         await confirmInferredProjectOrExit(
           options,
           target,
-          cmdOpts['report'] !== undefined,
+          cmdOpts.report !== undefined,
         );
         const modelOverride = optString(cmdOpts, 'model');
         const prompt = optString(cmdOpts, 'prompt');
@@ -626,7 +626,8 @@ Examples:
               success: `Execution complete`,
               failure: `Execution failed`,
             },
-            () => ctx.client.run(name, { target, prompt }, toPinOptions(cmdOpts)),
+            () =>
+              ctx.client.run(name, { target, prompt }, toPinOptions(cmdOpts)),
           );
 
           if (ctx.json) {
@@ -711,7 +712,7 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
-        const target: string = cmd.opts()['target'];
+        const target: string = cmd.opts().target;
         const agentNames: string[] = names.filter(Boolean);
 
         // --report is single-agent only. In a multi-agent run the report-mode
@@ -722,7 +723,7 @@ Examples:
         // inferred project, and write no report — silently, exit 0. Fail closed.
         // (For multi-phase reports, use `exec workflow|pipeline --report` once
         // consolidated-report mode ships.)
-        if (cmdOpts['report'] !== undefined && agentNames.length > 1) {
+        if (cmdOpts.report !== undefined && agentNames.length > 1) {
           console.error(
             `--report supports a single agent only — you passed ${agentNames.length} ` +
               `(${agentNames.join(', ')}).\n` +
@@ -734,7 +735,7 @@ Examples:
         await confirmInferredProjectOrExit(
           options,
           target,
-          cmdOpts['report'] !== undefined,
+          cmdOpts.report !== undefined,
         );
         const ctx = createCoreContext(options);
         const execOpts = buildExecOptions({ ...cmdOpts, ...options });
@@ -746,7 +747,7 @@ Examples:
           // Report-mode prompt augmentation: gated INSIDE the single-agent branch
           // so it cannot leak into the multi-agent path (which neither writes a
           // report file nor benefits from the directive).
-          const reportRequested = cmdOpts['report'] !== undefined;
+          const reportRequested = cmdOpts.report !== undefined;
           const effectivePrompt = applyReportModeDirective(
             prompt,
             reportRequested,
@@ -770,8 +771,7 @@ Examples:
             // intent (explicit --project or ULUOPS_PROJECT) yet report silently
             // wins. Otherwise it gets neither a tracker record nor a notice.
             const trackingIntent =
-              Boolean(options.project) ||
-              Boolean(process.env['ULUOPS_PROJECT']);
+              Boolean(options.project) || Boolean(process.env.ULUOPS_PROJECT);
             if (!ctx.quiet || trackingIntent) {
               console.error(
                 'Report mode enabled — tracking disabled. ' +
@@ -819,7 +819,7 @@ Examples:
                     console.error(
                       `\n  \u26A0\uFE0F  Risk signal: ${firstSignal.title as string}\n`,
                     );
-                  } else if (deep?.['status'] === 'error') {
+                  } else if (deep?.status === 'error') {
                     // Deep analysis errored \u2014 the aggregate stays at the sync
                     // level, so a sync-clean definition would otherwise read
                     // as clean here (deep-error laundering, registry-api
@@ -1039,7 +1039,7 @@ Examples:
         await confirmInferredProjectOrExit(
           options,
           target,
-          cmdOpts['report'] !== undefined,
+          cmdOpts.report !== undefined,
         );
         const ctx = createCoreContext(options);
         const modelOverride = optString(cmdOpts, 'model');
@@ -1105,7 +1105,7 @@ Examples:
         await confirmInferredProjectOrExit(
           options,
           target,
-          cmdOpts['report'] !== undefined,
+          cmdOpts.report !== undefined,
         );
         const modelOverride = optString(cmdOpts, 'model');
         const prompt = optString(cmdOpts, 'prompt');
@@ -1119,7 +1119,12 @@ Examples:
               success: `Workflow execution complete`,
               failure: `Workflow execution failed`,
             },
-            () => ctx.client.runWorkflow(name, { target, prompt }, toPinOptions(cmdOpts)),
+            () =>
+              ctx.client.runWorkflow(
+                name,
+                { target, prompt },
+                toPinOptions(cmdOpts),
+              ),
           );
 
           if (ctx.json) {
@@ -1165,7 +1170,7 @@ Examples:
         await confirmInferredProjectOrExit(
           options,
           target,
-          cmdOpts['report'] !== undefined,
+          cmdOpts.report !== undefined,
         );
         const modelOverride = optString(cmdOpts, 'model');
         const prompt = optString(cmdOpts, 'prompt');
@@ -1179,7 +1184,12 @@ Examples:
               success: `Pipeline execution complete`,
               failure: `Pipeline execution failed`,
             },
-            () => ctx.client.runPipeline(name, { target, prompt }, toPinOptions(cmdOpts)),
+            () =>
+              ctx.client.runPipeline(
+                name,
+                { target, prompt },
+                toPinOptions(cmdOpts),
+              ),
           );
 
           if (ctx.json) {
@@ -1269,7 +1279,7 @@ Examples:
 
         // Allow `name@version` suffix syntax (avoids commander's global -V shadow).
         // Explicit -v/--def-version still wins if both are supplied.
-        if (name && name.includes('@')) {
+        if (name?.includes('@')) {
           const atIdx = name.lastIndexOf('@');
           const suffix = name.slice(atIdx + 1);
           if (suffix.length > 0) {

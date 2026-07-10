@@ -757,7 +757,7 @@ Examples:
         if (ctx.json) {
           emitJson(ctx, result, 'auth.apiKeys.create');
         } else {
-          console.log('\n' + '='.repeat(60));
+          console.log(`\n${'='.repeat(60)}`);
           console.log(
             'IMPORTANT: Save this key now - it will not be shown again!',
           );
@@ -765,7 +765,7 @@ Examples:
           console.log(`\nAPI Key: ${result.key}`);
           console.log(`Key ID: ${result.apiKey.id}`);
           if (result.apiKey.name) console.log(`Name: ${result.apiKey.name}`);
-          console.log('\n' + '='.repeat(60));
+          console.log(`\n${'='.repeat(60)}`);
         }
       } catch (error) {
         handleOpsError(error, ctx);

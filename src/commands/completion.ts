@@ -93,7 +93,7 @@ function generateZshCompletion(program: Command): string {
       const subTree = tree.filter((t) => {
         const parent = entry.path;
         return (
-          t.path.startsWith(parent + ' ') &&
+          t.path.startsWith(`${parent} `) &&
           !t.path.slice(parent.length + 1).includes(' ')
         );
       });
@@ -197,7 +197,7 @@ function generateFishCompletion(program: Command): string {
   lines.push("complete -c ulu -l debug -d 'Enable debug output'");
   lines.push("complete -c ulu -s q -l quiet -d 'Suppress spinners'");
 
-  return lines.join('\n') + '\n';
+  return `${lines.join('\n')}\n`;
 }
 
 /**

@@ -158,7 +158,7 @@ export type JsonKind = keyof typeof SCHEMA_VERSIONS;
 
 /** True when the versioned envelope is opted into via env var or `--json-envelope`. */
 function envelopeEnabled(): boolean {
-  return process.env['ULU_JSON_SCHEMA'] === '1';
+  return process.env.ULU_JSON_SCHEMA === '1';
 }
 
 /**
