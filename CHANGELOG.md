@@ -6,6 +6,31 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`ulu runs save` no longer fabricates zero correlation counts.** The API
+  returns `correlation: null` on a dedup replay of a run saved before
+  correlation counts were persisted (ops-api migration 065) — the counts were
+  never stored and cannot be reconstructed. The human-readable output now
+  prints "(counts unavailable — replay of a run saved before correlation
+  counts were persisted)" for that case instead of `New issues: 0 /
+  Recurring: 0 / Regressions: 0`, which read as a confident (and wrong)
+  "nothing correlated". `--json` output is unaffected: it always carried the
+  raw `correlation` value, including `null`.
+
+### Dependencies
+
+- Bump `@uluops/ops-sdk` `5.6.0` → `5.8.0`:
+  - `recommendations[].issueStatus` on run details survives the SDK's response
+    parse (5.8.0 declares it; older SDKs stripped the unknown key). Each
+    recommendation now carries two orthogonal statuses from API 1.69.0:
+    `status` = correlation-in-run (`new`/`recurring`/`regression`/`observed`,
+    frozen at run time) and `issueStatus` = the linked issue's current
+    lifecycle (`open`/`completed`/…) — the latter answers "is the work done?"
+    without a follow-up issue lookup.
+  - Crosses the 5.7.0 `SaveRunResult.correlation` nullability widening — the
+    source of the display fix above.
+
 ## [0.23.0] - 2026-07-10
 
 ### Added
