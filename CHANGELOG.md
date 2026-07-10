@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+<<<<<<< HEAD
 ## [0.23.0] - 2026-07-10
 
 ### Added
@@ -29,13 +30,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   (`ulu exec pipeline academy-pipeline <target>`), including `exec agent`'s
   `-t` target shape.
 
+- **Deep-analysis errors named at both consumer surfaces** (completes the registry-sdk
+  0.43.0 adoption below — `def get` inherits the deep-aware predicate, but `exec agent`
+  re-derives locally because core types `riskProfile` as an opaque Record):
+  - `ulu def get`: a deep-errored profile prints "Deep analysis failed (reason) — could
+    not determine", naming the failing layer instead of the generic sync-scan copy;
+    `deep: null` still prints "Deep analysis pending."
+  - `exec agent`: new pre-run advisory "Deep safety analysis failed — verdict is
+    sync-only" for sync-clean definitions whose deep audit errored. An actual sync risk
+    signal outranks the advisory; `--no-safety-warnings` suppresses it as before.
+
 ### Dependencies
 
 - Bump `@uluops/registry-sdk` `0.42.0` → `0.43.0` — `isVerdictTrustworthy` is now
   deep-aware: a sync-clean definition whose background deep analysis **errored** no
   longer reads as trustworthy-clean (deep-error laundering, registry-api issue
-  06afd6ad). The CLI's incomplete-scan advisories (`def get`, `exec`) inherit the
-  fix through the predicate with no code change; `deep: null` (pending/skipped)
+  06afd6ad). `def get` inherits the fix through the predicate; `exec agent` needs
+  the explicit branch above (opaque Record from core). `deep: null` (pending/skipped)
   stays trusted.
 - Bump `@uluops/core` `0.30.0` → `0.32.0`:
   - **PDL stage gates enacted** — `gate.on_failure: abort` now hard-stops a pipeline

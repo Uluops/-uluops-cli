@@ -111,14 +111,21 @@ export function formatDefinition(def: Definition): string {
     // Risk signals. A failed sync scan carries aggregateRiskLevel 'none' as a
     // sentinel ("could not determine"), NOT a clean verdict \u2014 never render the
     // absence of signals as "No risk signals." (perverse-outcome finding P6)
+    // The predicate is deep-aware since registry-sdk 0.43.0: an errored deep
+    // analysis also lands here (deep-error laundering, registry-api 06afd6ad).
+    // Name the layer that failed so the reader knows what "incomplete" means.
     if (!isVerdictTrustworthy(profile)) {
-      const reason = profile.scanFailedReason
-        ? ` (${profile.scanFailedReason})`
-        : '';
+      const deepErrored =
+        profile.scanStatus !== 'failed' && profile.deep?.status === 'error';
+      const label = deepErrored
+        ? 'Deep analysis failed'
+        : 'Safety scan incomplete';
+      const rawReason = deepErrored
+        ? profile.deep?.errorReason
+        : profile.scanFailedReason;
+      const reason = rawReason ? ` (${rawReason})` : '';
       lines.push('');
-      lines.push(
-        `\u26A0\uFE0F  Safety scan incomplete${reason} \u2014 could not determine.`,
-      );
+      lines.push(`\u26A0\uFE0F  ${label}${reason} \u2014 could not determine.`);
       lines.push('    Absence of signals is not a clean verdict.');
     } else if (!signals?.length) {
       lines.push('No risk signals.');
@@ -144,10 +151,9 @@ export function formatDefinition(def: Definition): string {
     }
     if (!profile.deep) {
       lines.push('Deep analysis pending.');
-    } else if (profile.deep.status === 'error') {
-      // Deep run errored \u2014 empty findings are a sentinel, not a clean verdict.
-      lines.push('Deep analysis incomplete \u2014 could not determine.');
     }
+    // deep.status === 'error' is owned by the untrustworthy branch above
+    // (isVerdictTrustworthy is deep-aware) \u2014 no duplicate line here.
   }
 
   return lines.join('\n');
