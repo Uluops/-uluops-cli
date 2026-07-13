@@ -58,12 +58,44 @@ const mockModel = {
 };
 
 describe('formatDefinitions', () => {
+  const baseItem = { name: 'code-validator', type: 'agent', version: '1.0.0', status: 'published', visibility: 'public' };
+  const format = (items: Record<string, unknown>[]) =>
+    formatDefinitions(items as Parameters<typeof formatDefinitions>[0]);
+
   it('formats a list of definitions as a table', () => {
-    const items = [{ name: 'code-validator', type: 'agent', version: '1.0.0', status: 'published', visibility: 'public' }];
-    const result = formatDefinitions(items as Parameters<typeof formatDefinitions>[0]);
+    const result = format([baseItem]);
     expect(result).toContain('NAME');
     expect(result).toContain('TYPE');
     expect(result).toContain('code-validator');
+  });
+
+  // RISK column P6 discipline (risk-verdict list projection, SDK 0.44.0):
+  // absent triple = pending; failed/errored scan = incomplete (never clean);
+  // trustworthy none = clean; medium/high pass through.
+  it('renders RISK "pending" when no risk scalars are present', () => {
+    const result = format([baseItem]);
+    expect(result).toContain('RISK');
+    expect(result).toContain('pending');
+  });
+
+  it('renders RISK "incomplete" for a failed-scan sentinel none — never clean (P6)', () => {
+    const result = format([{ ...baseItem, riskLevel: 'none', scanStatus: 'failed' }]);
+    expect(result).toContain('incomplete');
+    expect(result).not.toContain('clean');
+  });
+
+  it('renders RISK "incomplete" for an errored deep analysis', () => {
+    const result = format([{ ...baseItem, riskLevel: 'none', scanStatus: 'complete', deepStatus: 'error' }]);
+    expect(result).toContain('incomplete');
+  });
+
+  it('renders RISK "clean" for a trustworthy none and the level for flagged rows', () => {
+    const result = format([
+      { ...baseItem, riskLevel: 'none', scanStatus: 'complete' },
+      { ...baseItem, name: 'risky-agent', riskLevel: 'high', scanStatus: 'complete' },
+    ]);
+    expect(result).toContain('clean');
+    expect(result).toContain('high');
   });
 });
 

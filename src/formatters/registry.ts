@@ -12,9 +12,22 @@ import type {
   VersionDiffSummary,
   VersionListItem,
 } from '@uluops/registry-sdk';
-import { isVerdictTrustworthy } from '@uluops/registry-sdk';
+import { isListVerdictTrustworthy, isVerdictTrustworthy } from '@uluops/registry-sdk';
 import { formatDisplayDate, truncate } from '../utils.js';
 import { type Column, formatKeyValue, formatTable } from './table.js';
+
+/**
+ * Render the list-grain risk verdict with the same P6 discipline as the
+ * detail formatter: an absent/null scalar triple is "pending" (not yet
+ * scanned — never blank/clean), and a failed scan or errored deep analysis
+ * renders "incomplete" — a riskLevel of 'none' in those states is a sentinel
+ * ("could not determine"), not a clean verdict.
+ */
+function formatListRisk(item: DefinitionListItem): string {
+  if (item.riskLevel == null) return 'pending';
+  if (!isListVerdictTrustworthy(item)) return 'incomplete';
+  return item.riskLevel === 'none' ? 'clean' : item.riskLevel;
+}
 
 /**
  * Format a list of definitions as table
@@ -26,6 +39,7 @@ export function formatDefinitions(definitions: DefinitionListItem[]): string {
     { header: 'VERSION', accessor: 'version', width: 10 },
     { header: 'STATUS', accessor: 'status', width: 12 },
     { header: 'VISIBILITY', accessor: 'visibility', width: 10 },
+    { header: 'RISK', accessor: formatListRisk, width: 10 },
   ];
   return formatTable(definitions, columns);
 }

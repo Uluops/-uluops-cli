@@ -6,7 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-07-12
+
+### Added
+
+- **`RISK` column on `ulu def list`** — the safety verdict at the list grain, rendered
+  with the same P6 discipline as the detail view: `pending` (not yet scanned — never
+  blank), `incomplete` (failed scan or errored deep analysis; a `none` level there is a
+  sentinel, not clean), `clean` (trustworthy none), or the level (`medium`/`high`).
+  Backed by `@uluops/registry-sdk` 0.44.0's list-grain risk scalars and its new
+  `isListVerdictTrustworthy` predicate. `--json` output carries the additive
+  `riskLevel`/`scanStatus`/`deepStatus` fields on each list item (non-breaking).
+
 ### Changed
+
+- Bump `@uluops/registry-sdk` to `0.44.0` (list-grain risk scalars — the `.strip()`
+  gate release; without it the CLI stayed risk-blind during list discovery).
 
 - **`ulu runs save` no longer fabricates zero correlation counts.** The API
   returns `correlation: null` on a dedup replay of a run saved before
