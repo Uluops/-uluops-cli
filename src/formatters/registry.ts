@@ -12,7 +12,10 @@ import type {
   VersionDiffSummary,
   VersionListItem,
 } from '@uluops/registry-sdk';
-import { isListVerdictTrustworthy, isVerdictTrustworthy } from '@uluops/registry-sdk';
+import {
+  isListVerdictTrustworthy,
+  isVerdictTrustworthy,
+} from '@uluops/registry-sdk';
 import { formatDisplayDate, truncate } from '../utils.js';
 import { type Column, formatKeyValue, formatTable } from './table.js';
 
