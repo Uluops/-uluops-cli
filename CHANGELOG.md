@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-07-21
+
+### Changed
+
+- **Run views render `N/A` when a run has no gate verdict.** `allGatesPassed` is
+  `boolean | null` on run reads since `@uluops/ops-sdk` 5.10.0: `null` =
+  **NOT_A_GATE** — the run carried no gate-bearing agents (e.g. a
+  cognitive-lens-only run), distinct from `false` (a gate ran and failed).
+  `ulu runs list` (PASSED column), the single-run key-value view, and
+  `ulu runs details` now print `N/A` for null instead of collapsing it to `No`.
+  Today's API still emits booleans — output is unchanged until the API's
+  NOT_A_GATE emission ships (save-run-decision-semantics spec v0.2.1, Phase C).
+
+### Dependencies
+
+- `@uluops/ops-sdk` 5.8.0 → **5.10.0** (nullable `allGatesPassed` read schemas).
+- `@uluops/core` 0.33.0 → **0.34.0** (matching nullable read types on
+  `RunSubmissionResponse` / `RunHistoryEntry`).
+
 ## [0.24.0] - 2026-07-12
 
 ### Added
