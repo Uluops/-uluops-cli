@@ -98,7 +98,8 @@ export function formatRuns(
     },
     {
       header: 'PASSED',
-      accessor: (r) => (r.allGatesPassed === null ? 'N/A' : r.allGatesPassed ? 'Yes' : 'No'),
+      accessor: (r) =>
+        r.allGatesPassed === null ? 'N/A' : r.allGatesPassed ? 'Yes' : 'No',
       width: 7,
     },
     {
@@ -119,7 +120,8 @@ export function formatRun(run: Run): string {
     id: run.id,
     workflowType: run.workflowType,
     averageScore: run.averageScore?.toFixed(1) ?? '-',
-    allGatesPassed: run.allGatesPassed === null ? 'N/A' : run.allGatesPassed ? 'Yes' : 'No',
+    allGatesPassed:
+      run.allGatesPassed === null ? 'N/A' : run.allGatesPassed ? 'Yes' : 'No',
     createdAt: formatDisplayDate(run.createdAt),
   });
 }

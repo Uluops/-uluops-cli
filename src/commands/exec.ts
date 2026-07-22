@@ -1,5 +1,5 @@
+import { type Stats, statSync } from 'node:fs';
 import { mkdir, writeFile } from 'node:fs/promises';
-import { statSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import type {
   AgentResult,
@@ -76,7 +76,7 @@ function getMergedOptions(cmd: Command): ExecOptions {
  */
 export function assertTargetIsDirectoryOrExit(target: string): void {
   const resolved = resolve(target);
-  let stat;
+  let stat: Stats;
   try {
     stat = statSync(resolved);
   } catch {
@@ -893,8 +893,13 @@ Examples:
                 // Non-fatal — proceed with execution even if describe fails. But the safety
                 // check the operator asked for did not run; silence here would read as "clean"
                 // (same principle as scanStatus==='failed' above).
-                const msg = safetyError instanceof Error ? safetyError.message : String(safetyError);
-                console.error(`\n  ⚠️  Safety pre-check unavailable (${msg}) — could not verify; proceeding without a safety verdict.\n`);
+                const msg =
+                  safetyError instanceof Error
+                    ? safetyError.message
+                    : String(safetyError);
+                console.error(
+                  `\n  ⚠️  Safety pre-check unavailable (${msg}) — could not verify; proceeding without a safety verdict.\n`,
+                );
               }
             }
 

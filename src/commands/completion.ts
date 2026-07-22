@@ -59,7 +59,7 @@ _ulu_completions() {
     cur="\${COMP_WORDS[COMP_CWORD]}"
     prev="\${COMP_WORDS[COMP_CWORD-1]}"
     words=("\${COMP_WORDS[@]}")
-    cword=\$COMP_CWORD
+    cword=$COMP_CWORD
     echo "ulu completion: 'bash-completion' package not found; install it for full completion support." >&2
   fi
 

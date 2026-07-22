@@ -106,7 +106,11 @@ function saveCredentials(
     // Defensive: harden the credentials file to 0600 on every write, in case an
     // older CLI, a backup restore, or a manual edit left it at umask default.
     // Mirrors the 0700 dir hardening above. Best-effort; ignore failures.
-    try { chmodSync(credPath, 0o600); } catch { /* best-effort */ }
+    try {
+      chmodSync(credPath, 0o600);
+    } catch {
+      /* best-effort */
+    }
     try {
       stored = JSON.parse(readFileSync(credPath, 'utf-8'));
     } catch (readError) {
@@ -114,8 +118,11 @@ function saveCredentials(
       // error discards every OTHER stored profile on the next write with no
       // signal (same "silence reads as clean" principle as the exec.ts safety
       // pre-check breadcrumb).
-      const msg = readError instanceof Error ? readError.message : String(readError);
-      console.error(`Warning: ~/.uluops/credentials.json was unreadable (${msg}) and is being reset. Any other profiles it held will be lost.`);
+      const msg =
+        readError instanceof Error ? readError.message : String(readError);
+      console.error(
+        `Warning: ~/.uluops/credentials.json was unreadable (${msg}) and is being reset. Any other profiles it held will be lost.`,
+      );
     }
   }
 

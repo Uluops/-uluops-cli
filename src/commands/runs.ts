@@ -186,7 +186,9 @@ Examples:
             `Run #${details.run.runNumber} - ${details.run.workflowType}`,
           );
           console.log(`Score: ${details.run.averageScore?.toFixed(1) ?? '-'}`);
-          console.log(`Passed: ${details.run.allGatesPassed === null ? 'N/A' : details.run.allGatesPassed ? 'Yes' : 'No'}`);
+          console.log(
+            `Passed: ${details.run.allGatesPassed === null ? 'N/A' : details.run.allGatesPassed ? 'Yes' : 'No'}`,
+          );
           console.log('');
 
           if (details.agents.length > 0) {
