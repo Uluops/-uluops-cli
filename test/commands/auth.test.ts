@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Command } from 'commander';
 import { captureOutput } from '../helpers/capture.js';
 import { createMockOpsClient, createMockOpsContext } from '../helpers/command-harness.js';
@@ -35,6 +35,7 @@ vi.mock('node:os', async (importOriginal) => {
   return { ...actual, homedir: vi.fn(() => '/tmp/test-home') };
 });
 
+import { readFileSync } from 'node:fs';
 import { createOpsContext, createUnauthenticatedContext, handleOpsError } from '../../src/context.js';
 import {
   registerAuthCommands,
@@ -343,5 +344,47 @@ describe('resolveCredentialSource', () => {
       resolveCredentialSource({}, { ULUOPS_SESSION_TOKEN: secret }),
     ];
     for (const label of labels) expect(label).not.toContain(secret);
+  });
+});
+
+// ── saveCredentials corrupt-file breadcrumb (PRA-FRA/M fix) ─────────────────
+
+describe('saveCredentials: corrupt credentials breadcrumb', () => {
+  const mockedReadFileSync = vi.mocked(readFileSync);
+
+  afterEach(() => {
+    // Restore default: valid credentials JSON (matches suite-level mock)
+    mockedReadFileSync.mockReturnValue(
+      JSON.stringify({ default: { type: 'session', sessionToken: 'tok123' } }),
+    );
+  });
+
+  it('emits exactly one Warning to stderr and still succeeds when credentials.json is corrupt', async () => {
+    // Simulate a corrupt (unparseable) credentials file by making readFileSync
+    // throw a SyntaxError from JSON.parse perspective — here we throw directly
+    // from readFileSync since that is what the mock intercepts.
+    const parseError = new SyntaxError('Unexpected token < in JSON at position 0');
+    mockedReadFileSync.mockImplementation(() => { throw parseError; });
+    mockLogin.mockResolvedValue({
+      user: { email: 'test@example.com' },
+      sessionToken: 'new-token',
+      expiresAt: '2025-12-31T00:00:00Z',
+    });
+
+    const out = captureOutput();
+    // login calls saveCredentials; the corrupt-read path must not throw
+    await parse('auth', 'login', '--email', 'test@example.com', '--password', 'secret');
+    const stderr = out.stderr();
+    // Exactly the warning breadcrumb — one occurrence, stderr not stdout
+    expect(stderr).toContain('Warning: ~/.uluops/credentials.json was unreadable');
+    expect(stderr).toContain('Unexpected token');
+    expect(stderr).toContain('being reset');
+    // The error message must never carry raw file bytes or credential values
+    expect(stderr).not.toContain('new-token');
+    // stdout must not contain the warning (--json safety: must not pollute stdout)
+    expect(out.stdout()).not.toContain('Warning:');
+    // Login still completes
+    expect(out.stdout()).toContain('Credentials saved');
+    out.restore();
   });
 });

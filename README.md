@@ -632,6 +632,8 @@ ulu models aliases                # List model aliases
 ulu models resolve <alias>        # Resolve alias to concrete model
 ```
 
+> **Note:** `ulu models providers` lists the providers the platform catalog knows about. This is distinct from what `ulu exec` can currently execute against — execution is Anthropic-only today (issue b9c5ac1e). <!-- revisit when b9c5ac1e multi-provider execution ships -->
+
 ---
 
 ### Exec
@@ -711,7 +713,7 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | Option | Description |
 |--------|-------------|
 | `-p, --prompt <text>` | Operator directive or context for the agent |
-| `-m, --model <model>` | Model override (alias, tier, or provider:modelId) |
+| `-m, --model <model>` | Model override (alias, tier, or provider:modelId). The `provider:` prefix is parsed and accepted; however, `ulu exec` currently only executes against Anthropic — non-Anthropic providers are not yet supported at the execution layer (issue b9c5ac1e). <!-- revisit when b9c5ac1e multi-provider execution ships --> |
 | `--hash <sha256:...>` | **Optional.** Pin the expected YAML hash (from a trusted channel). Verifies the resolved definition source + config before executing; refuses on mismatch (**exit 4**). Available on `run`, `agent`, `command`, `workflow`, and `pipeline` (requires `@uluops/core@0.32.0`). |
 | `--prompt-hash <sha256:...>` | **Optional.** Pin the expected rendered-prompt hash. Pair with `--hash` for full agent/command executed-prompt integrity. Only `run`, `agent`, and `command` — workflows/pipelines have no rendered prompt, so supplying it for one is refused as "unavailable" (**exit 4**). |
 
@@ -921,7 +923,7 @@ through the single `emitJson()` chokepoint. To change an output shape you must:
 | `ULUOPS_PASSWORD` | Password for session auth | - |
 | `ULUOPS_DEBUG` | Enable debug logging (also expands the global unhandled-error handler's output) | `false` |
 | `ULU_JSON_SCHEMA` | Set to `1` to wrap `--json` output in the versioned stability envelope | - |
-| `ANTHROPIC_API_KEY` | API key for AI model execution (required for `ulu exec` commands) | - |
+| `ANTHROPIC_API_KEY` | API key for AI model execution (required for `ulu exec` commands). `ulu exec` executes against Anthropic models today regardless of a `--model` value's provider prefix; non-Anthropic execution is not yet supported (tracked in issue b9c5ac1e). <!-- revisit when b9c5ac1e multi-provider execution ships --> | - |
 | `ULUOPS_MAX_CONCURRENCY` | Engine-wide cap on concurrent in-flight LLM calls for `ulu exec` (distinct from `exec agent -c/--concurrency`); honored by `@uluops/core` | `8` |
 | `ULUOPS_THINKING_BUDGET` | Token budget for extended thinking (optional) | - |
 

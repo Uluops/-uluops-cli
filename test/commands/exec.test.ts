@@ -4,6 +4,10 @@ import { captureOutput } from '../helpers/capture.js';
 import type { CoreCliContext } from '../../src/context.js';
 
 vi.mock('../../src/context.js');
+vi.mock('node:fs', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('node:fs')>();
+  return { ...actual, statSync: vi.fn() };
+});
 
 // Partial-mock utils so promptInput is controllable; everything else stays real
 // (withSpinner, parse*Option are used by the command actions under test).
@@ -12,6 +16,7 @@ vi.mock('../../src/utils.js', async (importOriginal) => {
   return { ...actual, promptInput: vi.fn() };
 });
 
+import { statSync } from 'node:fs';
 import { createCoreContext, handleCoreError } from '../../src/context.js';
 import { promptInput } from '../../src/utils.js';
 import {
@@ -21,6 +26,7 @@ import {
   confirmInferredProjectOrExit,
   reorderInheritedExecOptions,
   guardShadowedVersionFlag,
+  assertTargetIsDirectoryOrExit,
   REPORT_MODE_DIRECTIVE,
 } from '../../src/commands/exec.js';
 import type { GlobalOptions, CoreExecOptions } from '../../src/context.js';
@@ -36,6 +42,7 @@ import type { AgentResult } from '@uluops/core';
 
 const mockedCreateCoreContext = vi.mocked(createCoreContext);
 const mockedHandleCoreError = vi.mocked(handleCoreError);
+const mockedStatSync = vi.mocked(statSync);
 
 function createMockCoreClient() {
   return {
@@ -62,6 +69,9 @@ beforeEach(() => {
     quiet: true,
   });
   mockedHandleCoreError.mockImplementation((error) => { throw error; });
+  // Default: statSync returns a directory stat so command-execution tests pass
+  // the assertTargetIsDirectoryOrExit guard without filesystem I/O.
+  mockedStatSync.mockReturnValue({ isDirectory: () => true } as ReturnType<typeof statSync>);
   output = captureOutput();
   // Command-execution tests aren't testing project inference; give them a
   // project so the confirmInferredProjectOrExit gate skips. The dedicated gate
@@ -904,6 +914,66 @@ describe('resolveReportPath', () => {
       { report: './a.md', output: '' },
     );
     expect(got).toBe(resolvePath('./a.md'));
+  });
+});
+
+// ── assertTargetIsDirectoryOrExit (SEM-COM/L fix) ─────────────────────────
+
+describe('assertTargetIsDirectoryOrExit', () => {
+  afterEach(() => {
+    mockedStatSync.mockReset();
+    // Restore the default directory mock for other tests.
+    mockedStatSync.mockReturnValue({ isDirectory: () => true } as ReturnType<typeof statSync>);
+  });
+
+  it('exits 1 with not-found message when target does not exist', () => {
+    mockedStatSync.mockImplementation(() => { throw new Error('ENOENT: no such file or directory'); });
+    const out = captureOutput();
+    expect(() => assertTargetIsDirectoryOrExit('/no/such/path')).toThrow('process.exit(1)');
+    expect(out.stderr()).toContain('Target not found:');
+    expect(out.stderr()).toContain('/no/such/path');
+    out.restore();
+  });
+
+  it('exits 1 with directory-required message when target is a file', () => {
+    mockedStatSync.mockReturnValue({ isDirectory: () => false } as ReturnType<typeof statSync>);
+    const out = captureOutput();
+    expect(() => assertTargetIsDirectoryOrExit('./package.json')).toThrow('process.exit(1)');
+    expect(out.stderr()).toContain('Target is a file, not a directory:');
+    expect(out.stderr()).toContain('must be a directory');
+    out.restore();
+  });
+
+  it('does not exit when target is a valid directory', () => {
+    mockedStatSync.mockReturnValue({ isDirectory: () => true } as ReturnType<typeof statSync>);
+    expect(() => assertTargetIsDirectoryOrExit('./src')).not.toThrow();
+  });
+
+  it('exec agent exits 1 before any SDK call when target is a file', async () => {
+    mockedStatSync.mockReturnValue({ isDirectory: () => false } as ReturnType<typeof statSync>);
+    const out = captureOutput();
+    await expect(parse('exec', 'agent', '-t', './package.json', 'code-validator')).rejects.toThrow('process.exit(1)');
+    expect(out.stderr()).toContain('Target is a file, not a directory:');
+    expect(mockClient.runAgent).not.toHaveBeenCalled();
+    out.restore();
+  });
+
+  it('exec workflow exits 1 before any SDK call when target is a file', async () => {
+    mockedStatSync.mockReturnValue({ isDirectory: () => false } as ReturnType<typeof statSync>);
+    const out = captureOutput();
+    await expect(parse('exec', 'workflow', 'ship', './package.json')).rejects.toThrow('process.exit(1)');
+    expect(out.stderr()).toContain('Target is a file, not a directory:');
+    expect(mockClient.runWorkflow).not.toHaveBeenCalled();
+    out.restore();
+  });
+
+  it('exec pipeline exits 1 before any SDK call when target is not found', async () => {
+    mockedStatSync.mockImplementation(() => { throw new Error('ENOENT: no such file or directory'); });
+    const out = captureOutput();
+    await expect(parse('exec', 'pipeline', 'foundations', '/no/such/dir')).rejects.toThrow('process.exit(1)');
+    expect(out.stderr()).toContain('Target not found:');
+    expect(mockClient.runPipeline).not.toHaveBeenCalled();
+    out.restore();
   });
 });
 

@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
+import { statSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
 import type {
   AgentResult,
@@ -61,6 +62,33 @@ function getMergedOptions(cmd: Command): ExecOptions {
         ? merged.safetyWarnings
         : undefined,
   } as ExecOptions;
+}
+
+/**
+ * Guard that the execution target is an existing directory.
+ *
+ * Agents run with their cwd set to `target`, so a file path or a nonexistent
+ * path produces an opaque NOT_ACCESSIBLE error from the agent runtime. Surfacing
+ * a clear CLI error before any SDK call is made is the fail-closed pattern used
+ * everywhere else in this file.
+ *
+ * @internal Exported for unit testing only.
+ */
+export function assertTargetIsDirectoryOrExit(target: string): void {
+  const resolved = resolve(target);
+  let stat;
+  try {
+    stat = statSync(resolved);
+  } catch {
+    console.error(`Target not found: ${resolved}`);
+    process.exit(1);
+  }
+  if (!stat.isDirectory()) {
+    console.error(
+      `Target is a file, not a directory: ${resolved}. Agents run with cwd set to the target, which must be a directory.`,
+    );
+    process.exit(1);
+  }
 }
 
 /**
@@ -609,6 +637,7 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
+        assertTargetIsDirectoryOrExit(target);
         await confirmInferredProjectOrExit(
           options,
           target,
@@ -715,6 +744,8 @@ Examples:
         const target: string = cmd.opts().target;
         const agentNames: string[] = names.filter(Boolean);
 
+        assertTargetIsDirectoryOrExit(target);
+
         // --report is single-agent only. In a multi-agent run the report-mode
         // no-tracking coupling and the report-file write live only in the
         // single-agent branch below — but the report skip passed to
@@ -756,8 +787,7 @@ Examples:
           // symmetric mutual-exclusion guard: report mode signals the executor to
           // disable structured-output enforcement, which tracker submission
           // requires, so --report silently wins and forces no-tracking (no hard
-          // error even if --project is also passed). See
-          // agent-reporting-spec-v0_1_1.md Phase 2 Formal Cause #2 and Phase 4.4.
+          // error even if --project is also passed).
           let effectiveExecOpts: ExecutionOptions | undefined = execOpts;
           if (reportRequested) {
             effectiveExecOpts = {
@@ -859,8 +889,12 @@ Examples:
                     }
                   }
                 }
-              } catch {
-                // Non-fatal — proceed with execution even if describe fails
+              } catch (safetyError) {
+                // Non-fatal — proceed with execution even if describe fails. But the safety
+                // check the operator asked for did not run; silence here would read as "clean"
+                // (same principle as scanStatus==='failed' above).
+                const msg = safetyError instanceof Error ? safetyError.message : String(safetyError);
+                console.error(`\n  ⚠️  Safety pre-check unavailable (${msg}) — could not verify; proceeding without a safety verdict.\n`);
               }
             }
 
@@ -1036,6 +1070,7 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
+        assertTargetIsDirectoryOrExit(target);
         await confirmInferredProjectOrExit(
           options,
           target,
@@ -1102,6 +1137,7 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
+        assertTargetIsDirectoryOrExit(target);
         await confirmInferredProjectOrExit(
           options,
           target,
@@ -1167,6 +1203,7 @@ Examples:
         cmd: Command,
       ) => {
         const options = getMergedOptions(cmd);
+        assertTargetIsDirectoryOrExit(target);
         await confirmInferredProjectOrExit(
           options,
           target,

@@ -49,9 +49,19 @@ function generateBashCompletion(program: Command): string {
 
   return `# Bash completion for ulu CLI
 # Add to ~/.bashrc: eval "$(ulu completion bash)"
+# Requires the 'bash-completion' package (provides _init_completion).
 _ulu_completions() {
   local cur prev words cword
-  _init_completion || return
+  if declare -f _init_completion > /dev/null 2>&1; then
+    _init_completion || return
+  else
+    # bash-completion package not available — fall back to a minimal shim
+    cur="\${COMP_WORDS[COMP_CWORD]}"
+    prev="\${COMP_WORDS[COMP_CWORD-1]}"
+    words=("\${COMP_WORDS[@]}")
+    cword=\$COMP_CWORD
+    echo "ulu completion: 'bash-completion' package not found; install it for full completion support." >&2
+  fi
 
   # Build the command path from words
   local cmd_path=""
@@ -212,7 +222,7 @@ export function registerCompletionCommands(program: Command): void {
       'after',
       `
 Setup:
-  bash:  eval "$(ulu completion bash)"     # add to ~/.bashrc
+  bash:  eval "$(ulu completion bash)"     # add to ~/.bashrc (requires 'bash-completion' package)
   zsh:   eval "$(ulu completion zsh)"      # add to ~/.zshrc
   fish:  ulu completion fish > ~/.config/fish/completions/ulu.fish
 `,
