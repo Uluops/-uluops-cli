@@ -572,7 +572,7 @@ Examples:
     .option('--description <text>', 'Detailed description')
     .option('--file-path <path>', 'File path where issue was found')
     .option('--line <number>', 'Line number in file')
-    .option('--failure-code <code>', 'Failure code (e.g., SEM-VAL/H)')
+    .option('--failure-code <code>', 'Failure code (e.g., STR-OMI/H)')
     .option('--domain <domain>', 'Failure domain (STR, SEM, PRA, EPI)')
     .option(
       '--type <type>',

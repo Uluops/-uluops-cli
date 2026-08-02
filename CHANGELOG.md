@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **`--failure-code` help text and the README example used an invalid code.** `SEM-VAL/H` is
+  not a failure code — `VAL` is an `EPI` mode, so `EPI-VAL` exists and `SEM-VAL` does not.
+  Codes come from a closed set of 24 rather than being composed from a domain and a mode
+  independently. This is the example a user reads in `--help` at the moment they are looking
+  up how to supply the flag. Now `STR-OMI/H`.
+
 ## [0.25.0] - 2026-07-21
 
 ### Changed

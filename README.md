@@ -385,7 +385,7 @@ ulu issues create --project my-project \
   --priority critical \
   --severity critical \
   --type security \
-  --failure-code SEM-VAL/H \
+  --failure-code STR-OMI/H \
   --domain SEM \
   --file-path src/auth/login.ts \
   --line 45
