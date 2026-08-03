@@ -6,6 +6,36 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.25.1] - 2026-08-03
+
+### Security
+
+- **`brace-expansion` 5.0.7 → 5.0.9** (transitive, via `@uluops/core` → `glob` →
+  `minimatch`). Closes two high-severity DoS advisories — unbounded expansion length, and
+  unbounded intermediate arrays bypassing the CVE-2026-14257 mitigation. Pre-existing:
+  the vulnerable version was already in the lockfile, and the advisories were published
+  against it. No API or behaviour change.
+
+### Dependencies
+
+- **`@uluops/ops-sdk` 5.10.0 → 5.11.0.** No CLI behaviour changes — this release exists
+  so that issue commands keep working after `ops-uluops-api` deploys migration 075, which
+  drops `issues.resolution_run_id`.
+
+  **Install this before that API deploys.** The SDK runtime-parses every response, and
+  `resolutionRunId` was a *required* key in its issue schema through 5.10.0. A required
+  key the API stops sending throws a `ZodError` rather than surfacing as `null`, so a CLI
+  on 0.25.0 fails on **every issue read** — `ulu issues get`, `details`, `list`, `search`,
+  `status`, and `note`. 5.11.0 makes the field optional, so it parses both the old and new
+  API shapes and is safe to install at any time.
+
+  Refresh a global install with `npm install -g @uluops/cli`.
+
+  The dropped column encoded resolution-by-run, a model the tracker never implemented —
+  runs *detect*, humans and agents *resolve*, and no run is in scope at a resolving
+  transition. It was `NULL` on every row, so no CLI output changes. `ops-uluops-api`
+  tracker `83eeac77`.
+
 ## [0.25.0] - 2026-07-21
 
 ### Changed
