@@ -4,8 +4,12 @@
  * One-shot bulk metadata update: walks every definition owned by the `system`
  * org in the UluOps registry and sets:
  *   tier            = 'pro'
- *   minSubscription = 'free'
  *   visibility      = 'public'
+ *
+ * minSubscription was dropped from the target on 2026-08-05 (NEX-01): the
+ * registry no longer accepts it and strips it silently, so a diff on that field
+ * would report a change that never happened. Every lineage has been 'free'
+ * since migration 043 at the 2026-06-10 pricing pivot.
  *
  * Idempotent — re-running after a successful apply is a no-op.
  *
@@ -30,7 +34,6 @@ import type {
 
 const TARGET = {
   tier: 'pro' as const,
-  minSubscription: 'free' as const,
   visibility: 'public' as const,
 };
 
@@ -67,7 +70,7 @@ function parseArgs(argv: string[]): Args {
 function printHelp(): void {
   console.log(
     [
-      'Promote every system-org definition to tier=pro, minSubscription=free, visibility=public.',
+      'Promote every system-org definition to tier=pro, visibility=public.',
       '',
       'Flags:',
       '  --apply               actually call PUT; default is dry-run',
@@ -116,7 +119,6 @@ async function listAll(
 function computeDiff(item: DefinitionListItem): UpdateDefinitionBody {
   const diff: UpdateDefinitionBody = {};
   if (item.tier !== TARGET.tier) diff.tier = TARGET.tier;
-  if (item.minSubscription !== TARGET.minSubscription) diff.minSubscription = TARGET.minSubscription;
   if (item.visibility !== TARGET.visibility) diff.visibility = TARGET.visibility;
   return diff;
 }
@@ -124,7 +126,6 @@ function computeDiff(item: DefinitionListItem): UpdateDefinitionBody {
 function describeDiff(diff: UpdateDefinitionBody): string {
   const parts: string[] = [];
   if (diff.tier !== undefined) parts.push(`tier→${diff.tier}`);
-  if (diff.minSubscription !== undefined) parts.push(`min→${diff.minSubscription}`);
   if (diff.visibility !== undefined) parts.push(`vis→${diff.visibility}`);
   return parts.join(', ');
 }
