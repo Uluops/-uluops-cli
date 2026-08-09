@@ -40,7 +40,7 @@
   },
   "license": "MIT",
   "dependencies": {
-    "@uluops/core": "0.34.0",
+    "@uluops/core": "0.36.0",
     "@uluops/ops-sdk": "5.11.0",
     "@uluops/registry-sdk": "0.44.0",
     "commander": "13.1.0",
