@@ -6,6 +6,52 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-08-17
+
+### Fixed — `ulu auth register` was broken for every user, on every invocation
+
+The command called `client.auth.register()` from `@uluops/ops-sdk`, whose
+`RegisterResponseSchema` declared a shape the API has never returned. Every run threw an
+unwrapped `ZodError` on a successful HTTP 201, **after the account had already been created
+server-side** — so a user saw a stack trace, had no idea the registration had worked, and
+would fail again on retry with "email already registered".
+
+Controlled against the published 5.11.0 artifact rather than inferred: its
+`RegisterResponseSchema` requires `id`, `email`, `isActive`, `role` and `subscriptionTier`
+at the top level, while the API returns `{user, sessionToken, expiresAt}`. `id` alone
+guarantees the throw.
+
+Fixed upstream in `@uluops/ops-sdk` 5.17.0, which corrects the schema to match the live
+response. No CLI code changed — `src/commands/auth.ts` never read a field off the result, so
+the flat→nested type change is source-compatible here.
+
+Verified live against a running API: `ulu auth register --email … --json` now exits 0 and
+emits the account.
+
+### Changed — `ulu auth register --json` output shape (BREAKING for scripts parsing it)
+
+The emitted object follows the API's real response and is now nested:
+
+```json
+{ "user": { "id": "…", "email": "…", "role": "user", … }, "sessionToken": "…", "expiresAt": "…" }
+```
+
+Previously nothing was emitted at all, because the command threw before reaching
+`emitJson` — so strictly there is no prior output to break. Flagged as a shape change
+anyway for anyone who wrote a parser against the *documented* flat shape and never got to
+run it. Read `.user.email` rather than `.email`.
+
+### Changed — `@uluops/ops-sdk` 5.11.0 → 5.17.0 exact
+
+Six minors. Audited the span rather than assuming: the **only** breaking item newer than
+5.11.0 is 5.17.0's `RegisterResponse` flat→nested change, which is source-compatible for
+this package. Everything else in 5.12.0–5.16.0 is additive.
+
+Also brings `failureMode` on the issue-list query types, so a future `ulu` issue-filtering
+flag can offer it. Note the server-side predicate ships in `ops-uluops-api` — against an
+older deployment that filter is silently ignored and returns unfiltered results.
+
+
 ## [0.25.1] - 2026-08-03
 
 ### Security
