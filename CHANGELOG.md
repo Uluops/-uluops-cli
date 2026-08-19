@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.26.1] - 2026-08-19
+
+### Changed
+
+- **`@uluops/registry-sdk` 0.44.0 → 0.49.0** (registry-api ADR-013 activation prerequisite).
+  Definition reads now tolerate the drop-aware deep-analysis fields: `deep.errorReason`
+  validates as shape rather than a closed enum — the old pin **threw on every read** of a
+  definition whose deep analysis errored with a reason it didn't know
+  (`unrepresentable_findings` shipped server-side 2026-08-18) — and `deep.droppedFindings`
+  survives parsing instead of being strip-mode deleted. The `ulu def get` safety block
+  already renders `errorReason` as display text, so unknown reasons print as-is. Latent
+  until the registry's deep worker activates; installed copies should be on ≥0.26.1 before
+  it does.
+
 ## [0.26.0] - 2026-08-17
 
 ### Fixed — `ulu auth register` was broken for every user, on every invocation
