@@ -78,6 +78,17 @@ vi.mock('@uluops/core', () => {
       return { name: this.name, message: this.message, statusCode: this.statusCode, code: this.code, details: this.details, requestId: this.requestId };
     }
   }
+  // Mirrors core's real implementation. It must test `statusCode` — NOT `name` and NOT
+  // `instanceof` — because that is the whole reason core exports this guard: a 402 arrives
+  // as base SdkApiError while a 404 arrives as NotFoundError, and instanceof is structurally
+  // always false across the sdk-core copy boundary. A mock that cheated with `instanceof`
+  // here would pass while the real guard's contract went untested.
+  const isApiErrorLike = (error: unknown): boolean =>
+    typeof error === 'object' &&
+    error !== null &&
+    typeof (error as { statusCode?: unknown }).statusCode === 'number' &&
+    typeof (error as { message?: unknown }).message === 'string';
+
   class UluOpsError extends Error { constructor(message: string) { super(message); this.name = 'UluOpsError'; } }
   class ConfigurationError extends UluOpsError { constructor(message: string) { super(message); this.name = 'ConfigurationError'; } }
   class ModelNotFoundError extends UluOpsError { constructor(message: string) { super(message); this.name = 'ModelNotFoundError'; } }
@@ -142,6 +153,7 @@ vi.mock('@uluops/core', () => {
     PreflightError, ParseError, SubmissionError,
     ExecutionError, WorkflowError, PipelineError, SubscriptionRequiredError,
     IntegrityError,
+    isApiErrorLike,
   };
 });
 
