@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`@uluops/core` 0.40.0 → 0.41.0.** The old pin was an exact `0.40.0`, a version that only
+  ever existed on the local Verdaccio registry and was never published to npmjs — so `npm ci`
+  on any machine without Verdaccio could not resolve it. The lockfile additionally carried
+  `http://localhost:4873/...` resolved URLs for `@uluops/core` and `@uluops/taxonomy`, which
+  survive both removing the project `.npmrc` and reinstalling: npm does not re-resolve a
+  dependency whose locked version already satisfies the range. Cleared with an explicit
+  `npm install <pkg>@<ver> --registry https://registry.npmjs.org/`, and verified with a jq
+  scan of `package-lock.json` (the scan is the gate — not having performed the steps).
+
+- **`isApiErrorLike` now comes from `@uluops/core` instead of a local copy.** `src/context.ts`
+  carried its own byte-identical `ApiErrorLike` interface and `isApiErrorLike` function, with
+  matching rationale comments, purely because core exposed the guard only on its `./errors`
+  subpath. Core 0.41.0 exports it from the package root, so the 32-line duplicate is gone.
+
+  The guard must never be replaced with `instanceof SdkApiError`: the CLI constructs its
+  `RegistryClient`/`OpsClient` from `@uluops/registry-sdk` / `@uluops/ops-sdk`, which resolve a
+  *different* exact `@uluops/sdk-core` copy, so two `SdkApiError` class objects coexist and the
+  `instanceof` is structurally always false for errors those clients throw.
+
+### Fixed
+
+- **`--json` error output no longer crashes when an error has no `toJSON()`.** The local
+  interface this CLI removed declared `toJSON(): unknown` as **required**, but the guard behind
+  it only ever checked `statusCode` and `message` — so a serializer-less error satisfied the
+  type while being unable to honour it, and `error.toJSON()` would throw a `TypeError` *from
+  inside the error printer*, replacing a useful diagnostic with a crash. The extension over
+  core's minimal contract (`DetailedApiError`) now declares `details` and `toJSON` optional,
+  and the call site falls back to the fields known to exist.
+
+
 ## [0.26.1] - 2026-08-19
 
 ### Changed

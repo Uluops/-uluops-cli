@@ -6,17 +6,23 @@ import {
   ConfigurationError,
   ExecutionError,
   IntegrityError,
+  // Identity-free API-error guard. The CLI used to define its own byte-identical
+  // copy of this because core exposed it only on the './errors' subpath; core
+  // 0.41.0 exports it from the root, so the duplicate is gone. Do NOT replace
+  // this with `instanceof SdkApiError` — that is structurally always false here,
+  // since registry-sdk/ops-sdk resolve a different exact sdk-core copy.
+  isApiErrorLike,
   ModelNotFoundError,
   ParseError,
   PipelineError,
   PreflightError,
-  SdkApiError,
   SubmissionError,
   SubscriptionRequiredError,
   UluOpsClient,
   UluOpsError,
   WorkflowError,
 } from '@uluops/core';
+import type { ApiErrorLike } from '@uluops/core';
 import {
   loadConfig as loadOpsConfig,
   OpsApiError,
@@ -381,14 +387,21 @@ export function createCoreContext(
 /**
  * Hint overrides for domain-specific error messages
  */
-/** Common shape for API error objects from any SDK */
-interface ApiErrorLike {
-  message: string;
-  code?: string;
-  statusCode?: number;
+/**
+ * Core's `ApiErrorLike` is the MINIMUM structural contract shared by every SDK copy —
+ * `statusCode` + `message`, the two fields the guard actually tests. Individual SDK errors
+ * additionally carry `details` and a `toJSON()` serializer, which this CLI reads when
+ * present.
+ *
+ * Both are declared OPTIONAL here. The CLI's previous local copy of this interface declared
+ * `toJSON(): unknown` as REQUIRED, which was never true of every error reaching this path —
+ * the guard only ever checked `statusCode` and `message`, so a serializer-less error
+ * satisfied the type while being unable to honour it. Optional + a call-site guard is the
+ * honest shape.
+ */
+interface DetailedApiError extends ApiErrorLike {
   details?: unknown;
-  requestId?: string;
-  toJSON(): unknown;
+  toJSON?(): unknown;
 }
 
 interface ErrorHintOverrides {
@@ -443,12 +456,17 @@ function extractAmbiguousTypes(message: string): {
 }
 
 function printApiErrorDetails(
-  error: ApiErrorLike,
+  error: DetailedApiError,
   ctx: { json: boolean; debug: boolean },
   hints: ErrorHintOverrides = {},
 ): void {
   if (ctx.json) {
-    console.error(JSON.stringify(error.toJSON(), null, 2));
+    // toJSON is optional — fall back to the fields we know exist rather than crashing
+    // the error printer itself, which would replace a useful message with a TypeError.
+    const payload = typeof error.toJSON === 'function'
+      ? error.toJSON()
+      : { statusCode: error.statusCode, message: error.message, code: error.code, requestId: error.requestId };
+    console.error(JSON.stringify(payload, null, 2));
   } else {
     console.error(`Error: ${error.message}`);
 
@@ -598,8 +616,8 @@ export function handleCoreError(
     process.exit(1);
   }
 
-  if (error instanceof SdkApiError) {
-    printApiErrorDetails(error as ApiErrorLike, ctx, {
+  if (isApiErrorLike(error)) {
+    printApiErrorDetails(error, ctx, {
       unauthorized: 'Check your ULUOPS_API_KEY environment variable.',
       notFound: 'The definition was not found. Check the name and version.',
       validation: 'Invalid request. Check the command arguments.',
