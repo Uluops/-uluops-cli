@@ -62,6 +62,7 @@ export const SCHEMA_VERSIONS = {
   'auth.apiKeys.list': 1,
   'auth.apiKeys.create': 1,
   'auth.apiKeys.revoke': 1,
+  'auth.apiKeys.rotate': 1,
   // definitions
   'definition.list': 1,
   'definition.getRendered': 1,

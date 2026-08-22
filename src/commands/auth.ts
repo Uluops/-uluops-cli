@@ -154,6 +154,48 @@ function removeCredentials(profile: string): void {
   writeFileAtomic(credPath, JSON.stringify(stored, null, 2));
 }
 
+type ApiKeyScope = 'read' | 'write';
+
+/**
+ * Resolve the scope for `api-keys create` (per-key-scopes §4.7, D9).
+ *
+ * Precedence: explicit `--scope` → the `readonly-` name convention → an
+ * interactive prompt → a non-interactive default of `write` announced out
+ * loud (never a silent default — D9). The convention ("a key whose name
+ * starts `readonly-` mints read unless --scope write is given") is enforced
+ * here, the one place, so it survives the operator forgetting.
+ */
+async function resolveCreateScope(
+  options: { scope?: string; name?: string },
+  ctx: { json: boolean },
+): Promise<ApiKeyScope> {
+  if (options.scope !== undefined) {
+    if (options.scope !== 'read' && options.scope !== 'write') {
+      exitWithError(`Invalid --scope '${options.scope}'. Use 'read' or 'write'.`);
+    }
+    return options.scope as ApiKeyScope;
+  }
+  // Name convention: readonly-* defaults to read (explicit --scope wins above).
+  if (options.name && options.name.startsWith('readonly-')) {
+    if (!ctx.json) {
+      console.log("Name starts 'readonly-' → scope 'read' (pass --scope write to override).");
+    }
+    return 'read';
+  }
+  // D9: prompt rather than silently defaulting, when a human is present.
+  if (!ctx.json && process.stdin.isTTY) {
+    const answer = (await promptInput("Scope [read/write] (default write): ")).trim().toLowerCase();
+    if (answer === 'read' || answer === 'r') return 'read';
+    if (answer === '' || answer === 'write' || answer === 'w') return 'write';
+    exitWithError(`Invalid scope '${answer}'. Use 'read' or 'write'.`);
+  }
+  // Non-interactive with no --scope: default to write, but say so — not silent.
+  if (!ctx.json) {
+    console.log("No --scope given; defaulting to 'write'. Pass --scope read for a read-only key.");
+  }
+  return 'write';
+}
+
 /**
  * Register auth commands
  */
@@ -710,7 +752,9 @@ Examples:
       `
 Examples:
   $ ulu auth api-keys list
-  $ ulu auth api-keys create --name "CI pipeline"
+  $ ulu auth api-keys create --name "CI pipeline" --scope write
+  $ ulu auth api-keys create --name "readonly-briefing" --scope read
+  $ ulu auth api-keys rotate abc12345
   $ ulu auth api-keys revoke abc12345
 `,
     );
@@ -750,12 +794,15 @@ Examples:
     .command('create')
     .description('Create a new API key')
     .option('-n, --name <name>', 'Key name (for identification)')
+    .option('--scope <scope>', 'Key scope: read | write')
     .option('--expires <date>', 'Expiration date (ISO format)')
     .action(async (options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
       try {
+        const scope = await resolveCreateScope(options, ctx);
+
         const result = await withSpinner(
           ctx,
           {
@@ -766,6 +813,7 @@ Examples:
           () =>
             ctx.client.auth.createApiKey({
               name: options.name,
+              scope,
               expiresAt: options.expires,
             }),
         );
@@ -781,6 +829,7 @@ Examples:
           console.log(`\nAPI Key: ${result.key}`);
           console.log(`Key ID: ${result.apiKey.id}`);
           if (result.apiKey.name) console.log(`Name: ${result.apiKey.name}`);
+          if (result.apiKey.scope) console.log(`Scope: ${result.apiKey.scope}`);
           console.log(`\n${'='.repeat(60)}`);
         }
       } catch (error) {
@@ -811,6 +860,79 @@ Examples:
           emitJson(ctx, { success: true, keyId }, 'auth.apiKeys.revoke');
         } else {
           console.log(`API key ${keyId} has been revoked`);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu auth api-keys rotate <keyId>
+  apiKeys
+    .command('rotate <keyId>')
+    .description('Rotate an API key: mint a replacement preserving name + scope, then revoke the old one')
+    .action(async (keyId: string, _, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      try {
+        // Rotation is delete + re-mint. Scope is immutable and re-mint
+        // otherwise re-runs the 'write' default (§4.7) — so read the existing
+        // key's scope and PRESERVE it, or a key rotated under incident
+        // pressure returns write-capable with the same name.
+        const keys = await withSpinner(
+          ctx,
+          { start: 'Reading existing key...', failure: 'Failed to read API keys' },
+          () => ctx.client.auth.listApiKeys(),
+        );
+        const existing = keys.find(
+          (k) => k.id === keyId || k.id.slice(0, 8) === keyId,
+        );
+        if (!existing) {
+          exitWithError(`No API key found matching '${keyId}'.`);
+          return;
+        }
+        const preservedScope =
+          existing.scope === 'read' || existing.scope === 'write'
+            ? (existing.scope as ApiKeyScope)
+            : 'write';
+
+        const result = await withSpinner(
+          ctx,
+          {
+            start: 'Minting replacement key...',
+            success: 'Replacement key minted',
+            failure: 'Failed to create replacement key',
+          },
+          () =>
+            ctx.client.auth.createApiKey({
+              name: existing.name ?? undefined,
+              scope: preservedScope,
+              expiresAt: existing.expiresAt ?? undefined,
+            }),
+        );
+
+        // Only revoke the old key AFTER the replacement is safely minted.
+        await withSpinner(
+          ctx,
+          { start: 'Revoking old key...', success: 'Old key revoked', failure: 'Failed to revoke old key' },
+          () => ctx.client.auth.revokeApiKey(existing.id),
+        );
+
+        if (ctx.json) {
+          emitJson(
+            ctx,
+            { rotated: existing.id, replacement: result, scope: preservedScope },
+            'auth.apiKeys.rotate',
+          );
+        } else {
+          console.log(`\n${'='.repeat(60)}`);
+          console.log('IMPORTANT: Save this key now - it will not be shown again!');
+          console.log('='.repeat(60));
+          console.log(`\nRotated: ${existing.id} → ${result.apiKey.id}`);
+          console.log(`API Key: ${result.key}`);
+          if (result.apiKey.name) console.log(`Name: ${result.apiKey.name}`);
+          console.log(`Scope: ${result.apiKey.scope ?? preservedScope} (preserved)`);
+          console.log(`\n${'='.repeat(60)}`);
         }
       } catch (error) {
         handleOpsError(error, ctx);

@@ -200,7 +200,8 @@ ulu auth update-profile           # Update profile (display name, bio, avatar)
 ulu auth sessions list            # List active sessions
 ulu auth sessions revoke <id>     # Revoke a session
 ulu auth api-keys list            # List API keys
-ulu auth api-keys create          # Create new API key (--name, --expires <ISO date>)
+ulu auth api-keys create          # Create new API key (--name, --scope <read|write>, --expires <ISO date>)
+ulu auth api-keys rotate <id>     # Rotate a key: re-mint preserving name+scope, revoke the old
 ulu auth api-keys revoke <id>     # Revoke an API key
 ```
 
@@ -211,6 +212,7 @@ ulu auth api-keys revoke <id>     # Revoke an API key
 ulu auth register --email user@example.com --password mypassword
 ulu auth api-keys create --name "CI Pipeline"
 ulu auth api-keys create --name "CI Pipeline" --expires 2026-12-31  # optional expiry
+ulu auth api-keys create --name "readonly-briefing" --scope read     # a key that cannot write
 # Save this key: ulr_abc123... (shown once)
 
 # Login interactively

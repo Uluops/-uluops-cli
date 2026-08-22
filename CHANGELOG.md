@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added — per-key scope on API keys (platform v1.27.0, ops-sdk 5.21.0)
+
+- `ulu auth api-keys create --scope <read|write>` — mints a scoped key. Omitting
+  `--scope` resolves in this order: the `readonly-` name convention (a key named
+  `readonly-*` mints `read` unless `--scope write` is given), then an interactive
+  prompt, then a non-interactive default of `write` announced out loud (never a
+  silent default — spec D9, closes OQ-3).
+- `ulu auth api-keys rotate <id>` — mints a replacement key preserving the
+  original's name AND scope, then revokes the old one (mint before revoke). Scope
+  is immutable and a naive re-mint would re-run the `write` default, so a key
+  rotated under incident pressure would otherwise return write-capable (§4.7).
+- `ulu auth api-keys list` renders a `SCOPE` column; `--json` carries `scope`
+  automatically.
+- Requires `@uluops/ops-sdk` 5.21.0 (pin bumped). Not `npm ci`-green until that
+  is promoted to npm — reconciled in the per-key-scopes Phase C deploy.
+
 ### Changed
 
 - **`@uluops/core` 0.40.0 → 0.41.0.** The old pin was an exact `0.40.0`, a version that only
