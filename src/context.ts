@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import type { UluOpsConfig } from '@uluops/core';
+import type { ApiErrorLike, UluOpsConfig } from '@uluops/core';
 import {
   ConfigurationError,
   ExecutionError,
@@ -22,7 +22,6 @@ import {
   UluOpsError,
   WorkflowError,
 } from '@uluops/core';
-import type { ApiErrorLike } from '@uluops/core';
 import {
   loadConfig as loadOpsConfig,
   OpsApiError,
@@ -463,9 +462,15 @@ function printApiErrorDetails(
   if (ctx.json) {
     // toJSON is optional — fall back to the fields we know exist rather than crashing
     // the error printer itself, which would replace a useful message with a TypeError.
-    const payload = typeof error.toJSON === 'function'
-      ? error.toJSON()
-      : { statusCode: error.statusCode, message: error.message, code: error.code, requestId: error.requestId };
+    const payload =
+      typeof error.toJSON === 'function'
+        ? error.toJSON()
+        : {
+            statusCode: error.statusCode,
+            message: error.message,
+            code: error.code,
+            requestId: error.requestId,
+          };
     console.error(JSON.stringify(payload, null, 2));
   } else {
     console.error(`Error: ${error.message}`);

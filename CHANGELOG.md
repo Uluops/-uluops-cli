@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.27.0] - 2026-08-22
+
 ### Added — per-key scope on API keys (platform v1.27.0, ops-sdk 5.21.0)
 
 - `ulu auth api-keys create --scope <read|write>` — mints a scoped key. Omitting
