@@ -167,6 +167,7 @@ export function formatApiKeys(keys: PublicApiKey[]): string {
   const columns: Column<PublicApiKey>[] = [
     { header: 'ID', accessor: (k) => k.id.slice(0, 8), width: 10 },
     { header: 'NAME', accessor: (k) => k.name ?? '(unnamed)', width: 20 },
+    { header: 'SCOPE', accessor: (k) => k.scope ?? '—', width: 8 },
     {
       header: 'LAST USED',
       accessor: (k) =>
