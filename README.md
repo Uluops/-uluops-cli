@@ -193,8 +193,9 @@ ulu auth logout                   # Revoke all sessions
 ulu auth whoami                   # Show current user
 ulu auth register                 # Register new account
 ulu auth forgot-password          # Request password reset email
-ulu auth reset-password           # Reset password with token
-ulu auth change-password          # Change current password
+ulu auth reset-password           # Reset password with the emailed token (or the whole link)
+ulu auth set-password             # Set a FIRST password on an account that has none (API key / OAuth-only)
+ulu auth change-password          # Change current password (needs the current one)
 ulu auth profile                  # View user profile
 ulu auth update-profile           # Update profile (display name, bio, avatar)
 ulu auth sessions list            # List active sessions

@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.28.0] - 2026-09-10
+
+### Added
+
+- `ulu auth set-password [--password]` — sets a **first** password on the
+  authenticated account (`POST /auth/password`, `client.auth.setPassword`, in
+  ops-sdk since 5.x but never wired). The case is an account that authenticates
+  only by API key or OAuth: it has no password to `change-password` with, and
+  `reset-password` is the wrong tool twice over — it wants an emailed token, and a
+  successful reset deletes every API key on the account, including the one you
+  are holding. Prompts on a TTY when `--password` is omitted. "Password already
+  set" is rewritten to point at `change-password`.
+- `ulu auth reset-password --token` accepts the **whole link** from the
+  forgot-password email as well as the bare token. The email is written for the
+  web page (`…/reset-password?token=…`); nothing told a CLI user to lift the
+  `token` param out of it. `forgot-password` output now says so.
+
+### Changed
+
+- `ulu auth reset-password` given an API key as `--token` refuses **before any
+  request is made** — the key never travels in the unauthenticated reset body —
+  and names `set-password` / `change-password`. The server could only say
+  "Invalid or expired reset token" (hashed-token lookup), which is true and
+  unhelpful.
+
+
 ## [0.27.0] - 2026-08-22
 
 ### Added — per-key scope on API keys (platform v1.27.0, ops-sdk 5.21.0)

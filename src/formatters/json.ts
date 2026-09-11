@@ -55,6 +55,7 @@ export const SCHEMA_VERSIONS = {
   'auth.forgotPassword': 1,
   'auth.resetPassword': 1,
   'auth.changePassword': 1,
+  'auth.setPassword': 1,
   'auth.profile': 1,
   'auth.updateProfile': 1,
   'auth.sessions.list': 1,

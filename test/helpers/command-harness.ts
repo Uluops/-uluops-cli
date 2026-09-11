@@ -99,6 +99,7 @@ export function createMockOpsClient() {
       getProfile: vi.fn(),
       updateProfile: vi.fn(),
       changePassword: vi.fn(),
+      setPassword: vi.fn(),
       forgotPassword: vi.fn(),
       resetPassword: vi.fn(),
       listSessions: vi.fn(),

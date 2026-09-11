@@ -36,8 +36,10 @@ vi.mock('node:os', async (importOriginal) => {
 });
 
 import { readFileSync } from 'node:fs';
+import { API_KEY_PREFIX, OpsClient } from '@uluops/ops-sdk';
 import { createOpsContext, createUnauthenticatedContext, handleOpsError } from '../../src/context.js';
 import {
+  extractResetToken,
   registerAuthCommands,
   resolveCredentialSource,
 } from '../../src/commands/auth.js';
@@ -216,6 +218,85 @@ describe('auth change-password', () => {
   });
 });
 
+describe('auth set-password', () => {
+  it('should set a first-time password via the authenticated client', async () => {
+    mockClient.auth.setPassword.mockResolvedValue({ message: 'Password set successfully' });
+    const output = captureOutput();
+    await parse('auth', 'set-password', '--password', 'NewPass123!');
+    expect(mockClient.auth.setPassword).toHaveBeenCalledWith('NewPass123!');
+    expect(output.stdout()).toContain('Password set');
+    output.restore();
+  });
+
+  it('should require a password when not on a TTY', async () => {
+    const wasTTY = process.stdin.isTTY;
+    Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
+    try {
+      await expect(parse('auth', 'set-password')).rejects.toThrow('process.exit(1)');
+      expect(mockClient.auth.setPassword).not.toHaveBeenCalled();
+    } finally {
+      Object.defineProperty(process.stdin, 'isTTY', { value: wasTTY, configurable: true });
+    }
+  });
+
+  it('should point at change-password when a password already exists', async () => {
+    mockClient.auth.setPassword.mockRejectedValue(
+      new Error('Password already set. Use change password instead.'),
+    );
+    const output = captureOutput();
+    await expect(parse('auth', 'set-password', '--password', 'NewPass123!')).rejects.toThrow(
+      'process.exit(1)',
+    );
+    expect(output.stderr()).toContain('ulu auth change-password');
+    expect(mockedHandleOpsError).not.toHaveBeenCalled();
+    output.restore();
+  });
+});
+
+describe('auth reset-password', () => {
+  it('should refuse an API key as the token before any request is made', async () => {
+    // The server could only answer "Invalid or expired reset token" — the CLI
+    // recognises the key prefix, names set-password, and never sends the key
+    // in the unauthenticated reset body.
+    const constructed = vi.mocked(OpsClient).mock.calls.length;
+    const output = captureOutput();
+    await expect(
+      parse('auth', 'reset-password', '--token', `${API_KEY_PREFIX}abc123`, '--password', 'NewPass123!'),
+    ).rejects.toThrow('process.exit(1)');
+    expect(vi.mocked(OpsClient).mock.calls.length).toBe(constructed); // no client, no request
+    expect(output.stderr()).toContain('not a reset token');
+    expect(output.stderr()).toContain('ulu auth set-password');
+    expect(mockedHandleOpsError).not.toHaveBeenCalled();
+    output.restore();
+  });
+
+  it('should accept the whole emailed link and extract the token', async () => {
+    const resetPassword = vi.fn().mockResolvedValue({ message: 'Password reset successfully' });
+    vi.mocked(OpsClient).mockImplementationOnce(
+      () => ({ auth: { resetPassword } }) as unknown as OpsClient,
+    );
+    const output = captureOutput();
+    await parse(
+      'auth', 'reset-password',
+      '--token', 'https://app.uluops.ai/reset-password?token=abc%2Bdef',
+      '--password', 'NewPass123!',
+    );
+    expect(resetPassword).toHaveBeenCalledWith({ token: 'abc+def', password: 'NewPass123!' });
+    output.restore();
+  });
+
+  it('should fall through to handleOpsError for a genuine bad token', async () => {
+    const resetPassword = vi.fn().mockRejectedValue(new Error('Invalid or expired reset token'));
+    vi.mocked(OpsClient).mockImplementationOnce(
+      () => ({ auth: { resetPassword } }) as unknown as OpsClient,
+    );
+    await expect(
+      parse('auth', 'reset-password', '--token', 'emailed-token', '--password', 'NewPass123!'),
+    ).rejects.toThrow('Invalid or expired reset token');
+    expect(mockedHandleOpsError).toHaveBeenCalled();
+  });
+});
+
 describe('auth profile', () => {
   it('should display profile', async () => {
     mockClient.auth.getProfile.mockResolvedValue({
@@ -386,5 +467,18 @@ describe('saveCredentials: corrupt credentials breadcrumb', () => {
     // Login still completes
     expect(out.stdout()).toContain('Credentials saved');
     out.restore();
+  });
+});
+
+describe('extractResetToken', () => {
+  it('returns a bare token untouched', () => {
+    expect(extractResetToken('abc123')).toBe('abc123');
+    expect(extractResetToken('  abc123 ')).toBe('abc123');
+  });
+  it('extracts token from a reset link', () => {
+    expect(extractResetToken('https://x.test/reset-password?token=t0k')).toBe('t0k');
+  });
+  it('returns a URL without a token param untouched', () => {
+    expect(extractResetToken('https://x.test/reset-password')).toBe('https://x.test/reset-password');
   });
 });

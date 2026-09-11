@@ -1,7 +1,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { ENV_VARS, OpsClient } from '@uluops/ops-sdk';
+import { API_KEY_PREFIX, ENV_VARS, OpsClient } from '@uluops/ops-sdk';
 import type { Command } from 'commander';
 import {
   createOpsContext,
@@ -59,6 +59,24 @@ export function resolveCredentialSource(
   }
   const profile = options.profile ?? 'default';
   return `profile "${profile}" (~/.uluops/credentials.json)`;
+}
+
+/**
+ * Accept either the bare reset token or the whole link from the
+ * forgot-password email (`…/reset-password?token=…`). The email is written
+ * for the web page, so a CLI user's natural move is to paste the link; anything
+ * that is not a URL carrying a `token` param is returned untouched.
+ *
+ * @internal Exported for unit testing only.
+ */
+export function extractResetToken(input: string): string {
+  const value = String(input).trim();
+  if (!/^https?:\/\//i.test(value)) return value;
+  try {
+    return new URL(value).searchParams.get('token') ?? value;
+  } catch {
+    return value;
+  }
 }
 
 /**
@@ -512,6 +530,12 @@ Examples:
           emitJson(ctx, result, 'auth.forgotPassword');
         } else {
           console.log(result.message);
+          // The email carries only a link (…/reset-password?token=…) meant for
+          // the web page; a CLI user has to lift the token out of it.
+          console.log(
+            'Then run: ulu auth reset-password --token <token> --password <new>',
+            '\n(paste either the token from the link, or the whole link)',
+          );
         }
       } catch (error) {
         handleOpsError(error, ctx);
@@ -521,12 +545,31 @@ Examples:
   // ulu auth reset-password
   auth
     .command('reset-password')
-    .description('Reset password using a token')
-    .requiredOption('-t, --token <token>', 'Reset token from email')
+    .description('Reset password using the token from a forgot-password email')
+    .requiredOption(
+      '-t, --token <token>',
+      'Reset token, or the whole reset link, from the email',
+    )
     .requiredOption('-p, --password <password>', 'New password')
     .action(async (options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createUnauthenticatedContext(globalOpts);
+      const token = extractResetToken(options.token);
+
+      // An API key is not a reset token. Refuse before the request so the key
+      // never rides in an unauthenticated POST body; the server could only
+      // answer "invalid token" anyway (hashed lookup). Name the command the
+      // caller actually wanted.
+      if (token.startsWith(API_KEY_PREFIX)) {
+        console.error(
+          'Error: --token was given an API key, not a reset token.',
+        );
+        console.error(
+          '\nHint: To set a password on the account that key authenticates as, run',
+          '`ulu auth set-password` (first password) or `ulu auth change-password`.',
+        );
+        process.exit(1);
+      }
 
       try {
         const result = await withSpinner(
@@ -545,7 +588,7 @@ Examples:
               }),
             });
             return client.auth.resetPassword({
-              token: options.token,
+              token,
               password: options.password,
             });
           },
@@ -592,6 +635,66 @@ Examples:
           console.log(result.message);
         }
       } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu auth set-password
+  //
+  // First-time password on an account that has none — the API-key-only
+  // system account, an OAuth-only signup. POST /auth/password, authenticated
+  // (an API key or session works). NOT the reset-token flow: reset-password
+  // takes an emailed token, and a successful reset deletes every API key on
+  // the account (password-auth-service resetPassword) — including the one
+  // you'd be authenticating with. The API refuses with "Password already set"
+  // when credentials exist; that case is change-password.
+  auth
+    .command('set-password')
+    .description(
+      'Set a first-time password on the authenticated account (no password yet)',
+    )
+    .option(
+      '-p, --password <password>',
+      'New password (prompted if omitted on a TTY)',
+    )
+    .action(async (options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      let password = options.password as string | undefined;
+      if (!password && process.stdin.isTTY) {
+        password = await promptInput('New password: ', { hidden: true });
+      }
+      if (!password) {
+        console.error('Error: A new password is required');
+        console.error('Usage: ulu auth set-password --password <password>');
+        process.exit(1);
+      }
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          {
+            start: 'Setting password...',
+            success: 'Password set',
+            failure: 'Failed to set password',
+          },
+          () => ctx.client.auth.setPassword(password!),
+        );
+
+        if (ctx.json) {
+          emitJson(ctx, result, 'auth.setPassword');
+        } else {
+          console.log(result.message);
+        }
+      } catch (error) {
+        if (error instanceof Error && /already set/i.test(error.message)) {
+          console.error('Error: This account already has a password.');
+          console.error(
+            '\nHint: Use `ulu auth change-password --current <password> --new-password <password>` instead.',
+          );
+          process.exit(1);
+        }
         handleOpsError(error, ctx);
       }
     });
