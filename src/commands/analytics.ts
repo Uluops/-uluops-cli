@@ -81,7 +81,8 @@ Examples:
             },
             {
               header: 'PASS RATE',
-              accessor: (v) => `${v.passRate.toFixed(0)}%`,
+              accessor: (v) =>
+                v.passRate == null ? '-' : `${v.passRate.toFixed(0)}%`,
               width: 10,
               align: 'right',
             },

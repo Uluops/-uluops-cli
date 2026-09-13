@@ -114,7 +114,18 @@ export function formatRuns(
 /**
  * Format a single run
  */
-export function formatRun(run: Run): string {
+/** The fields the table prints — accepts both the read projection and the write echo (ops-sdk 6.x). */
+type RunLike = Pick<
+  Run,
+  | 'runNumber'
+  | 'id'
+  | 'workflowType'
+  | 'averageScore'
+  | 'allGatesPassed'
+  | 'createdAt'
+>;
+
+export function formatRun(run: RunLike): string {
   return formatKeyValue({
     runNumber: run.runNumber,
     id: run.id,

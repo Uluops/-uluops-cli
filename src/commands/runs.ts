@@ -81,10 +81,14 @@ Examples:
           ctx,
           { start: 'Fetching runs...', failure: 'Failed to fetch runs' },
           () =>
-            ctx.client.runs.listByProject(project, {
-              workflowType: options.workflow,
-              limit: parseIntOption(options.limit, '--limit'),
-            }),
+            // ops-sdk 6.0.0 (T13): the list envelope is {data, total}; this
+            // command's table wants the rows.
+            ctx.client.runs
+              .listByProject(project, {
+                workflowType: options.workflow,
+                limit: parseIntOption(options.limit, '--limit'),
+              })
+              .then((r) => r.data),
         );
 
         if (ctx.json) {
@@ -291,6 +295,11 @@ Examples:
           emitJson(ctx, result, 'run.save');
         } else {
           console.log(`Run #${result.run.runNumber} saved successfully`);
+          // Where it landed — the API's answer (the echo's orgSlug), not the flag;
+          // beside the base URL because a slug is server-relative (spec 2.4, F-6).
+          console.log(
+            `Org: ${result.run.orgSlug ?? ctx.org ?? 'personal'}  (${ctx.orgSource}${ctx.org && result.run.orgSlug && ctx.org !== result.run.orgSlug ? ', API answered differently' : ''})  ·  ${ctx.baseUrl}`,
+          );
           console.log('');
           console.log('Correlation:');
           // correlation is nullable since ops-sdk 5.7.0: null means the counts

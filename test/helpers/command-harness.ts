@@ -182,6 +182,9 @@ export function createMockOpsContext(overrides: Partial<OpsCliContext> = {}): Op
     json: false,
     debug: false,
     quiet: true,
+    baseUrl: 'http://localhost:3100/api/v1',
+    org: undefined,
+    orgSource: 'personal',
     ...overrides,
   };
 }

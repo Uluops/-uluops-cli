@@ -26,6 +26,9 @@ import {
   loadConfig as loadOpsConfig,
   OpsApiError,
   OpsClient,
+  resolveWorkspaceOrg,
+  type WorkspaceOrgResolution,
+  type WorkspaceOrgSource,
 } from '@uluops/ops-sdk';
 import { RegistryClient } from '@uluops/registry-sdk';
 import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
@@ -43,6 +46,8 @@ export interface GlobalOptions {
   apiKey?: string;
   profile?: string;
   baseUrl?: string;
+  /** `--org <slug>`: the org this invocation acts in (project-org-routing-and-rehome spec §3.4). */
+  org?: string;
   json?: boolean;
   debug?: boolean;
   quiet?: boolean;
@@ -57,6 +62,11 @@ export interface OpsCliContext {
   json: boolean;
   debug: boolean;
   quiet: boolean;
+  /** Resolved base URL — printed beside the org, because an org slug is server-relative. */
+  baseUrl: string;
+  /** The org this invocation acts in (`undefined` = the key holder's personal org) and where it came from. */
+  org: string | undefined;
+  orgSource: WorkspaceOrgSource;
 }
 
 /**
@@ -191,6 +201,12 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
     ? parseIntOption(options.timeout, '--timeout')
     : DEFAULT_TIMEOUT_MS;
 
+  // Org routing (spec §3.4 / D13): --org > nearest .uluops.json above cwd >
+  // ULUOPS_ORG_SLUG > personal. The SDK resolves it so the MCP and this CLI
+  // cannot drift; a malformed or forbidden workspace file is a loud exit here,
+  // not a silently wrong org.
+  const resolved = resolveOrg(options);
+
   let client: OpsClient;
   try {
     client = new OpsClient({
@@ -201,6 +217,7 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
       baseUrl: config.baseUrl,
       debug: config.debug,
       timeout,
+      orgSlug: resolved.org,
       onSecurityEvent: createSecurityEventHandler({
         quiet: options.quiet,
         debug: options.debug,
@@ -215,7 +232,28 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
     json: options.json ?? false,
     debug: options.debug ?? false,
     quiet: options.quiet ?? false,
+    baseUrl: config.baseUrl,
+    org: resolved.org,
+    orgSource: resolved.source,
   };
+}
+
+/**
+ * Resolve the org for this invocation through the SDK's D13 resolver, exiting
+ * with the resolver's own message on a malformed or forbidden `.uluops.json`.
+ */
+function resolveOrg(
+  options: Pick<GlobalOptions, 'org'>,
+): WorkspaceOrgResolution {
+  try {
+    return resolveWorkspaceOrg({
+      explicit: options.org,
+      cwd: process.cwd(),
+      env: process.env,
+    });
+  } catch (error) {
+    exitWithError(error instanceof Error ? error.message : String(error));
+  }
 }
 
 /**
@@ -339,12 +377,18 @@ export function createCoreContext(
   const thinkingBudget = thinkingBudgetEnv
     ? parseInt(thinkingBudgetEnv, 10)
     : undefined;
+  // Org routing (spec §3.5): `ulu exec` resolves the org the same way the ops
+  // commands do (--org > .uluops.json > ULUOPS_ORG_SLUG) and hands it to core,
+  // so the two writers a CLI user can reach agree. Core resolves env itself,
+  // but only the CLI knows the checkout.
+  const resolvedOrg = resolveOrg(options);
   const config: UluOpsConfig = {
     apiKey,
     localDefinitions: options.localDefinitions,
     trackingEnabled: options.tracking,
     defaultProject: options.project,
     submissionUrl: process.env.ULUOPS_SUBMISSION_URL ?? opsConfig.baseUrl,
+    ...(resolvedOrg.org !== undefined ? { orgSlug: resolvedOrg.org } : {}),
     debug: options.debug,
     ...(thinkingBudget !== undefined && !Number.isNaN(thinkingBudget)
       ? { defaultThinkingBudget: thinkingBudget }

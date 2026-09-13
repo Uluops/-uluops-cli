@@ -46,9 +46,9 @@ function parse(...args: string[]) {
 
 describe('runs list', () => {
   it('should display runs table', async () => {
-    mockClient.runs.listByProject.mockResolvedValue([
+    mockClient.runs.listByProject.mockResolvedValue({ total: 0, data: [
       createRun({ runNumber: 5, workflowType: 'ship', averageScore: 92.3 }),
-    ]);
+    ] });
     const output = captureOutput();
     await parse('runs', 'list', 'my-proj');
     expect(mockClient.runs.listByProject).toHaveBeenCalledWith('my-proj', expect.any(Object));
@@ -57,7 +57,7 @@ describe('runs list', () => {
   });
 
   it('should show message when empty', async () => {
-    mockClient.runs.listByProject.mockResolvedValue([]);
+    mockClient.runs.listByProject.mockResolvedValue({ total: 0, data: [] });
     const output = captureOutput();
     await parse('runs', 'list', 'my-proj');
     expect(output.stdout()).toContain('No runs found');
@@ -65,7 +65,7 @@ describe('runs list', () => {
   });
 
   it('should pass workflow filter', async () => {
-    mockClient.runs.listByProject.mockResolvedValue([]);
+    mockClient.runs.listByProject.mockResolvedValue({ total: 0, data: [] });
     const output = captureOutput();
     await parse('runs', 'list', 'my-proj', '--workflow', 'ship');
     expect(mockClient.runs.listByProject).toHaveBeenCalledWith('my-proj', expect.objectContaining({
@@ -147,6 +147,24 @@ describe('runs save', () => {
     await parse('runs', 'save', '--file', '/tmp/run.json');
     expect(mockClient.runs.save).toHaveBeenCalled();
     expect(output.stdout()).toContain('Run #7 saved');
+    // Where it landed (spec 2.4 / F-6): the API's orgSlug, else the resolved org,
+    // else "personal" — beside the base URL because a slug is server-relative.
+    expect(output.stdout()).toMatch(/Org: personal\s+\(personal\)\s+·\s+http:\/\/localhost:3100\/api\/v1/);
+    output.restore();
+  });
+
+  it('prints the org the API answered with, and flags a disagreement with the flag', async () => {
+    mockedCreateOpsContext.mockReturnValue(
+      createMockOpsContext({ client: mockClient as unknown as OpsCliContext['client'], org: 'acme', orgSource: 'explicit' }),
+    );
+    mockClient.runs.save.mockResolvedValue({
+      run: { ...createRun({ runNumber: 8 }), orgSlug: 'ulu-labs' },
+      correlation: { newIssues: 0, recurringIssues: 0, regressions: 0 },
+      deduplicated: false,
+    });
+    const output = captureOutput();
+    await parse('runs', 'save', '--file', '/tmp/run.json');
+    expect(output.stdout()).toContain('Org: ulu-labs  (explicit, API answered differently)');
     output.restore();
   });
 });
@@ -292,7 +310,7 @@ describe('runs delete', () => {
 
 describe('runs list with numeric options', () => {
   it('should pass limit option as number', async () => {
-    mockClient.runs.listByProject.mockResolvedValue([]);
+    mockClient.runs.listByProject.mockResolvedValue({ total: 0, data: [] });
     const output = captureOutput();
     await parse('runs', 'list', 'my-proj', '--limit', '5');
     expect(mockClient.runs.listByProject).toHaveBeenCalledWith('my-proj', expect.objectContaining({
@@ -302,7 +320,7 @@ describe('runs list with numeric options', () => {
   });
 
   it('should use default limit when not specified', async () => {
-    mockClient.runs.listByProject.mockResolvedValue([]);
+    mockClient.runs.listByProject.mockResolvedValue({ total: 0, data: [] });
     const output = captureOutput();
     await parse('runs', 'list', 'my-proj');
     expect(mockClient.runs.listByProject).toHaveBeenCalledWith('my-proj', expect.objectContaining({

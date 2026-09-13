@@ -32,6 +32,8 @@ vi.mock('@uluops/ops-sdk', () => {
     OpsClient: vi.fn().mockReturnValue({}),
     loadConfig: vi.fn(),
     OpsApiError,
+    // D13 resolver: default answer is the personal org; tests override per case.
+    resolveWorkspaceOrg: vi.fn(() => ({ org: undefined, source: 'personal' })),
   };
 });
 
@@ -158,7 +160,7 @@ vi.mock('@uluops/core', () => {
 });
 
 // Import after mocks are set up
-import { OpsClient, loadConfig as loadOpsConfig, OpsApiError } from '@uluops/ops-sdk';
+import { OpsClient, loadConfig as loadOpsConfig, OpsApiError, resolveWorkspaceOrg } from '@uluops/ops-sdk';
 import { RegistryClient } from '@uluops/registry-sdk';
 import { RegistryApiError } from '@uluops/registry-sdk/errors';
 import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
@@ -899,5 +901,59 @@ describe('handleCoreError', () => {
     expect(parsed.requiredTier).toBe('pro');
     expect(parsed.currentTier).toBe('free');
     output.restore();
+  });
+});
+
+describe('org routing (spec §3.4 / D13): --org reaches the clients through the SDK resolver', () => {
+  const mockedResolve = vi.mocked(resolveWorkspaceOrg);
+  beforeEach(() => {
+    mockedOpsClient.mockClear();
+    mockedUluOpsClient.mockClear();
+    mockedResolve.mockReset();
+    vi.mocked(loadOpsConfig).mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      credentials: { apiKey: 'ulr_my-key' },
+    } as never);
+  });
+
+  it('createOpsContext: the resolver is asked with the flag, cwd and env, and its answer becomes orgSlug', () => {
+    mockedResolve.mockReturnValue({ org: 'acme', source: 'explicit' });
+    const ctx = createOpsContext({ org: 'acme' });
+    expect(mockedResolve).toHaveBeenCalledWith({ explicit: 'acme', cwd: process.cwd(), env: process.env });
+    expect(mockedOpsClient).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: 'acme' }));
+    expect(ctx.org).toBe('acme');
+    expect(ctx.orgSource).toBe('explicit');
+    expect(ctx.baseUrl).toBe('http://localhost:3100');
+  });
+
+  it('createOpsContext: a workspace answer flows the same way (the CLI does not re-derive it)', () => {
+    mockedResolve.mockReturnValue({ org: 'ulu-labs', source: 'workspace', path: '/w/.uluops.json' });
+    const ctx = createOpsContext({});
+    expect(mockedOpsClient).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: 'ulu-labs' }));
+    expect(ctx.orgSource).toBe('workspace');
+  });
+
+  it('createOpsContext: personal → orgSlug undefined (control: the key is not set to a value)', () => {
+    mockedResolve.mockReturnValue({ org: undefined, source: 'personal' });
+    const ctx = createOpsContext({});
+    const cfg = mockedOpsClient.mock.calls[0]![0] as Record<string, unknown>;
+    expect(cfg.orgSlug).toBeUndefined();
+    expect(ctx.org).toBeUndefined();
+  });
+
+  it('createOpsContext: a malformed/forbidden workspace file is a loud exit with the resolver\'s message', () => {
+    mockedResolve.mockImplementation(() => { throw new Error('Refusing .uluops.json at /w/.uluops.json: it may carry only "org"'); });
+    expect(() => createOpsContext({})).toThrow('process.exit(1)');
+  });
+
+  it('createCoreContext (ulu exec): the resolved org is handed to core as orgSlug; absent when personal', () => {
+    mockedResolve.mockReturnValue({ org: 'ulu-labs', source: 'env' });
+    createCoreContext({ org: undefined, tracking: true });
+    expect(mockedUluOpsClient).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: 'ulu-labs' }));
+    mockedUluOpsClient.mockClear();
+    mockedResolve.mockReturnValue({ org: undefined, source: 'personal' });
+    createCoreContext({ tracking: true });
+    const cfg = mockedUluOpsClient.mock.calls[0]![0] as Record<string, unknown>;
+    expect('orgSlug' in cfg).toBe(false);
   });
 });

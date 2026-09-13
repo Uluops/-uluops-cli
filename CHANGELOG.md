@@ -4,6 +4,17 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.29.0] - 2026-09-13
+
+### Added
+
+- **`--org <slug>` (global)** — the org an invocation acts in, sent as `X-Org-Slug` (project-org-routing-and-rehome spec §3.4). Default when omitted, resolved by `@uluops/ops-sdk`'s `resolveWorkspaceOrg` (D13): the nearest `.uluops.json` above the current directory (`{ "org": "ulu-labs" }`; `{ "org": "personal" }` stops the walk in a personal repo nested under a work tree), else `ULUOPS_ORG_SLUG`, else your personal org. The API never infers an org from a project name, so with none of these set a run files personally even when a work org has a project by that name. A malformed workspace file, or one carrying credentials or a base URL, is a loud exit, not a silently wrong org. **`ulu exec` resolves the same way and hands the org to `@uluops/core`**, so the two writers a CLI user can reach agree.
+- **`ulu runs save` prints where the run landed** — `Org: <slug>  (<source>)  ·  <base URL>` — the API's own answer (the echo's `orgSlug`), flagged when it differs from the flag; beside the base URL because an org slug is server-relative (the same `.uluops.json` against dev names a different org or none).
+
+### Changed
+
+- **`@uluops/ops-sdk` 5.21.0 → 6.3.0 (a MAJOR across the 6.0.0 strict-shape flip) and `@uluops/core` ^0.41.0 → 0.43.1 (exact)** — the whole delivery train shares one ops-sdk version so no consumer nests a second copy. Visible effects here: `projects list` and `runs list` unwrap the 6.0.0 `{ data, total }` envelope; `analytics agents` prints `-` for a null pass rate; `formatRun` accepts the write echo. `@uluops/registry-sdk` 0.49.0 still pins `@uluops/sdk-core` 0.15.0 exactly, so that copy stays nested beside the 0.17.0 the others share — this CLI already treats API errors structurally (`ApiErrorLike`) for exactly that reason, so nothing changes in error handling.
+
 ## [Unreleased]
 
 ## [0.28.0] - 2026-09-10

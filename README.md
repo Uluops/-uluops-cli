@@ -155,6 +155,15 @@ The CLI resolves credentials in this order:
 
 ## Global Options
 
+### Which org a command acts in
+
+Every command sends `X-Org-Slug` for the org it acts in. Resolution, highest first: `--org <slug>`;
+the nearest `.uluops.json` above the current directory (`{ "org": "ulu-labs" }` — put one at the
+root of a work checkout; `{ "org": "personal" }` in a personal repo nested under it stops the walk);
+`ULUOPS_ORG_SLUG`; else your personal org. The API never infers an org from a project name.
+`ulu runs save` prints where the run landed. `ulu exec` hands the same org to `@uluops/core`.
+
+
 Every command accepts these flags:
 
 ```text

@@ -87,6 +87,10 @@ program
   .option('--profile <name>', 'Config profile to use', 'default')
   .option('--base-url <url>', 'API base URL')
   .option(
+    '--org <slug>',
+    'Org to act in (X-Org-Slug). Default: the nearest .uluops.json above cwd, else ULUOPS_ORG_SLUG, else your personal org',
+  )
+  .option(
     '--timeout <ms>',
     'Request timeout in milliseconds (default: 30000 for ops/registry, 600000 for exec)',
   )

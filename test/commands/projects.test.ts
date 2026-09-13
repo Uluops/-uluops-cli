@@ -33,7 +33,7 @@ function parse(...args: string[]) {
 
 describe('projects list', () => {
   it('should display projects table', async () => {
-    mockClient.projects.list.mockResolvedValue([createProject({ name: 'my-proj' })]);
+    mockClient.projects.list.mockResolvedValue({ total: 0, data: [createProject({ name: 'my-proj' })] });
     const output = captureOutput();
     await parse('projects', 'list');
     expect(mockClient.projects.list).toHaveBeenCalled();
@@ -42,7 +42,7 @@ describe('projects list', () => {
   });
 
   it('should show message when empty', async () => {
-    mockClient.projects.list.mockResolvedValue([]);
+    mockClient.projects.list.mockResolvedValue({ total: 0, data: [] });
     const output = captureOutput();
     await parse('projects', 'list');
     expect(output.stdout()).toContain('No projects found');
@@ -50,7 +50,7 @@ describe('projects list', () => {
   });
 
   it('should output JSON in json mode', async () => {
-    mockClient.projects.list.mockResolvedValue([createProject({ name: 'json-proj' })]);
+    mockClient.projects.list.mockResolvedValue({ total: 0, data: [createProject({ name: 'json-proj' })] });
     mockedCreateOpsContext.mockReturnValue(
       createMockOpsContext({ client: mockClient as unknown as OpsCliContext['client'], json: true })
     );

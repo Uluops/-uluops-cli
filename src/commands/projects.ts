@@ -48,7 +48,8 @@ Examples:
             start: 'Fetching projects...',
             failure: 'Failed to fetch projects',
           },
-          () => ctx.client.projects.list(),
+          // ops-sdk 6.0.0 (T13): {data, total} envelope.
+          () => ctx.client.projects.list().then((r) => r.data),
         );
 
         if (ctx.json) {
