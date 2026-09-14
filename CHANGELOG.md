@@ -4,6 +4,13 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.29.1] - 2026-09-13
+
+### Changed
+
+- **Destructive prompts name the org.** `project delete` and `run delete` confirm with the org, its source and the base URL (`… in org ulu-labs (workspace) at https://api.uluops.ai/api/v1?`), the same shape `run save` prints. Two orgs holding the same project name is the premise of org routing, so a prompt naming only the project confirmed the wrong thing (security audit run #187, trust-boundary F10).
+- `@uluops/core` 0.43.1 → 0.43.2, `@uluops/ops-sdk` 6.3.0 → 6.3.1.
+
 ## [0.29.0] - 2026-09-13
 
 ### Added

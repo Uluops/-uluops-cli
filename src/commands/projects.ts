@@ -143,7 +143,11 @@ Example:
 
       // Confirm deletion (fails closed in non-interactive contexts)
       const action = options.force ? 'permanently delete' : 'soft-delete';
-      await confirmOrExit(`${action} project "${name}"?`, options.yes);
+      // Name the org and its source (run #187, trust-boundary F10): two orgs
+      // holding the same project name is the spec's premise, so a prompt that
+      // names only the project confirms the wrong thing. Same shape as the
+      // `run save` print — org, source, base URL (a slug is server-relative).
+      await confirmOrExit(`${action} project "${name}" in org ${ctx.org ?? 'personal'} (${ctx.orgSource}) at ${ctx.baseUrl}?`, options.yes);
 
       try {
         if (options.force) {
