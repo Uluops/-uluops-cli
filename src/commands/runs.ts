@@ -630,7 +630,10 @@ Examples:
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
-      await confirmOrExit(`Permanently delete run ${runId} in org ${ctx.org ?? 'personal'} (${ctx.orgSource}) at ${ctx.baseUrl}?`, options.yes);
+      await confirmOrExit(
+        `Permanently delete run ${runId} in org ${ctx.org ?? 'personal'} (${ctx.orgSource}) at ${ctx.baseUrl}?`,
+        options.yes,
+      );
 
       try {
         await withSpinner(
