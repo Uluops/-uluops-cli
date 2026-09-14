@@ -9,7 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - **Destructive prompts name the org.** `project delete` and `run delete` confirm with the org, its source and the base URL (`… in org ulu-labs (workspace) at https://api.uluops.ai/api/v1?`), the same shape `run save` prints. Two orgs holding the same project name is the premise of org routing, so a prompt naming only the project confirmed the wrong thing (security audit run #187, trust-boundary F10).
-- `@uluops/core` 0.43.1 → 0.43.2, `@uluops/ops-sdk` 6.3.0 → 6.3.1.
+- `@uluops/core` 0.43.1 → 0.43.2, `@uluops/ops-sdk` 6.3.0 → 6.3.1. **`@uluops/sdk-core` 0.17.0 is now pinned at the root** so core and ops-sdk share ONE hoisted copy: until now each carried its own nested sdk-core (0.16.0 beside 0.17.0 on 0.29.0), two `SdkApiError` class identities in one process — the trap where an `instanceof` guard in core silently stops matching an error thrown inside ops-sdk. `registry-sdk` keeps its own nested 0.15.0 (it pins it exactly).
 
 ## [0.29.0] - 2026-09-13
 
