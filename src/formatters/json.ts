@@ -136,6 +136,11 @@ export const SCHEMA_VERSIONS = {
   'project.rehome': 1,
   // orgs
   'org.auditFeed': 1,
+  // ulu log (spec §3.7 D7): dotted like every key above; the default --json shape is
+  // byte-identical to JSON.stringify(data, null, 2) of the SDK's parsed value.
+  'log.stream': 1,
+  'log.stat': 1,
+  'log.orgs': 1,
   // runs
   'run.list': 1,
   'run.get': 1,

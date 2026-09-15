@@ -20,6 +20,7 @@ import { registerExecutionCommands } from './commands/executions.js';
 import { registerForkCommands } from './commands/forks.js';
 import { registerIssueCommands } from './commands/issues.js';
 import { registerLanguageCommands } from './commands/languages.js';
+import { registerLogCommands } from './commands/log.js';
 import { registerModelCommands } from './commands/models.js';
 import { registerOrgCommands } from './commands/orgs.js';
 import { registerProjectCommands } from './commands/projects.js';
@@ -120,6 +121,7 @@ program
 registerAuthCommands(program);
 registerProjectCommands(program);
 registerOrgCommands(program);
+registerLogCommands(program);
 registerRunCommands(program);
 registerIssueCommands(program);
 registerAnalyticsCommands(program);
