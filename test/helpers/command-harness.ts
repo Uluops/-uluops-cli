@@ -24,6 +24,10 @@ export function createMockOpsClient() {
       listIssues: vi.fn(),
       bulkUpdateIssueStatus: vi.fn(),
       mergeIssues: vi.fn(),
+      rehome: vi.fn(),
+    },
+    orgs: {
+      getVisibleAuditLog: vi.fn(),
     },
     runs: {
       list: vi.fn(),
@@ -176,7 +180,9 @@ export function createMockRegistryClient() {
 /**
  * Create a mock OpsCliContext for testing
  */
-export function createMockOpsContext(overrides: Partial<OpsCliContext> = {}): OpsCliContext {
+export function createMockOpsContext(
+  overrides: Partial<OpsCliContext> = {},
+): OpsCliContext {
   return {
     client: createMockOpsClient() as unknown as OpsCliContext['client'],
     json: false,
@@ -192,9 +198,12 @@ export function createMockOpsContext(overrides: Partial<OpsCliContext> = {}): Op
 /**
  * Create a mock RegistryCliContext for testing
  */
-export function createMockRegistryContext(overrides: Partial<RegistryCliContext> = {}): RegistryCliContext {
+export function createMockRegistryContext(
+  overrides: Partial<RegistryCliContext> = {},
+): RegistryCliContext {
   return {
-    client: createMockRegistryClient() as unknown as RegistryCliContext['client'],
+    client:
+      createMockRegistryClient() as unknown as RegistryCliContext['client'],
     json: false,
     debug: false,
     quiet: true,

@@ -1,14 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Command } from 'commander';
-import { captureOutput } from '../helpers/capture.js';
-import { createMockOpsClient, createMockOpsContext } from '../helpers/command-harness.js';
-import { createProject } from '../helpers/mock-factories.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpsCliContext } from '../../src/context.js';
+import { captureOutput } from '../helpers/capture.js';
+import {
+  createMockOpsClient,
+  createMockOpsContext,
+} from '../helpers/command-harness.js';
+import { createProject } from '../helpers/mock-factories.js';
 
 vi.mock('../../src/context.js');
 
-import { createOpsContext, handleOpsError } from '../../src/context.js';
 import { registerProjectCommands } from '../../src/commands/projects.js';
+import { createOpsContext, handleOpsError } from '../../src/context.js';
 
 const mockedCreateOpsContext = vi.mocked(createOpsContext);
 const mockedHandleOpsError = vi.mocked(handleOpsError);
@@ -19,9 +22,13 @@ let mockClient: MockClient;
 beforeEach(() => {
   mockClient = createMockOpsClient();
   mockedCreateOpsContext.mockReturnValue(
-    createMockOpsContext({ client: mockClient as unknown as OpsCliContext['client'] })
+    createMockOpsContext({
+      client: mockClient as unknown as OpsCliContext['client'],
+    }),
   );
-  mockedHandleOpsError.mockImplementation((error) => { throw error; });
+  mockedHandleOpsError.mockImplementation((error) => {
+    throw error;
+  });
 });
 
 function parse(...args: string[]) {
@@ -33,7 +40,10 @@ function parse(...args: string[]) {
 
 describe('projects list', () => {
   it('should display projects table', async () => {
-    mockClient.projects.list.mockResolvedValue({ total: 0, data: [createProject({ name: 'my-proj' })] });
+    mockClient.projects.list.mockResolvedValue({
+      total: 0,
+      data: [createProject({ name: 'my-proj' })],
+    });
     const output = captureOutput();
     await parse('projects', 'list');
     expect(mockClient.projects.list).toHaveBeenCalled();
@@ -50,9 +60,15 @@ describe('projects list', () => {
   });
 
   it('should output JSON in json mode', async () => {
-    mockClient.projects.list.mockResolvedValue({ total: 0, data: [createProject({ name: 'json-proj' })] });
+    mockClient.projects.list.mockResolvedValue({
+      total: 0,
+      data: [createProject({ name: 'json-proj' })],
+    });
     mockedCreateOpsContext.mockReturnValue(
-      createMockOpsContext({ client: mockClient as unknown as OpsCliContext['client'], json: true })
+      createMockOpsContext({
+        client: mockClient as unknown as OpsCliContext['client'],
+        json: true,
+      }),
     );
     const output = captureOutput();
     await parse('projects', 'list');
@@ -75,10 +91,14 @@ describe('projects get', () => {
 
 describe('projects create', () => {
   it('should create project', async () => {
-    mockClient.projects.create.mockResolvedValue(createProject({ name: 'new-proj' }));
+    mockClient.projects.create.mockResolvedValue(
+      createProject({ name: 'new-proj' }),
+    );
     const output = captureOutput();
     await parse('projects', 'create', 'new-proj');
-    expect(mockClient.projects.create).toHaveBeenCalledWith({ name: 'new-proj' });
+    expect(mockClient.projects.create).toHaveBeenCalledWith({
+      name: 'new-proj',
+    });
     expect(output.stdout()).toContain('Name: new-proj');
     output.restore();
   });
@@ -87,7 +107,9 @@ describe('projects create', () => {
 describe('projects delete', () => {
   it('should fail closed (exit 1) without --yes in non-interactive mode', async () => {
     const output = captureOutput();
-    await expect(parse('projects', 'delete', 'my-proj')).rejects.toThrow('process.exit(1)');
+    await expect(parse('projects', 'delete', 'my-proj')).rejects.toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('not an interactive terminal');
     expect(mockClient.projects.softDelete).not.toHaveBeenCalled();
     expect(mockClient.projects.delete).not.toHaveBeenCalled();
@@ -117,7 +139,9 @@ describe('projects delete', () => {
 
 describe('projects restore', () => {
   it('should restore project', async () => {
-    mockClient.projects.restore.mockResolvedValue(createProject({ name: 'restored' }));
+    mockClient.projects.restore.mockResolvedValue(
+      createProject({ name: 'restored' }),
+    );
     const output = captureOutput();
     await parse('projects', 'restore', 'restored');
     expect(mockClient.projects.restore).toHaveBeenCalledWith('restored');
@@ -130,7 +154,12 @@ describe('projects summary', () => {
   it('should display project summary', async () => {
     mockClient.projects.getSummary.mockResolvedValue({
       project: createProject({ name: 'my-proj' }),
-      stats: { openIssues: 5, criticalIssues: 1, totalIssues: 20, totalRuns: 8 },
+      stats: {
+        openIssues: 5,
+        criticalIssues: 1,
+        totalIssues: 20,
+        totalRuns: 8,
+      },
     });
     const output = captureOutput();
     await parse('projects', 'summary', 'my-proj');
@@ -144,13 +173,13 @@ describe('projects trends', () => {
   it('should pass --days option', async () => {
     mockClient.projects.getTrends.mockResolvedValue({
       days: 14,
-      daily: [
-        { date: '2025-01-15', total: 5, new: 2, resolved: 1 },
-      ],
+      daily: [{ date: '2025-01-15', total: 5, new: 2, resolved: 1 }],
     });
     const output = captureOutput();
     await parse('projects', 'trends', 'my-proj', '--days', '14');
-    expect(mockClient.projects.getTrends).toHaveBeenCalledWith('my-proj', { days: 14 });
+    expect(mockClient.projects.getTrends).toHaveBeenCalledWith('my-proj', {
+      days: 14,
+    });
     expect(output.stdout()).toContain('2025-01-15');
     output.restore();
   });
@@ -166,10 +195,15 @@ describe('projects trends', () => {
 
 describe('projects rename', () => {
   it('should rename a project', async () => {
-    mockClient.projects.rename.mockResolvedValue(createProject({ name: 'new-name' }));
+    mockClient.projects.rename.mockResolvedValue(
+      createProject({ name: 'new-name' }),
+    );
     const output = captureOutput();
     await parse('projects', 'rename', 'old-name', '--new-name', 'new-name');
-    expect(mockClient.projects.rename).toHaveBeenCalledWith({ oldName: 'old-name', newName: 'new-name' });
+    expect(mockClient.projects.rename).toHaveBeenCalledWith({
+      oldName: 'old-name',
+      newName: 'new-name',
+    });
     expect(output.stdout()).toContain('old-name');
     expect(output.stdout()).toContain('new-name');
     output.restore();
@@ -183,11 +217,24 @@ describe('projects bulk-update-issues', () => {
       failed: [],
     });
     const output = captureOutput();
-    await parse('projects', 'bulk-update-issues', 'my-proj', '--ids', 'issue-1,issue-2', '--status', 'completed', '--reason', 'Fixed in v2');
-    expect(mockClient.projects.bulkUpdateIssueStatus).toHaveBeenCalledWith('my-proj', [
-      { issueId: 'issue-1', status: 'completed', reason: 'Fixed in v2' },
-      { issueId: 'issue-2', status: 'completed', reason: 'Fixed in v2' },
-    ]);
+    await parse(
+      'projects',
+      'bulk-update-issues',
+      'my-proj',
+      '--ids',
+      'issue-1,issue-2',
+      '--status',
+      'completed',
+      '--reason',
+      'Fixed in v2',
+    );
+    expect(mockClient.projects.bulkUpdateIssueStatus).toHaveBeenCalledWith(
+      'my-proj',
+      [
+        { issueId: 'issue-1', status: 'completed', reason: 'Fixed in v2' },
+        { issueId: 'issue-2', status: 'completed', reason: 'Fixed in v2' },
+      ],
+    );
     expect(output.stdout()).toContain('Updated 2 issues');
     output.restore();
   });
@@ -201,7 +248,15 @@ describe('projects merge-issues', () => {
       migratedOccurrences: 5,
     });
     const output = captureOutput();
-    await parse('projects', 'merge-issues', 'my-proj', '--target', 'target-id-1234', '--sources', 'src-1,src-2');
+    await parse(
+      'projects',
+      'merge-issues',
+      'my-proj',
+      '--target',
+      'target-id-1234',
+      '--sources',
+      'src-1,src-2',
+    );
     expect(mockClient.projects.mergeIssues).toHaveBeenCalledWith('my-proj', {
       targetIssueId: 'target-id-1234',
       sourceIssueIds: ['src-1', 'src-2'],
@@ -218,6 +273,79 @@ describe('error handling', () => {
     const error = new Error('API fail');
     mockClient.projects.list.mockRejectedValue(error);
     await expect(parse('projects', 'list')).rejects.toThrow('API fail');
-    expect(mockedHandleOpsError).toHaveBeenCalledWith(error, expect.any(Object));
+    expect(mockedHandleOpsError).toHaveBeenCalledWith(
+      error,
+      expect.any(Object),
+    );
+  });
+});
+
+describe('projects rehome', () => {
+  const moved = {
+    ...createProject({ name: 'billing' }),
+    orgId: 'b-id',
+    rehome: {
+      from_org: { id: 'a-id', slug: 'acme' },
+      to_org: { id: 'b-id', slug: 'ulu-labs' },
+      audit_ids: [],
+    },
+  };
+
+  it('fails closed without --yes in non-interactive mode', async () => {
+    const output = captureOutput();
+    await expect(
+      parse('projects', 'rehome', 'billing', '--to', 'ulu-labs'),
+    ).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('not an interactive terminal');
+    expect(mockClient.projects.rehome).not.toHaveBeenCalled();
+    output.restore();
+  });
+
+  it('moves with --yes, omits reason when not given, and prints source → target', async () => {
+    mockClient.projects.rehome.mockResolvedValue(moved);
+    const output = captureOutput();
+    await parse('projects', 'rehome', 'billing', '--to', 'ulu-labs', '--yes');
+    expect(mockClient.projects.rehome).toHaveBeenCalledWith('billing', {
+      targetOrg: 'ulu-labs',
+    });
+    expect(output.stdout()).toContain('acme → ulu-labs');
+    expect(output.stdout()).toContain('410 PROJECT_REHOMED');
+    output.restore();
+  });
+
+  it('carries --reason and emits the rehome block in json mode', async () => {
+    mockClient.projects.rehome.mockResolvedValue(moved);
+    mockedCreateOpsContext.mockReturnValue(
+      createMockOpsContext({
+        client: mockClient as unknown as OpsCliContext['client'],
+        json: true,
+      }),
+    );
+    const output = captureOutput();
+    await parse(
+      'projects',
+      'rehome',
+      'billing',
+      '--to',
+      'ulu-labs',
+      '--reason',
+      'team took it',
+      '-y',
+    );
+    expect(mockClient.projects.rehome).toHaveBeenCalledWith('billing', {
+      targetOrg: 'ulu-labs',
+      reason: 'team took it',
+    });
+    expect(JSON.parse(output.stdout()).rehome.to_org.slug).toBe('ulu-labs');
+    output.restore();
+  });
+
+  it('requires --to', async () => {
+    const output = captureOutput();
+    await expect(
+      parse('projects', 'rehome', 'billing', '-y'),
+    ).rejects.toThrow();
+    expect(mockClient.projects.rehome).not.toHaveBeenCalled();
+    output.restore();
   });
 });

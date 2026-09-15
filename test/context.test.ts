@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { captureOutput } from './helpers/capture.js';
 
 // Mock node:fs to prevent isSessionExpired from reading real credentials
@@ -19,13 +19,20 @@ vi.mock('@uluops/ops-sdk', () => {
       message: string,
       public code: string = 'UNKNOWN',
       public details?: Record<string, unknown>,
-      public requestId?: string
+      public requestId?: string,
     ) {
       super(message);
       this.name = 'OpsApiError';
     }
     toJSON() {
-      return { name: this.name, message: this.message, statusCode: this.statusCode, code: this.code, details: this.details, requestId: this.requestId };
+      return {
+        name: this.name,
+        message: this.message,
+        statusCode: this.statusCode,
+        code: this.code,
+        details: this.details,
+        requestId: this.requestId,
+      };
     }
   }
   return {
@@ -48,13 +55,18 @@ vi.mock('@uluops/registry-sdk/errors', () => {
       message: string,
       public code: string = 'UNKNOWN',
       public details?: Record<string, unknown>,
-      public requestId?: string
+      public requestId?: string,
     ) {
       super(message);
       this.name = 'RegistryApiError';
     }
     toJSON() {
-      return { name: this.name, message: this.message, statusCode: this.statusCode, code: this.code };
+      return {
+        name: this.name,
+        message: this.message,
+        statusCode: this.statusCode,
+        code: this.code,
+      };
     }
   }
   return { RegistryApiError };
@@ -71,13 +83,20 @@ vi.mock('@uluops/core', () => {
       message: string,
       public code: string = 'UNKNOWN',
       public details?: Record<string, unknown>,
-      public requestId?: string
+      public requestId?: string,
     ) {
       super(message);
       this.name = 'SdkApiError';
     }
     toJSON() {
-      return { name: this.name, message: this.message, statusCode: this.statusCode, code: this.code, details: this.details, requestId: this.requestId };
+      return {
+        name: this.name,
+        message: this.message,
+        statusCode: this.statusCode,
+        code: this.code,
+        details: this.details,
+        requestId: this.requestId,
+      };
     }
   }
   // Mirrors core's real implementation. It must test `statusCode` — NOT `name` and NOT
@@ -91,13 +110,32 @@ vi.mock('@uluops/core', () => {
     typeof (error as { statusCode?: unknown }).statusCode === 'number' &&
     typeof (error as { message?: unknown }).message === 'string';
 
-  class UluOpsError extends Error { constructor(message: string) { super(message); this.name = 'UluOpsError'; } }
-  class ConfigurationError extends UluOpsError { constructor(message: string) { super(message); this.name = 'ConfigurationError'; } }
-  class ModelNotFoundError extends UluOpsError { constructor(message: string) { super(message); this.name = 'ModelNotFoundError'; } }
+  class UluOpsError extends Error {
+    constructor(message: string) {
+      super(message);
+      this.name = 'UluOpsError';
+    }
+  }
+  class ConfigurationError extends UluOpsError {
+    constructor(message: string) {
+      super(message);
+      this.name = 'ConfigurationError';
+    }
+  }
+  class ModelNotFoundError extends UluOpsError {
+    constructor(message: string) {
+      super(message);
+      this.name = 'ModelNotFoundError';
+    }
+  }
   class PreflightError extends UluOpsError {
     check = 'target-exists';
     details?: Record<string, unknown>;
-    constructor(message: string, check?: string, details?: Record<string, unknown>) {
+    constructor(
+      message: string,
+      check?: string,
+      details?: Record<string, unknown>,
+    ) {
       super(message);
       this.name = 'PreflightError';
       if (check) this.check = check;
@@ -106,79 +144,150 @@ vi.mock('@uluops/core', () => {
   }
   class ParseError extends UluOpsError {
     contentPreview?: string;
-    constructor(message: string, contentPreview?: string) { super(message); this.name = 'ParseError'; this.contentPreview = contentPreview; }
+    constructor(message: string, contentPreview?: string) {
+      super(message);
+      this.name = 'ParseError';
+      this.contentPreview = contentPreview;
+    }
   }
   class SubmissionError extends UluOpsError {
     code?: string;
-    constructor(message: string, code?: string) { super(message); this.name = 'SubmissionError'; this.code = code; }
+    constructor(message: string, code?: string) {
+      super(message);
+      this.name = 'SubmissionError';
+      this.code = code;
+    }
   }
   class ExecutionError extends UluOpsError {
     partialResult?: unknown;
-    constructor(message: string, partialResult?: unknown) { super(message); this.name = 'ExecutionError'; this.partialResult = partialResult; }
+    constructor(message: string, partialResult?: unknown) {
+      super(message);
+      this.name = 'ExecutionError';
+      this.partialResult = partialResult;
+    }
   }
   class WorkflowError extends UluOpsError {
     context?: { partialResult?: unknown };
-    constructor(message: string, context?: { partialResult?: unknown }) { super(message); this.name = 'WorkflowError'; this.context = context; }
+    constructor(message: string, context?: { partialResult?: unknown }) {
+      super(message);
+      this.name = 'WorkflowError';
+      this.context = context;
+    }
   }
-  class PipelineError extends UluOpsError { constructor(message: string) { super(message); this.name = 'PipelineError'; } }
+  class PipelineError extends UluOpsError {
+    constructor(message: string) {
+      super(message);
+      this.name = 'PipelineError';
+    }
+  }
   class SubscriptionRequiredError extends UluOpsError {
     definition?: { name: string; displayName?: string };
     requiredTier: string;
     currentTier: string;
-    constructor(message: string, opts?: { definition?: { name: string; displayName?: string }; requiredTier?: string; currentTier?: string }) {
+    constructor(
+      message: string,
+      opts?: {
+        definition?: { name: string; displayName?: string };
+        requiredTier?: string;
+        currentTier?: string;
+      },
+    ) {
       super(message);
       this.name = 'SubscriptionRequiredError';
       this.definition = opts?.definition;
       this.requiredTier = opts?.requiredTier ?? 'pro';
       this.currentTier = opts?.currentTier ?? 'free';
     }
-    trackedUpgradeUrl(source: string) { return `https://uluops.ai/upgrade?source=${source}`; }
-    toJSON() { return { error: this.message, requiredTier: this.requiredTier, currentTier: this.currentTier }; }
+    trackedUpgradeUrl(source: string) {
+      return `https://uluops.ai/upgrade?source=${source}`;
+    }
+    toJSON() {
+      return {
+        error: this.message,
+        requiredTier: this.requiredTier,
+        currentTier: this.currentTier,
+      };
+    }
   }
   class IntegrityError extends UluOpsError {
     kind: 'yaml' | 'prompt' | 'unavailable';
     expected?: string;
     actual?: string;
-    constructor(message: string, kind: 'yaml' | 'prompt' | 'unavailable', _name?: string, _version?: string, expected?: string, actual?: string) {
+    constructor(
+      message: string,
+      kind: 'yaml' | 'prompt' | 'unavailable',
+      _name?: string,
+      _version?: string,
+      expected?: string,
+      actual?: string,
+    ) {
       super(message);
       this.name = 'IntegrityError';
       this.kind = kind;
       this.expected = expected;
       this.actual = actual;
     }
-    toJSON() { return { error: this.message, kind: this.kind, expected: this.expected, actual: this.actual }; }
+    toJSON() {
+      return {
+        error: this.message,
+        kind: this.kind,
+        expected: this.expected,
+        actual: this.actual,
+      };
+    }
   }
 
   return {
     UluOpsClient: vi.fn().mockReturnValue({}),
-    UluOpsError, SdkApiError, ConfigurationError, ModelNotFoundError,
-    PreflightError, ParseError, SubmissionError,
-    ExecutionError, WorkflowError, PipelineError, SubscriptionRequiredError,
+    UluOpsError,
+    SdkApiError,
+    ConfigurationError,
+    ModelNotFoundError,
+    PreflightError,
+    ParseError,
+    SubmissionError,
+    ExecutionError,
+    WorkflowError,
+    PipelineError,
+    SubscriptionRequiredError,
     IntegrityError,
     isApiErrorLike,
   };
 });
 
-// Import after mocks are set up
-import { OpsClient, loadConfig as loadOpsConfig, OpsApiError, resolveWorkspaceOrg } from '@uluops/ops-sdk';
-import { RegistryClient } from '@uluops/registry-sdk';
-import { RegistryApiError } from '@uluops/registry-sdk/errors';
-import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
 import {
+  ConfigurationError,
+  SubmissionError as CoreSubmissionError,
+  ExecutionError,
+  IntegrityError,
+  ModelNotFoundError,
+  ParseError,
+  PipelineError,
+  PreflightError,
+  SdkApiError,
+  SubscriptionRequiredError,
   UluOpsClient,
-  SdkApiError, ConfigurationError, ModelNotFoundError, PreflightError,
-  ParseError, SubmissionError as CoreSubmissionError,
-  ExecutionError, WorkflowError, PipelineError, UluOpsError,
-  SubscriptionRequiredError, IntegrityError,
+  UluOpsError,
+  WorkflowError,
 } from '@uluops/core';
+// Import after mocks are set up
 import {
+  loadConfig as loadOpsConfig,
+  OpsApiError,
+  OpsClient,
+  resolveWorkspaceOrg,
+} from '@uluops/ops-sdk';
+import { RegistryClient } from '@uluops/registry-sdk';
+import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
+import { RegistryApiError } from '@uluops/registry-sdk/errors';
+import {
+  createCoreContext,
   createOpsContext,
   createRegistryContext,
-  createCoreContext,
   createUnauthenticatedContext,
+  handleCoreError,
   handleOpsError,
   handleRegistryError,
-  handleCoreError,
 } from '../src/context.js';
 
 const mockedLoadOpsConfig = vi.mocked(loadOpsConfig);
@@ -214,7 +323,7 @@ describe('createOpsContext', () => {
 
     createOpsContext({});
     expect(mockedOpsClient).toHaveBeenCalledWith(
-      expect.objectContaining({ apiKey: 'ulr_my-key' })
+      expect.objectContaining({ apiKey: 'ulr_my-key' }),
     );
   });
 
@@ -240,7 +349,7 @@ describe('createOpsContext', () => {
 
     createOpsContext({});
     expect(mockedOpsClient).toHaveBeenCalledWith(
-      expect.objectContaining({ sessionToken: 'jwt-token' })
+      expect.objectContaining({ sessionToken: 'jwt-token' }),
     );
   });
 
@@ -253,7 +362,10 @@ describe('createOpsContext', () => {
 
     createOpsContext({});
     expect(mockedOpsClient).toHaveBeenCalledWith(
-      expect.objectContaining({ email: 'test@example.com', password: 'secret' })
+      expect.objectContaining({
+        email: 'test@example.com',
+        password: 'secret',
+      }),
     );
   });
 
@@ -266,7 +378,7 @@ describe('createOpsContext', () => {
 
     createOpsContext({ timeout: '60000' });
     expect(mockedOpsClient).toHaveBeenCalledWith(
-      expect.objectContaining({ timeout: 60000 })
+      expect.objectContaining({ timeout: 60000 }),
     );
   });
 
@@ -279,7 +391,7 @@ describe('createOpsContext', () => {
 
     createOpsContext({});
     expect(mockedOpsClient).toHaveBeenCalledWith(
-      expect.objectContaining({ timeout: 30000 })
+      expect.objectContaining({ timeout: 30000 }),
     );
   });
 });
@@ -337,7 +449,7 @@ describe('createRegistryContext', () => {
 
     createRegistryContext({ timeout: '45000' });
     expect(mockedRegistryClient).toHaveBeenCalledWith(
-      expect.objectContaining({ timeout: 45000 })
+      expect.objectContaining({ timeout: 45000 }),
     );
   });
 
@@ -356,7 +468,7 @@ describe('createRegistryContext', () => {
 
     createRegistryContext({});
     expect(mockedRegistryClient).toHaveBeenCalledWith(
-      expect.objectContaining({ timeout: 30000 })
+      expect.objectContaining({ timeout: 30000 }),
     );
   });
 });
@@ -386,7 +498,7 @@ describe('createCoreContext', () => {
 
     createCoreContext({ timeout: '30000' });
     expect(mockedUluOpsClient).toHaveBeenCalledWith(
-      expect.objectContaining({ timeout: 30000 })
+      expect.objectContaining({ timeout: 30000 }),
     );
   });
 
@@ -399,7 +511,7 @@ describe('createCoreContext', () => {
 
     createCoreContext({});
     expect(mockedUluOpsClient).toHaveBeenCalledWith(
-      expect.objectContaining({ timeout: 600_000 })
+      expect.objectContaining({ timeout: 600_000 }),
     );
   });
 
@@ -422,7 +534,9 @@ describe('handleOpsError', () => {
     const output = captureOutput();
     const error = new OpsApiError(400, 'Bad request', 'VALIDATION_ERROR');
 
-    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Error: Bad request');
     output.restore();
   });
@@ -431,16 +545,56 @@ describe('handleOpsError', () => {
     const output = captureOutput();
     const error = new OpsApiError(400, 'Bad request', 'VALIDATION_ERROR');
 
-    expect(() => handleOpsError(error, { json: true, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: true, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('"statusCode": 400');
     output.restore();
+  });
+
+  it('400 with a business reason names the reason instead of the schema hint (same_org = already there); a plain 400 keeps the hint', () => {
+    const output = captureOutput();
+    const same = new OpsApiError(
+      400,
+      'The project is already in that organization',
+      'VALIDATION_ERROR',
+      { reason: 'same_org' },
+    );
+    expect(() => handleOpsError(same, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
+    expect(output.stderr()).toContain('already in that org — nothing to do');
+    expect(output.stderr()).not.toContain('Check the command arguments');
+    output.restore();
+
+    const unknown = captureOutput();
+    const other = new OpsApiError(400, 'refused', 'VALIDATION_ERROR', {
+      reason: 'brand_new_reason',
+    });
+    expect(() => handleOpsError(other, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
+    expect(unknown.stderr()).toContain('reason "brand_new_reason"');
+    unknown.restore();
+
+    const plain = captureOutput();
+    expect(() =>
+      handleOpsError(new OpsApiError(400, 'Bad request', 'VALIDATION_ERROR'), {
+        json: false,
+        debug: false,
+      }),
+    ).toThrow('process.exit(1)');
+    expect(plain.stderr()).toContain('Check the command arguments');
+    plain.restore();
   });
 
   it('should show auth hint for 401', () => {
     const output = captureOutput();
     const error = new OpsApiError(401, 'Unauthorized', 'UNAUTHORIZED');
 
-    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('credentials may be invalid');
     output.restore();
   });
@@ -449,7 +603,9 @@ describe('handleOpsError', () => {
     const output = captureOutput();
     const error = new OpsApiError(404, 'Not found', 'NOT_FOUND');
 
-    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('not found');
     output.restore();
   });
@@ -458,16 +614,24 @@ describe('handleOpsError', () => {
     const output = captureOutput();
     const error = new OpsApiError(429, 'Rate limited', 'RATE_LIMITED');
 
-    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Rate limited');
     output.restore();
   });
 
   it('should show service unavailable hint for 503', () => {
     const output = captureOutput();
-    const error = new OpsApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE');
+    const error = new OpsApiError(
+      503,
+      'Service unavailable',
+      'SERVICE_UNAVAILABLE',
+    );
 
-    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Service unavailable');
     expect(output.stderr()).toContain('Try again');
     output.restore();
@@ -475,18 +639,29 @@ describe('handleOpsError', () => {
 
   it('should show retry-after value for 503 when available', () => {
     const output = captureOutput();
-    const error = new OpsApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE', { retryAfter: 30 });
+    const error = new OpsApiError(
+      503,
+      'Service unavailable',
+      'SERVICE_UNAVAILABLE',
+      { retryAfter: 30 },
+    );
 
-    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Try again in 30 seconds');
     output.restore();
   });
 
   it('should show details in debug mode', () => {
     const output = captureOutput();
-    const error = new OpsApiError(400, 'Bad request', 'VALIDATION_ERROR', { field: 'name' });
+    const error = new OpsApiError(400, 'Bad request', 'VALIDATION_ERROR', {
+      field: 'name',
+    });
 
-    expect(() => handleOpsError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: false, debug: true })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Details:');
     expect(output.stderr()).toContain('name');
     output.restore();
@@ -494,9 +669,17 @@ describe('handleOpsError', () => {
 
   it('should show requestId when present', () => {
     const output = captureOutput();
-    const error = new OpsApiError(500, 'Server error', 'INTERNAL', undefined, 'req-abc-123');
+    const error = new OpsApiError(
+      500,
+      'Server error',
+      'INTERNAL',
+      undefined,
+      'req-abc-123',
+    );
 
-    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Request ID: req-abc-123');
     output.restore();
   });
@@ -505,7 +688,9 @@ describe('handleOpsError', () => {
     const output = captureOutput();
     const error = new Error('ECONNREFUSED');
 
-    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('ECONNREFUSED');
     expect(output.stderr()).toContain('Cannot connect');
     output.restore();
@@ -515,7 +700,9 @@ describe('handleOpsError', () => {
     const output = captureOutput();
     const error = new Error('Something broke');
 
-    expect(() => handleOpsError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: false, debug: true })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Stack trace:');
     output.restore();
   });
@@ -524,7 +711,9 @@ describe('handleOpsError', () => {
     const output = captureOutput();
     const error = new Error('Boom');
 
-    expect(() => handleOpsError(error, { json: true, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleOpsError(error, { json: true, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('"error"');
     output.restore();
   });
@@ -533,9 +722,15 @@ describe('handleOpsError', () => {
 describe('handleRegistryError', () => {
   it('should show error message for RegistryApiError', () => {
     const output = captureOutput();
-    const error = new RegistryApiError(404, 'Definition not found', 'NOT_FOUND');
+    const error = new RegistryApiError(
+      404,
+      'Definition not found',
+      'NOT_FOUND',
+    );
 
-    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() =>
+      handleRegistryError(error, { json: false, debug: false }),
+    ).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Definition not found');
     output.restore();
   });
@@ -544,7 +739,9 @@ describe('handleRegistryError', () => {
     const output = captureOutput();
     const error = new RegistryApiError(400, 'Invalid YAML', 'VALIDATION_ERROR');
 
-    expect(() => handleRegistryError(error, { json: true, debug: false })).toThrow('process.exit(1)');
+    expect(() =>
+      handleRegistryError(error, { json: true, debug: false }),
+    ).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('"statusCode": 400');
     output.restore();
   });
@@ -553,7 +750,9 @@ describe('handleRegistryError', () => {
     const output = captureOutput();
     const error = new Error('Network fail');
 
-    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() =>
+      handleRegistryError(error, { json: false, debug: false }),
+    ).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Network fail');
     output.restore();
   });
@@ -562,7 +761,9 @@ describe('handleRegistryError', () => {
     const output = captureOutput();
     const error = new RegistryApiError(401, 'Unauthorized', 'UNAUTHORIZED');
 
-    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() =>
+      handleRegistryError(error, { json: false, debug: false }),
+    ).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('ULUOPS_API_KEY or session token');
     output.restore();
   });
@@ -571,7 +772,9 @@ describe('handleRegistryError', () => {
     const output = captureOutput();
     const error = new RegistryApiError(404, 'Not found', 'NOT_FOUND');
 
-    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() =>
+      handleRegistryError(error, { json: false, debug: false }),
+    ).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('type, name, and version');
     output.restore();
   });
@@ -580,25 +783,39 @@ describe('handleRegistryError', () => {
     const output = captureOutput();
     const error = new RegistryApiError(400, 'Bad input', 'VALIDATION_ERROR');
 
-    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() =>
+      handleRegistryError(error, { json: false, debug: false }),
+    ).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('YAML file');
     output.restore();
   });
 
   it('should show rate limit hint for 429', () => {
     const output = captureOutput();
-    const error = new RegistryApiError(429, 'Too many requests', 'RATE_LIMITED');
+    const error = new RegistryApiError(
+      429,
+      'Too many requests',
+      'RATE_LIMITED',
+    );
 
-    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() =>
+      handleRegistryError(error, { json: false, debug: false }),
+    ).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Rate limited');
     output.restore();
   });
 
   it('should show service unavailable hint for 503', () => {
     const output = captureOutput();
-    const error = new RegistryApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE');
+    const error = new RegistryApiError(
+      503,
+      'Service unavailable',
+      'SERVICE_UNAVAILABLE',
+    );
 
-    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() =>
+      handleRegistryError(error, { json: false, debug: false }),
+    ).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Service unavailable');
     expect(output.stderr()).toContain('Try again');
     output.restore();
@@ -606,18 +823,29 @@ describe('handleRegistryError', () => {
 
   it('should show retry-after value for 503 when available', () => {
     const output = captureOutput();
-    const error = new RegistryApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE', { retryAfter: 60 });
+    const error = new RegistryApiError(
+      503,
+      'Service unavailable',
+      'SERVICE_UNAVAILABLE',
+      { retryAfter: 60 },
+    );
 
-    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() =>
+      handleRegistryError(error, { json: false, debug: false }),
+    ).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Try again in 60 seconds');
     output.restore();
   });
 
   it('should show details in debug mode', () => {
     const output = captureOutput();
-    const error = new RegistryApiError(400, 'Bad', 'VALIDATION_ERROR', { field: 'yaml' });
+    const error = new RegistryApiError(400, 'Bad', 'VALIDATION_ERROR', {
+      field: 'yaml',
+    });
 
-    expect(() => handleRegistryError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(() =>
+      handleRegistryError(error, { json: false, debug: true }),
+    ).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Details:');
     expect(output.stderr()).toContain('yaml');
     output.restore();
@@ -625,9 +853,17 @@ describe('handleRegistryError', () => {
 
   it('should show requestId when present', () => {
     const output = captureOutput();
-    const error = new RegistryApiError(500, 'Error', 'INTERNAL', undefined, 'req-xyz-789');
+    const error = new RegistryApiError(
+      500,
+      'Error',
+      'INTERNAL',
+      undefined,
+      'req-xyz-789',
+    );
 
-    expect(() => handleRegistryError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() =>
+      handleRegistryError(error, { json: false, debug: false }),
+    ).toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Request ID: req-xyz-789');
     output.restore();
   });
@@ -638,7 +874,9 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new SdkApiError(401, 'Unauthorized', 'UNAUTHORIZED');
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('ULUOPS_API_KEY');
     output.restore();
   });
@@ -647,16 +885,24 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new SdkApiError(404, 'Not found', 'NOT_FOUND');
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('definition was not found');
     output.restore();
   });
 
   it('should handle SdkApiError 503 with service unavailable hint', () => {
     const output = captureOutput();
-    const error = new SdkApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE');
+    const error = new SdkApiError(
+      503,
+      'Service unavailable',
+      'SERVICE_UNAVAILABLE',
+    );
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Service unavailable');
     expect(output.stderr()).toContain('Try again');
     output.restore();
@@ -664,9 +910,16 @@ describe('handleCoreError', () => {
 
   it('should handle SdkApiError 503 with retry-after value', () => {
     const output = captureOutput();
-    const error = new SdkApiError(503, 'Service unavailable', 'SERVICE_UNAVAILABLE', { retryAfter: 15 });
+    const error = new SdkApiError(
+      503,
+      'Service unavailable',
+      'SERVICE_UNAVAILABLE',
+      { retryAfter: 15 },
+    );
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Try again in 15 seconds');
     output.restore();
   });
@@ -675,7 +928,9 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new ConfigurationError('Missing API key');
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Missing API key');
     expect(output.stderr()).toContain('ANTHROPIC_API_KEY');
     output.restore();
@@ -687,7 +942,9 @@ describe('handleCoreError', () => {
       'Multiple definitions named "socrates-explorer" found (agent, command). Specify type explicitly: resolve("socrates-explorer", version, "command")',
     );
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     const stderr = output.stderr();
     expect(stderr).toContain('Multiple definitions named');
     // The hint must name commands that actually exist — exec run has no
@@ -707,7 +964,9 @@ describe('handleCoreError', () => {
       'Multiple definitions named "x" found (agent, command, garbage). Specify type explicitly: resolve("x", version, "command")',
     );
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     const stderr = output.stderr();
     expect(stderr).toContain('ulu exec agent x -t <target>');
     expect(stderr).toContain('ulu exec command x <target>');
@@ -719,9 +978,13 @@ describe('handleCoreError', () => {
 
   it('should handle ConfigurationError without any hint for unrelated messages', () => {
     const output = captureOutput();
-    const error = new ConfigurationError('Invalid definition name: "../etc/passwd"');
+    const error = new ConfigurationError(
+      'Invalid definition name: "../etc/passwd"',
+    );
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Invalid definition name');
     expect(output.stderr()).not.toContain('ANTHROPIC_API_KEY');
     expect(output.stderr()).not.toContain('--type');
@@ -732,7 +995,9 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new ModelNotFoundError('Model "bad-model" not found');
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('bad-model');
     expect(output.stderr()).toContain('haiku, sonnet, opus');
     output.restore();
@@ -740,9 +1005,14 @@ describe('handleCoreError', () => {
 
   it('should handle PreflightError', () => {
     const output = captureOutput();
-    const error = new PreflightError('Target directory not found', 'target-exists');
+    const error = new PreflightError(
+      'Target directory not found',
+      'target-exists',
+    );
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Pre-flight check');
     expect(output.stderr()).toContain('target-exists');
     output.restore();
@@ -750,9 +1020,13 @@ describe('handleCoreError', () => {
 
   it('should handle PreflightError with details in debug mode', () => {
     const output = captureOutput();
-    const error = new PreflightError('Check failed', 'api-key', { checked: true });
+    const error = new PreflightError('Check failed', 'api-key', {
+      checked: true,
+    });
 
-    expect(() => handleCoreError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: true })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Details:');
     output.restore();
   });
@@ -761,7 +1035,9 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new ParseError('Failed to parse JSON', '{"broken');
 
-    expect(() => handleCoreError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: true })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Content preview:');
     expect(output.stderr()).toContain('{"broken');
     output.restore();
@@ -771,7 +1047,9 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new ParseError('Failed to parse');
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('--debug');
     output.restore();
   });
@@ -780,7 +1058,9 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new CoreSubmissionError('Schema invalid', 'SCHEMA_ERROR');
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Schema invalid');
     expect(output.stderr()).toContain('SCHEMA_ERROR');
     output.restore();
@@ -790,7 +1070,9 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new ExecutionError('Agent timed out');
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Agent timed out');
     expect(output.stderr()).toContain('target path');
     output.restore();
@@ -800,7 +1082,9 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new ExecutionError('Failed mid-execution', { score: 42 });
 
-    expect(() => handleCoreError(error, { json: false, debug: true })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: true })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Partial result:');
     output.restore();
   });
@@ -809,7 +1093,9 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new WorkflowError('Phase 2 failed');
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Phase 2 failed');
     output.restore();
   });
@@ -818,7 +1104,9 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new PipelineError('Pipeline aborted');
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Pipeline aborted');
     output.restore();
   });
@@ -827,16 +1115,27 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new UluOpsError('Unknown SDK error');
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('Unknown SDK error');
     output.restore();
   });
 
   it('should exit 4 on IntegrityError (yaml) with expected/actual + refusal', () => {
     const output = captureOutput();
-    const error = new IntegrityError('pinned hash mismatch', 'yaml', 'a', '1.0.0', 'sha256:aaa', 'sha256:bbb');
+    const error = new IntegrityError(
+      'pinned hash mismatch',
+      'yaml',
+      'a',
+      '1.0.0',
+      'sha256:aaa',
+      'sha256:bbb',
+    );
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(4)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(4)',
+    );
     const err = output.stderr();
     expect(err).toContain('execution refused');
     expect(err).toContain('sha256:aaa');
@@ -846,18 +1145,35 @@ describe('handleCoreError', () => {
 
   it('should exit 4 on IntegrityError (unavailable) with a clear hint', () => {
     const output = captureOutput();
-    const error = new IntegrityError('no rendered prompt', 'unavailable', 'wf', '1.0.0', 'sha256:ccc');
+    const error = new IntegrityError(
+      'no rendered prompt',
+      'unavailable',
+      'wf',
+      '1.0.0',
+      'sha256:ccc',
+    );
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(4)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(4)',
+    );
     expect(output.stderr().toLowerCase()).toContain('omit --prompt-hash');
     output.restore();
   });
 
   it('should emit IntegrityError as JSON in json mode (still exit 4)', () => {
     const output = captureOutput();
-    const error = new IntegrityError('pinned hash mismatch', 'prompt', 'a', '1.0.0', 'sha256:aaa', 'sha256:bbb');
+    const error = new IntegrityError(
+      'pinned hash mismatch',
+      'prompt',
+      'a',
+      '1.0.0',
+      'sha256:aaa',
+      'sha256:bbb',
+    );
 
-    expect(() => handleCoreError(error, { json: true, debug: false })).toThrow('process.exit(4)');
+    expect(() => handleCoreError(error, { json: true, debug: false })).toThrow(
+      'process.exit(4)',
+    );
     expect(output.stderr()).toContain('"kind"');
     output.restore();
   });
@@ -866,7 +1182,9 @@ describe('handleCoreError', () => {
     const output = captureOutput();
     const error = new Error('ECONNREFUSED');
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('ECONNREFUSED');
     output.restore();
   });
@@ -874,13 +1192,18 @@ describe('handleCoreError', () => {
   it('should render upgrade box for SubscriptionRequiredError with definition', () => {
     const output = captureOutput();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const error = new (SubscriptionRequiredError as any)('Subscription required', {
-      definition: { name: 'code-validator', displayName: 'Code Validator' },
-      requiredTier: 'professional',
-      currentTier: 'free',
-    });
+    const error = new (SubscriptionRequiredError as any)(
+      'Subscription required',
+      {
+        definition: { name: 'code-validator', displayName: 'Code Validator' },
+        requiredTier: 'professional',
+        currentTier: 'free',
+      },
+    );
 
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('"Code Validator"');
     expect(output.stderr()).toContain('professional');
     expect(output.stderr()).toContain('Upgrade to');
@@ -891,12 +1214,17 @@ describe('handleCoreError', () => {
   it('should output JSON for SubscriptionRequiredError in json mode', () => {
     const output = captureOutput();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const error = new (SubscriptionRequiredError as any)('Subscription required', {
-      requiredTier: 'pro',
-      currentTier: 'free',
-    });
+    const error = new (SubscriptionRequiredError as any)(
+      'Subscription required',
+      {
+        requiredTier: 'pro',
+        currentTier: 'free',
+      },
+    );
 
-    expect(() => handleCoreError(error, { json: true, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: true, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     const parsed = JSON.parse(output.stderr());
     expect(parsed.requiredTier).toBe('pro');
     expect(parsed.currentTier).toBe('free');
@@ -919,17 +1247,29 @@ describe('org routing (spec §3.4 / D13): --org reaches the clients through the 
   it('createOpsContext: the resolver is asked with the flag, cwd and env, and its answer becomes orgSlug', () => {
     mockedResolve.mockReturnValue({ org: 'acme', source: 'explicit' });
     const ctx = createOpsContext({ org: 'acme' });
-    expect(mockedResolve).toHaveBeenCalledWith({ explicit: 'acme', cwd: process.cwd(), env: process.env });
-    expect(mockedOpsClient).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: 'acme' }));
+    expect(mockedResolve).toHaveBeenCalledWith({
+      explicit: 'acme',
+      cwd: process.cwd(),
+      env: process.env,
+    });
+    expect(mockedOpsClient).toHaveBeenCalledWith(
+      expect.objectContaining({ orgSlug: 'acme' }),
+    );
     expect(ctx.org).toBe('acme');
     expect(ctx.orgSource).toBe('explicit');
     expect(ctx.baseUrl).toBe('http://localhost:3100');
   });
 
   it('createOpsContext: a workspace answer flows the same way (the CLI does not re-derive it)', () => {
-    mockedResolve.mockReturnValue({ org: 'ulu-labs', source: 'workspace', path: '/w/.uluops.json' });
+    mockedResolve.mockReturnValue({
+      org: 'ulu-labs',
+      source: 'workspace',
+      path: '/w/.uluops.json',
+    });
     const ctx = createOpsContext({});
-    expect(mockedOpsClient).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: 'ulu-labs' }));
+    expect(mockedOpsClient).toHaveBeenCalledWith(
+      expect.objectContaining({ orgSlug: 'ulu-labs' }),
+    );
     expect(ctx.orgSource).toBe('workspace');
   });
 
@@ -941,15 +1281,21 @@ describe('org routing (spec §3.4 / D13): --org reaches the clients through the 
     expect(ctx.org).toBeUndefined();
   });
 
-  it('createOpsContext: a malformed/forbidden workspace file is a loud exit with the resolver\'s message', () => {
-    mockedResolve.mockImplementation(() => { throw new Error('Refusing .uluops.json at /w/.uluops.json: it may carry only "org"'); });
+  it("createOpsContext: a malformed/forbidden workspace file is a loud exit with the resolver's message", () => {
+    mockedResolve.mockImplementation(() => {
+      throw new Error(
+        'Refusing .uluops.json at /w/.uluops.json: it may carry only "org"',
+      );
+    });
     expect(() => createOpsContext({})).toThrow('process.exit(1)');
   });
 
   it('createCoreContext (ulu exec): the resolved org is handed to core as orgSlug; absent when personal', () => {
     mockedResolve.mockReturnValue({ org: 'ulu-labs', source: 'env' });
     createCoreContext({ org: undefined, tracking: true });
-    expect(mockedUluOpsClient).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: 'ulu-labs' }));
+    expect(mockedUluOpsClient).toHaveBeenCalledWith(
+      expect.objectContaining({ orgSlug: 'ulu-labs' }),
+    );
     mockedUluOpsClient.mockClear();
     mockedResolve.mockReturnValue({ org: undefined, source: 'personal' });
     createCoreContext({ tracking: true });

@@ -4,6 +4,22 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.30.0] - 2026-09-15
+
+### Added
+
+- **`ulu projects rehome <name> --to <org> [--reason <text>] [-y]`** — move a project and its whole history into another org (project-org-routing-and-rehome spec §4.1, D14; `ops-sdk` `projects.rehome`). The SOURCE is the org the command is scoped to (`--org`, else the workspace file, else `ULUOPS_ORG_SLUG`, else personal) and the project is looked up there — a work-org project without `--org` is a 404 from the personal org, not a search. The confirmation names both orgs and the source's provenance (the F10 shape `delete` adopted in 0.29.1); the success line prints `source → target` and says the old address is now a `410 PROJECT_REHOMED` tombstone. `--json` emits the `RehomeResponse` (kind `project.rehome`).
+- **`ulu orgs audit-feed <slug> [--limit] [--cursor] [--json]`** — the D19 member-visible audit feed (`GET /orgs/:slug/audit-log/global`): today, projects that left the org for someone's personal org. One line per row (`"billing" moved to alexself2 (personal org) — reason`; incoming rows read `arrived from`; the platform-admin path is marked); non-re-home rows fall back to their `details.action` so nothing is dropped silently. Prints the continuation command when there is more. New `orgs` command group — reads only; `--org` does not apply (the org is the argument). `--json` kind `org.auditFeed`.
+
+### Changed
+
+- **A 400 that carries a business `details.reason` is explained, not blamed on the arguments.** The generic hint ("Invalid input. Check the command arguments…") is wrong for a well-formed call the server refused on state, and actively misleading for re-home's `same_org`, which means "already there" (the §4.7 idempotence signal). Known reasons get a sentence (`same_org`, `project_soft_deleted`, `project_has_no_org`); unknown ones are named verbatim; a reason-less 400 keeps the old hint.
+- `@uluops/ops-sdk` 6.3.1 → 6.4.0.
+
+### Notes
+
+- Both commands were run live against the current API build on a prod-copy database from a clean directory (no `.env` in cwd): create → `rehome --to <team>` → `same_org` → reverse move into the personal org → `orgs audit-feed <team>` rendering the move → delete.
+
 ## [0.29.1] - 2026-09-13
 
 ### Changed

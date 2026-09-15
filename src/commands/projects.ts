@@ -30,6 +30,7 @@ Examples:
   $ ulu projects trends ops-sdk --days 7
   $ ulu projects create my-project
   $ ulu projects delete my-project --yes
+  $ ulu projects rehome my-project --to ulu-labs --org acme --reason "team took it over"
 `,
     );
 
@@ -321,6 +322,75 @@ Example:
           emitJson(ctx, project, 'project.rename');
         } else {
           console.log(`Project renamed: ${name} → ${project.name}`);
+        }
+      } catch (error) {
+        handleOpsError(error, ctx);
+      }
+    });
+
+  // ulu projects rehome <name> --to <org>
+  projects
+    .command('rehome <name>')
+    .description(
+      'Move a project and its whole history into another org (source = --org / workspace default / personal)',
+    )
+    .requiredOption(
+      '-t, --to <org>',
+      'Destination org slug (you must be admin/owner there; a personal org only if it is yours)',
+    )
+    .option(
+      '-r, --reason <text>',
+      'Why it is moving (≤ 500 chars; stored on the audit record)',
+    )
+    .option('-y, --yes', 'Skip confirmation prompt')
+    .addHelpText(
+      'after',
+      `
+The SOURCE org is the one this CLI is scoped to — \`--org <slug>\`, else the nearest .uluops.json,
+else ULUOPS_ORG_SLUG, else your personal org. The project is looked up THERE: a work-org project
+without --org is a 404 from your personal org, not a search. After the move the old address is a
+410 PROJECT_REHOMED tombstone (an org-less write there does not fork a new project); moving back
+is the same command the other way. A "same_org" refusal means it is already there.
+`,
+    )
+    .action(async (name: string, options, cmd) => {
+      const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
+      const ctx = createOpsContext(globalOpts);
+
+      // Both orgs in the prompt, source with its provenance (the trust-boundary
+      // F10 shape): a move is the one write where naming only the project
+      // confirms nothing — the same name can exist in every org involved.
+      await confirmOrExit(
+        `move project "${name}" from org ${ctx.org ?? 'personal'} (${ctx.orgSource}) to org ${options.to} at ${ctx.baseUrl}?`,
+        options.yes,
+      );
+
+      try {
+        const result = await withSpinner(
+          ctx,
+          {
+            start: 'Moving project...',
+            success: 'Project moved',
+            failure: 'Failed to move project',
+          },
+          () =>
+            ctx.client.projects.rehome(name, {
+              targetOrg: options.to,
+              ...(options.reason !== undefined
+                ? { reason: options.reason }
+                : {}),
+            }),
+        );
+
+        if (ctx.json) {
+          emitJson(ctx, result, 'project.rehome');
+        } else {
+          console.log(
+            `Project moved: ${result.name} — ${result.rehome.from_org.slug} → ${result.rehome.to_org.slug} (id ${result.id})`,
+          );
+          console.log(
+            `The old address in ${result.rehome.from_org.slug} is now a tombstone; org-less writes there answer 410 PROJECT_REHOMED naming ${result.rehome.to_org.slug}.`,
+          );
         }
       } catch (error) {
         handleOpsError(error, ctx);

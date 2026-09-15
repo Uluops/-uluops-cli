@@ -21,6 +21,7 @@ import { registerForkCommands } from './commands/forks.js';
 import { registerIssueCommands } from './commands/issues.js';
 import { registerLanguageCommands } from './commands/languages.js';
 import { registerModelCommands } from './commands/models.js';
+import { registerOrgCommands } from './commands/orgs.js';
 import { registerProjectCommands } from './commands/projects.js';
 import { registerRunCommands } from './commands/runs.js';
 import { registerTaxonomyCommands } from './commands/taxonomy.js';
@@ -106,6 +107,7 @@ program
 // Ops commands
 registerAuthCommands(program);
 registerProjectCommands(program);
+registerOrgCommands(program);
 registerRunCommands(program);
 registerIssueCommands(program);
 registerAnalyticsCommands(program);

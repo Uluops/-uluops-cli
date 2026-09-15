@@ -50,6 +50,7 @@ ulu exec --project my-project agent code-validator -t ./src --model sonnet
 - [Command Reference](#command-reference)
   - [Auth](#auth) — Authentication & credential management
   - [Projects](#projects) (`ulu p`) — Project lifecycle management
+  - [Orgs](#orgs) — An org's member-visible activity
   - [Runs](#runs) (`ulu r`) — Validation run management
   - [Issues](#issues) (`ulu i`) — Issue tracking & management
   - [Analytics](#analytics) (`ulu a`) — Validation analytics & metrics
@@ -247,6 +248,7 @@ ulu projects restore <name>       # Restore soft-deleted project
 ulu projects summary <name>       # Project summary with issue counts
 ulu projects trends <name>        # Issue trends over time
 ulu projects rename <name>        # Rename project (--new-name required)
+ulu projects rehome <name>        # Move project to another org (--to required; source = --org)
 ulu projects bulk-update-issues <name>   # Batch update issue statuses
 ulu projects merge-issues <name>         # Merge duplicate issues
 ```
@@ -267,7 +269,39 @@ ulu projects rename old-name --new-name new-name
 # Soft delete and restore (delete prompts for confirmation; pass -y to skip)
 ulu projects delete my-app -y
 ulu projects restore my-app
+
+# Move a project (and its whole history) from org acme to org ulu-labs.
+# The SOURCE is the org this command is scoped to (--org, else the nearest
+# .uluops.json, else ULUOPS_ORG_SLUG, else your personal org) — the project is
+# looked up THERE. Needs admin/owner in both orgs.
+ulu projects rehome my-app --org acme --to ulu-labs --reason "team took it over"
 ```
+
+`rehome` prompts with both orgs and the source's provenance (`move project "my-app" from org acme
+(explicit) to org ulu-labs at …?`); pass `-y` to skip. After the move the old address in the source
+org is a tombstone — an org-less write there answers `410 PROJECT_REHOMED` naming the new org instead
+of forking a new project; moving back is the same command the other way. A `same_org` refusal means
+it is already there and the hint says so (it is not an argument error). Other refusals name their
+reason: `name_collision` / `soft_deleted_conflict` / `rehomed_away_conflict` (the name is taken in
+the target), `export_in_progress`, `moved_during_request`; `402` means the target org is at its
+project cap.
+
+---
+
+### Orgs
+
+Reads an org's **member-visible** activity. Org creation, membership and invitations are dashboard
+surfaces. `--org` does not apply here — the org is the positional argument.
+
+```bash
+ulu orgs audit-feed <slug>        # Org-visible audit feed (any member); --limit, --cursor, --json
+```
+
+The feed carries the rows an org's writers marked visible to every member — today, projects that
+left the org for someone's personal org (an org admin may do that; the feed is how the org's owner
+sees it). Each row is one line: when, who, and `"billing" moved to alexself2 (personal org) — reason`.
+Page with the `--cursor` the previous page printed; `--json` emits the raw envelope
+(`data.entries[]`, `count`, `hasMore`, `nextCursor`).
 
 ---
 

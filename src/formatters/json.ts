@@ -133,6 +133,9 @@ export const SCHEMA_VERSIONS = {
   'project.rename': 1,
   'project.bulkUpdateIssues': 1,
   'project.mergeIssues': 1,
+  'project.rehome': 1,
+  // orgs
+  'org.auditFeed': 1,
   // runs
   'run.list': 1,
   'run.get': 1,

@@ -498,6 +498,16 @@ function extractAmbiguousTypes(message: string): {
   };
 }
 
+/** 400s that carry a business `details.reason` (project re-home, spec §4.4/§4.7). */
+const BUSINESS_REASON_HINTS: Record<string, string> = {
+  same_org:
+    'The project is already in that org — nothing to do. (A re-run over a finished move answers this; it is not an error in your arguments.)',
+  project_has_no_org:
+    'This project row has no org (pre-org legacy data) and cannot be moved as-is; an operator must repair the row first.',
+  project_soft_deleted:
+    'The project is soft-deleted. Restore it in its current org ("ulu projects restore") before moving it.',
+};
+
 function printApiErrorDetails(
   error: DetailedApiError,
   ctx: { json: boolean; debug: boolean },
@@ -530,9 +540,22 @@ function printApiErrorDetails(
         `\nHint: ${hints.notFound ?? 'The resource was not found. Check the name or ID.'}`,
       );
     } else if (error.code === 'VALIDATION_ERROR' || error.statusCode === 400) {
-      console.error(
-        `\nHint: ${hints.validation ?? 'Invalid input. Check the command arguments, or run the command with --help to see valid options and values.'}`,
-      );
+      // A 400 carrying a business `reason` is a decision, not a malformed
+      // argument — "check the command arguments" would send the user back to
+      // --help for a call that was well-formed. Re-home's `same_org` is the
+      // one that matters (it means "already there"); other reasons are named
+      // so the user sees the server's word, not a schema hint.
+      const reason = (error.details as Record<string, unknown> | undefined)
+        ?.reason;
+      if (typeof reason === 'string' && reason.length > 0) {
+        console.error(
+          `\nHint: ${BUSINESS_REASON_HINTS[reason] ?? `The server refused this for reason "${reason}" — the arguments were well-formed; the state does not allow it.`}`,
+        );
+      } else {
+        console.error(
+          `\nHint: ${hints.validation ?? 'Invalid input. Check the command arguments, or run the command with --help to see valid options and values.'}`,
+        );
+      }
     } else if (
       error.code === 'SUBSCRIPTION_REQUIRED' ||
       error.statusCode === 402
