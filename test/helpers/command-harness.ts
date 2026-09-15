@@ -25,9 +25,13 @@ export function createMockOpsClient() {
       bulkUpdateIssueStatus: vi.fn(),
       mergeIssues: vi.fn(),
       rehome: vi.fn(),
+      getLog: vi.fn(),
+      getLogStat: vi.fn(),
     },
     orgs: {
       getVisibleAuditLog: vi.fn(),
+      list: vi.fn(),
+      getLogStat: vi.fn(),
     },
     runs: {
       list: vi.fn(),

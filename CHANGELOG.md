@@ -4,6 +4,19 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.31.0] - 2026-09-15
+
+### Added
+
+- **`ulu log [project]`** — the project's second history as a command (ulu log spec v0.1.13 §3.1–§3.6; checklist Phase 4): runs, decisions and regressions interleaved newest first, keyset-paged (`-n`, `--cursor`), windowed (`--since`/`--until`), filtered (`--kind`, `--workflow`, `--agent`, `--include-archived`); `--stat` for the rollup; `--orgs` for the rollup per org with a per-project table. Rendering is §3.4's vocabulary verbatim (D4): `completed` prints **fixed**; `no reason recorded` for a NULL reason; `by agent` only when `source = 'agent'`, nothing for NULL (unattributed, never human); `-` counts with a one-time parenthetical for runs saved before migration 065; the 12-char fingerprint; ASCII only; times `YYYY-MM-DD HH:MM` UTC. **D11 collapse:** within a page, `decision` events sharing `(second, from, to, reason)` render as one line with an issue count at the group's first position, regardless of adjacency; a per-page footer says how many collapsed into how many lines; `--no-collapse` expands; `--json` is never collapsed. Long reasons are cut at 120 chars on the page (`--json` keeps them). `--help` carries the spec's caveats verbatim.
+- **Project resolution (D5):** `--project`/`-p` → argument → the `project` key of the nearest `.uluops.json` (the same file the org comes from) → `ULUOPS_PROJECT` → an error naming the file and listing your projects. The resolver is **module-private** in `src/commands/log.ts` — the structural read-only guarantee: no write path can import it, and `ulu exec` is untouched. The reader's refusals stop the ladder with the reader's message; when env answers over a file that names no project, one stderr line says so; a 404 names the org searched and the file the project came from.
+- **`--orgs` with a bound key:** an org the key cannot read (`403 ORG_ACCESS_DENIED`) is noted on stderr and skipped; the rest render; `--json` carries only the readable rollups.
+- `--json` kinds `log.stream`, `log.stat`, `log.orgs` in `SCHEMA_VERSIONS` (D7); the default shape is byte-identical to `JSON.stringify(data, null, 2)`.
+
+### Dependencies
+
+- `@uluops/ops-sdk` 6.4.1 → **6.5.0** (the four log reads + `readWorkspaceFile`); `@uluops/core` 0.43.4 → **0.43.5** — **not cosmetic.** 0.43.4 exact-pinned ops-sdk 6.4.1, which npm nests under core, so this CLI would have shipped with TWO `.uluops.json` readers: `ulu log` on 6.5.0 reading `project`, `ulu exec` (via core) on 6.4.1 refusing the same file. Proven by calling both readers from this tree on a file carrying `project`; 0.43.5 dedupes to one. The rollout rule the README states follows from the same fact for every other reader on a machine.
+
 ## [0.30.0] - 2026-09-15
 
 ### Added

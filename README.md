@@ -319,6 +319,63 @@ before printing it.
 
 ---
 
+### Log — the project's second history
+
+Git remembers what changed. `ulu log` remembers what was decided: runs (what was examined) and
+decisions (what was decided, with reasons) interleaved newest first, plus what came back.
+
+```bash
+ulu log [project]                 # The stream, newest first, 50 events a page (-n 1-500; --cursor to continue)
+ulu log [project] --stat          # The rollup: examined / found / decided / came back / activity
+ulu log --orgs                    # The rollup per org you belong to, with a per-project table (implies --stat)
+ulu log --since <iso> --until <iso> --kind run,decision,regression --workflow <type> --agent <name> --include-archived
+ulu log --no-collapse             # One line per issue instead of collapsing same-second identical decisions
+ulu log --json                    # The API's page or rollup, byte-for-byte; never collapsed
+```
+
+**Which project.** `--project <name>` / `-p`, then the argument, then the **`project` key of the
+nearest `.uluops.json`** — the same file that names the org, so both come from one place — then
+`ULUOPS_PROJECT`, then an error listing your projects. The file's `project` key governs **reads
+only**: `ulu exec` keeps its own resolution (`--project`, `ULUOPS_PROJECT`, the directory name) and
+can track under a different name than `ulu log` reads — a walked file never decides where a run
+*lands*, only what is shown. A file carrying `project` must also carry `org` (`"personal"` for no
+org) or it is refused, so a project-only file can never shadow an outer org. A refused file (owned
+by another user, unparseable, an unknown key) stops resolution with its own message. When the
+nearest file names an org but no project and `ULUOPS_PROJECT` answers, one stderr line says so.
+
+> **Before you add `project` to a shared checkout:** every tool that reads `.uluops.json` in that
+> tree must be on `@uluops/ops-sdk` ≥ 6.5.0 — older readers refuse the key *for every command*, not
+> only `ulu log`. This CLI (≥ 0.31.0, with `@uluops/core` ≥ 0.43.5) is; the tracker MCP is from the
+> release that pins ops-sdk 6.5.0. Check with
+> `find <tree> -path '*/@uluops/ops-sdk/dist/config/workspace-org.js'` and read each copy's
+> `package.json` version.
+
+**Reading the stream.** `run #47 2026-09-13 14:02 security-audit security-analyst@1.4.0 +2 score 82, gates ok`
+then its counts (`new 3 . recurring 1 . regression 1`; `-` on runs saved before counts were
+recorded). `regressed` is a finding a **run** re-detected, with `via run #N` (`via run ?` when that
+run is archived). `decided` is a ledger row: `deferred <- open "reason"`; `no reason recorded` is
+the ledger's silence, not a person's; `by agent` prints only when the ledger says so — nothing
+printed means *unattributed*, never *human*; `open <- wontfix` without a run is *reopened by
+decision*. Same-second identical decisions collapse into one line with an issue count (a bulk
+status change); the footer says how many, and `--no-collapse` expands them. Collapse is per page:
+a group across a page boundary shows as two lines. Run times are as reported by the saving client;
+within a second, order is as recorded — for events recorded before millisecond timestamps
+(migration 080) it is not meaningful. Times are UTC. Long reasons are cut at 120 characters on the
+page; `--json` carries the full text.
+
+**Reading `--stat`.** Two frames on two clocks: *Decided* is the current status of findings first
+seen in the window (run times); *Activity* is what changed in the window (ledger times). With no
+window both say *all time*. `completed` prints as **fixed**. *Came back* counts distinct findings —
+*caught by re-running* (a run re-detected it; `any window` for the last date) and *reopened by
+decision*. Under *Activity*, *reopened* counts transitions into open.
+
+**`--orgs`** lists every org you belong to and prints each org's rollup with a per-project table
+(name, runs, findings, fixed, regressions; last run first, capped at 100). The org rollup is
+cached 60 s server-side — the `as of` time is when the numbers were computed. A key bound to one
+org lists all your orgs but can read only its own; the others are noted on stderr and skipped.
+
+---
+
 ### Runs
 
 Validation run management — save, compare, and archive pipeline results. Alias: `r`.
