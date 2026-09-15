@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
 import { Command } from 'commander';
+import { describe, expect, it, vi } from 'vitest';
 import { registerCompletionCommands } from '../../src/commands/completion.js';
 
 /**
@@ -23,10 +23,14 @@ function buildTestProgram(): Command {
 
 function captureStdoutWrite() {
   const chunks: string[] = [];
-  const spy = vi.spyOn(process.stdout, 'write').mockImplementation((chunk: string | Uint8Array) => {
-    chunks.push(typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk));
-    return true;
-  });
+  const spy = vi
+    .spyOn(process.stdout, 'write')
+    .mockImplementation((chunk: string | Uint8Array) => {
+      chunks.push(
+        typeof chunk === 'string' ? chunk : new TextDecoder().decode(chunk),
+      );
+      return true;
+    });
   return {
     output: () => chunks.join(''),
     restore: () => spy.mockRestore(),

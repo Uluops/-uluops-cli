@@ -347,21 +347,39 @@ Example:
       'after',
       `
 The SOURCE org is the one this CLI is scoped to — \`--org <slug>\`, else the nearest .uluops.json,
-else ULUOPS_ORG_SLUG, else your personal org. The project is looked up THERE: a work-org project
-without --org is a 404 from your personal org, not a search. After the move the old address is a
-410 PROJECT_REHOMED tombstone (an org-less write there does not fork a new project); moving back
-is the same command the other way. A "same_org" refusal means it is already there.
+else ULUOPS_ORG_SLUG (from your shell, ./.env or ~/.uluops/.env), else your personal org. The
+project is looked up THERE: a work-org project without --org is looked up in that default — moved
+if a same-named project lives there, otherwise a 404 — never a search. The confirmation prompt is
+the one place both orgs and the source's provenance are shown BEFORE the write; \`-y\` skips it, so a
+script sees them only on the success line, after the move. \`--to\` takes the target's real slug
+("personal" is not a slug). After the move the old address is a 410 PROJECT_REHOMED tombstone
+(an org-less write there does not fork a new project); moving back is the same command the other
+way — and a re-run of THIS command after the move answers 404 (the project is no longer in the
+source), not "already there".
 `,
     )
     .action(async (name: string, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
 
+      // `--org personal` is a resolver sentinel; `--to personal` would go to the
+      // wire as a literal slug and 404 with "check the name" (code-auditor,
+      // 2026-09-15). A personal target must be named by its real slug.
+      if (String(options.to).toLowerCase() === 'personal') {
+        handleOpsError(
+          new Error(
+            '--to takes the target org\'s real slug; "personal" is not a slug. Your personal org\'s slug is shown by "ulu auth whoami".',
+          ),
+          ctx,
+        );
+      }
+
       // Both orgs in the prompt, source with its provenance (the trust-boundary
       // F10 shape): a move is the one write where naming only the project
       // confirms nothing — the same name can exist in every org involved.
+      // Provenance is the detailed form (which .uluops.json; shell vs env file).
       await confirmOrExit(
-        `move project "${name}" from org ${ctx.org ?? 'personal'} (${ctx.orgSource}) to org ${options.to} at ${ctx.baseUrl}?`,
+        `move project "${name}" from org ${ctx.org ?? 'personal'} (${ctx.orgProvenance}) to org ${options.to} at ${ctx.baseUrl}?`,
         options.yes,
       );
 
@@ -385,8 +403,10 @@ is the same command the other way. A "same_org" refusal means it is already ther
         if (ctx.json) {
           emitJson(ctx, result, 'project.rehome');
         } else {
+          // The success line carries what the prompt carried: with `-y` this is
+          // the only record a script keeps of WHERE the move landed.
           console.log(
-            `Project moved: ${result.name} — ${result.rehome.from_org.slug} → ${result.rehome.to_org.slug} (id ${result.id})`,
+            `Project moved: ${result.name} — ${result.rehome.from_org.slug} → ${result.rehome.to_org.slug} (id ${result.id}) at ${ctx.baseUrl} [source: ${ctx.orgProvenance}]`,
           );
           console.log(
             `The old address in ${result.rehome.from_org.slug} is now a tombstone; org-less writes there answer 410 PROJECT_REHOMED naming ${result.rehome.to_org.slug}.`,

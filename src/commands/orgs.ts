@@ -7,7 +7,23 @@ import {
 } from '../context.js';
 import { emitJson } from '../formatters/json.js';
 import { type Column, formatTable } from '../formatters/table.js';
-import { formatDisplayDate, parseIntOption, withSpinner } from '../utils.js';
+import {
+  formatDisplayDate,
+  parseIntOption,
+  stripAnsi,
+  withSpinner,
+} from '../utils.js';
+
+/**
+ * Remote free text → one terminal line. `stripAnsi` is this CLI's boundary
+ * rule for anything sourced from a response; here it matters more than usual
+ * because the feed is by construction written by one org member and read by
+ * another (an admin's `--reason` renders on the owner's terminal). Newlines
+ * are flattened so a value cannot split the table row (code-auditor, 2026-09-15).
+ */
+function safeText(value: string): string {
+  return stripAnsi(value).replace(/\r?\n/g, ' ');
+}
 
 /**
  * One line per feed entry. A re-home row (the only class the feed carries
@@ -18,16 +34,16 @@ export function describeFeedEntry(entry: OrgAuditEntry): string {
   const d = readRehomeAuditDetails(entry);
   if (d === null) {
     const inner = entry.details['action'];
-    return typeof inner === 'string' ? inner : entry.action;
+    return safeText(typeof inner === 'string' ? inner : entry.action);
   }
   const incoming = d.action === 'project.rehome_in';
-  const other = incoming ? d.from_org.slug : d.to_org.slug;
+  const other = safeText(incoming ? d.from_org.slug : d.to_org.slug);
   const verb = incoming ? 'arrived from' : 'moved to';
   const flags = [
     d.to_personal_org ? 'personal org' : null,
     d.via_admin_path ? 'platform admin' : null,
   ].filter((f): f is string => f !== null);
-  return `"${d.project_name}" ${verb} ${other}${flags.length > 0 ? ` (${flags.join(', ')})` : ''}${d.reason !== null ? ` — ${d.reason}` : ''}`;
+  return `"${safeText(d.project_name)}" ${verb} ${other}${flags.length > 0 ? ` (${flags.join(', ')})` : ''}${d.reason !== null ? ` — ${safeText(d.reason)}` : ''}`;
 }
 
 /**
@@ -59,10 +75,25 @@ Examples:
       '-c, --cursor <cursor>',
       "Continue from a previous page's next cursor (opaque; pass it back verbatim)",
     )
-    .option('-l, --limit <n>', 'Page size (max 200)', '50')
+    .option(
+      '-l, --limit <n>',
+      'Page size, 1–100 (the API answers 400 outside that range)',
+      '50',
+    )
     .action(async (slug: string, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const ctx = createOpsContext(globalOpts);
+
+      // Client-side range check: the API's OrgVisibleAuditLogQuery is
+      // .min(1).max(100) and returns 400 (with the generic "check your
+      // arguments" hint) rather than clamping — say the range here.
+      const limit = parseIntOption(options.limit, '--limit');
+      if (limit < 1 || limit > 100) {
+        handleOpsError(
+          new Error(`--limit must be between 1 and 100 (got ${limit})`),
+          ctx,
+        );
+      }
 
       try {
         const feed = await withSpinner(
@@ -74,7 +105,7 @@ Examples:
           },
           () =>
             ctx.client.orgs.getVisibleAuditLog(slug, {
-              limit: parseIntOption(options.limit, 'limit'),
+              limit,
               ...(options.cursor !== undefined
                 ? { cursor: options.cursor }
                 : {}),

@@ -1,14 +1,24 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Command } from 'commander';
-import { captureOutput } from '../helpers/capture.js';
-import { createMockRegistryClient, createMockRegistryContext } from '../helpers/command-harness.js';
-import { createModel, createModelAlias, createAliasResolution } from '../helpers/mock-factories.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RegistryCliContext } from '../../src/context.js';
+import { captureOutput } from '../helpers/capture.js';
+import {
+  createMockRegistryClient,
+  createMockRegistryContext,
+} from '../helpers/command-harness.js';
+import {
+  createAliasResolution,
+  createModel,
+  createModelAlias,
+} from '../helpers/mock-factories.js';
 
 vi.mock('../../src/context.js');
 
-import { createRegistryContext, handleRegistryError } from '../../src/context.js';
 import { registerModelCommands } from '../../src/commands/models.js';
+import {
+  createRegistryContext,
+  handleRegistryError,
+} from '../../src/context.js';
 
 const mockedCreateRegistryContext = vi.mocked(createRegistryContext);
 const mockedHandleRegistryError = vi.mocked(handleRegistryError);
@@ -19,9 +29,13 @@ let mockClient: MockClient;
 beforeEach(() => {
   mockClient = createMockRegistryClient();
   mockedCreateRegistryContext.mockReturnValue(
-    createMockRegistryContext({ client: mockClient as unknown as RegistryCliContext['client'] })
+    createMockRegistryContext({
+      client: mockClient as unknown as RegistryCliContext['client'],
+    }),
   );
-  mockedHandleRegistryError.mockImplementation((error) => { throw error; });
+  mockedHandleRegistryError.mockImplementation((error) => {
+    throw error;
+  });
 });
 
 function parse(...args: string[]) {
@@ -34,7 +48,9 @@ function parse(...args: string[]) {
 describe('models list', () => {
   it('should display models table', async () => {
     mockClient.models.list.mockResolvedValue({
-      models: [createModel({ provider: 'anthropic', modelId: 'claude-opus-4-6' })],
+      models: [
+        createModel({ provider: 'anthropic', modelId: 'claude-opus-4-6' }),
+      ],
     });
     const output = captureOutput();
     await parse('models', 'list');
@@ -54,10 +70,15 @@ describe('models list', () => {
 
 describe('models get', () => {
   it('should fetch and display model', async () => {
-    mockClient.models.get.mockResolvedValue(createModel({ provider: 'anthropic', modelId: 'claude-opus-4-6' }));
+    mockClient.models.get.mockResolvedValue(
+      createModel({ provider: 'anthropic', modelId: 'claude-opus-4-6' }),
+    );
     const output = captureOutput();
     await parse('models', 'get', 'anthropic', 'claude-opus-4-6');
-    expect(mockClient.models.get).toHaveBeenCalledWith('anthropic', 'claude-opus-4-6');
+    expect(mockClient.models.get).toHaveBeenCalledWith(
+      'anthropic',
+      'claude-opus-4-6',
+    );
     expect(output.stdout()).toContain('anthropic');
     output.restore();
   });
@@ -98,7 +119,10 @@ describe('models aliases', () => {
 describe('models resolve', () => {
   it('should resolve alias', async () => {
     mockClient.models.resolveAlias.mockResolvedValue(
-      createAliasResolution({ alias: 'sonnet', target: 'anthropic/claude-sonnet-4-5' })
+      createAliasResolution({
+        alias: 'sonnet',
+        target: 'anthropic/claude-sonnet-4-5',
+      }),
     );
     const output = captureOutput();
     await parse('models', 'resolve', 'sonnet');
@@ -114,6 +138,9 @@ describe('error handling', () => {
     const error = new Error('Registry fail');
     mockClient.models.list.mockRejectedValue(error);
     await expect(parse('models', 'list')).rejects.toThrow('Registry fail');
-    expect(mockedHandleRegistryError).toHaveBeenCalledWith(error, expect.any(Object));
+    expect(mockedHandleRegistryError).toHaveBeenCalledWith(
+      error,
+      expect.any(Object),
+    );
   });
 });

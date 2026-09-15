@@ -1,24 +1,30 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  statSync,
+} from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
-  toSnakeCase,
-  toCamelCase,
-  normalizeKeys,
-  truncate,
-  redact,
-  formatDisplayDate,
-  getFlexibleProperty,
-  getErrorCode,
-  parseIntOption,
-  parseFloatOption,
-  readFileOption,
   asFlexibleResponse,
+  formatDisplayDate,
+  getErrorCode,
+  getFlexibleProperty,
   inferDefinitionType,
+  normalizeKeys,
+  parseFloatOption,
+  parseIntOption,
+  readFileOption,
+  redact,
   resolveDefinitionType,
   resolveProject,
   stripBom,
+  toCamelCase,
+  toSnakeCase,
+  truncate,
   writeFileAtomic,
 } from '../src/utils.js';
 
@@ -133,7 +139,10 @@ describe('normalizeKeys', () => {
 
   it('passes through camelCase keys unchanged', () => {
     const input = { workflowType: 'ship', project: 'test' };
-    expect(normalizeKeys(input)).toEqual({ workflowType: 'ship', project: 'test' });
+    expect(normalizeKeys(input)).toEqual({
+      workflowType: 'ship',
+      project: 'test',
+    });
   });
 
   it('handles primitive values', () => {
@@ -263,19 +272,25 @@ describe('parseIntOption', () => {
   });
 
   it('exits with error for non-numeric strings', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockExit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
     const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     parseIntOption('abc', '--limit');
     expect(mockExit).toHaveBeenCalledWith(1);
-    expect(mockError).toHaveBeenCalledWith('Error: Invalid number for --limit: "abc"');
+    expect(mockError).toHaveBeenCalledWith(
+      'Error: Invalid number for --limit: "abc"',
+    );
 
     mockExit.mockRestore();
     mockError.mockRestore();
   });
 
   it('exits with error for empty string', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockExit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
     const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     parseIntOption('', '--limit');
@@ -311,19 +326,25 @@ describe('parseFloatOption', () => {
   });
 
   it('exits with error for non-numeric strings', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockExit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
     const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     parseFloatOption('abc', '--temperature');
     expect(mockExit).toHaveBeenCalledWith(1);
-    expect(mockError).toHaveBeenCalledWith('Error: Invalid number for --temperature: "abc"');
+    expect(mockError).toHaveBeenCalledWith(
+      'Error: Invalid number for --temperature: "abc"',
+    );
 
     mockExit.mockRestore();
     mockError.mockRestore();
   });
 
   it('exits with error for empty string', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockExit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
     const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     parseFloatOption('', '--temperature');
@@ -357,12 +378,16 @@ describe('getFlexibleProperty', () => {
 
   it('returns default when camelCase key exists but is undefined', () => {
     const obj = { workflowType: undefined };
-    expect(getFlexibleProperty(obj, 'workflowType', 'fallback')).toBe('fallback');
+    expect(getFlexibleProperty(obj, 'workflowType', 'fallback')).toBe(
+      'fallback',
+    );
   });
 
   it('returns default when snake_case key exists but is undefined', () => {
     const obj = { workflow_type: undefined };
-    expect(getFlexibleProperty(obj, 'workflowType', 'fallback')).toBe('fallback');
+    expect(getFlexibleProperty(obj, 'workflowType', 'fallback')).toBe(
+      'fallback',
+    );
   });
 
   it('returns falsy values that are not undefined', () => {
@@ -377,31 +402,43 @@ describe('getFlexibleProperty', () => {
   });
 
   it('works with typed default values', () => {
-    const result = getFlexibleProperty<string[]>({ items: ['a', 'b'] }, 'items', []);
+    const result = getFlexibleProperty<string[]>(
+      { items: ['a', 'b'] },
+      'items',
+      [],
+    );
     expect(result).toEqual(['a', 'b']);
   });
 });
 
 describe('readFileOption', () => {
   it('exits with error for non-existent file', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockExit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
     const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     readFileOption('/tmp/does-not-exist-cli-test-file.txt');
     expect(mockExit).toHaveBeenCalledWith(1);
-    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('File not found'));
+    expect(mockError).toHaveBeenCalledWith(
+      expect.stringContaining('File not found'),
+    );
 
     mockExit.mockRestore();
     mockError.mockRestore();
   });
 
   it('exits with error for directory path', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockExit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
     const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     readFileOption('/tmp');
     expect(mockExit).toHaveBeenCalledWith(1);
-    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('directory'));
+    expect(mockError).toHaveBeenCalledWith(
+      expect.stringContaining('directory'),
+    );
 
     mockExit.mockRestore();
     mockError.mockRestore();
@@ -511,23 +548,31 @@ describe('resolveDefinitionType', () => {
 
   it('infers from filename when no explicit type', () => {
     expect(resolveDefinitionType(undefined, 'my.agent.yaml')).toBe('agent');
-    expect(resolveDefinitionType(undefined, 'my.workflow.yaml')).toBe('workflow');
+    expect(resolveDefinitionType(undefined, 'my.workflow.yaml')).toBe(
+      'workflow',
+    );
   });
 
   it('exits with error when neither is available', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockExit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
     const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     resolveDefinitionType(undefined, undefined);
     expect(mockExit).toHaveBeenCalledWith(1);
-    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('Could not determine definition type'));
+    expect(mockError).toHaveBeenCalledWith(
+      expect.stringContaining('Could not determine definition type'),
+    );
 
     mockExit.mockRestore();
     mockError.mockRestore();
   });
 
   it('exits when filename has no type pattern', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockExit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
     const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     resolveDefinitionType(undefined, 'some-random.yaml');
@@ -620,13 +665,19 @@ describe('resolveProject', () => {
   });
 
   it('exits with helpful error when no project available', () => {
-    const mockExit = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    const mockExit = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
     const mockError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
     resolveProject(undefined);
     expect(mockExit).toHaveBeenCalledWith(1);
-    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('No project specified'));
-    expect(mockError).toHaveBeenCalledWith(expect.stringContaining('as the first argument'));
+    expect(mockError).toHaveBeenCalledWith(
+      expect.stringContaining('No project specified'),
+    );
+    expect(mockError).toHaveBeenCalledWith(
+      expect.stringContaining('as the first argument'),
+    );
 
     mockExit.mockRestore();
     mockError.mockRestore();

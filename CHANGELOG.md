@@ -14,7 +14,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - **A 400 that carries a business `details.reason` is explained, not blamed on the arguments.** The generic hint ("Invalid input. Check the command arguments…") is wrong for a well-formed call the server refused on state, and actively misleading for re-home's `same_org`, which means "already there" (the §4.7 idempotence signal). Known reasons get a sentence (`same_org`, `project_soft_deleted`, `project_has_no_org`); unknown ones are named verbatim; a reason-less 400 keeps the old hint.
-- `@uluops/ops-sdk` 6.3.1 → 6.4.0.
+- `@uluops/ops-sdk` 6.3.1 → 6.4.1; `@uluops/core` 0.43.2 → 0.43.4 (pin-only releases so the tree carries one ops-sdk).
+
+### Pre-publish review fold (anxiety-reader 84 / code-auditor 95 / dx-validator 86 / docs-validator 85 on the 0.30.0 diff, 2026-09-15)
+
+- **Prompt and success line carry full provenance.** `OpsCliContext.orgProvenance` renders `workspace <path>` (which `.uluops.json` answered — nested checkouts could not tell), `env (shell)` or **`env-file`** when `ULUOPS_ORG_SLUG` arrived via `./.env` / `~/.uluops/.env` (the CLI records whether the variable changed across `loadEnvFiles()`); the resolver's bare `env` read as "my shell" for a value a file in the checkout had set. With `-y` the prompt is skipped, so the success line now repeats base URL + provenance — the record a script keeps.
+- **`--to personal` is refused** with the real-slug hint; `--org personal` is a resolver sentinel but `--to personal` went to the wire as a literal slug and 404'd with "check the name".
+- **Hints for the whole refusal surface.** The business-`reason` hint fires on 409 as well as 400 (the README promised it for reasons that are 409s); 402 `PROJECT_LIMIT` gets a project-cap hint instead of the "Subscription required" upgrade box (which was keyed on the bare status); 410 `PROJECT_REHOMED` names the target org and the `--org` to re-run with; `INSUFFICIENT_ORG_ROLE` / `ORG_ACCESS_DENIED` / `SESSION_REQUIRED` / `INSUFFICIENT_ROLE` each say what to do and what not to (never "retry without --org"). Lookups use `Object.hasOwn` — `reason` is server text.
+- **The `same_org` hint no longer claims a member-path re-run answers it.** It does not: the lookup is in the source org, where the moved project no longer is, so the re-run is a 404. The hint, the `--help` text and the README say which path answers which.
+- **`orgs audit-feed` renders another member's free text safely** — `stripAnsi` plus newline flattening on the reason, project name and fallback action (the CLI's own boundary rule, applied at `issues.ts` and skipped here); `--limit` is validated to **1–100** client-side (the API's range; it answers 400 rather than clamping, and the help said "max 200").
+- Docs: Global Options no longer claims *every* command sends the org header; the CI destructive-commands callout lists `projects rehome`; the Error Handling table gains the 402/410 rows.
 
 ### Notes
 

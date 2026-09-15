@@ -1303,3 +1303,69 @@ describe('org routing (spec §3.4 / D13): --org reaches the clients through the 
     expect('orgSlug' in cfg).toBe(false);
   });
 });
+
+describe('handleOpsError — re-home refusals (review fold, 2026-09-15)', () => {
+  it('402 PROJECT_LIMIT gets a cap hint, not the "Subscription required" box (dx-validator)', () => {
+    const output = captureOutput();
+    expect(() =>
+      handleOpsError(
+        new OpsApiError(
+          402,
+          'Target org "ulu-labs" is at its project cap',
+          'PROJECT_LIMIT',
+        ),
+        { json: false, debug: false },
+      ),
+    ).toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('reached its project limit');
+    expect(output.stderr()).not.toContain('Subscription required');
+    output.restore();
+    const box = captureOutput();
+    expect(() =>
+      handleOpsError(new OpsApiError(402, 'tier', 'SUBSCRIPTION_REQUIRED'), {
+        json: false,
+        debug: false,
+      }),
+    ).toThrow('process.exit(1)');
+    expect(box.stderr()).toContain('Subscription required');
+    box.restore();
+  });
+
+  it('409 reasons get their hint (they were gated to 400 only); 410 names the target org; 403 org codes explain --org', () => {
+    const cases: Array<[OpsApiError, RegExp]> = [
+      [
+        new OpsApiError(409, 'name taken', 'CONFLICT', {
+          reason: 'name_collision',
+        }),
+        /already exists in the target org/,
+      ],
+      [
+        new OpsApiError(409, 'reserved', 'CONFLICT', {
+          reason: 'rehomed_away_conflict',
+        }),
+        /reserved this name/,
+      ],
+      [
+        new OpsApiError(410, 'moved', 'PROJECT_REHOMED', {
+          project_id: 'p',
+          target_org: { id: 't', slug: 'acme-successor' },
+        }),
+        /--org acme-successor/,
+      ],
+      [
+        new OpsApiError(403, 'no', 'INSUFFICIENT_ORG_ROLE'),
+        /Do NOT retry without --org/,
+      ],
+      [new OpsApiError(403, 'no', 'ORG_ACCESS_DENIED'), /TARGET \(--to\)/],
+      [new OpsApiError(403, 'no', 'SESSION_REQUIRED'), /ulu auth login/],
+    ];
+    for (const [err, re] of cases) {
+      const output = captureOutput();
+      expect(() => handleOpsError(err, { json: false, debug: false })).toThrow(
+        'process.exit(1)',
+      );
+      expect(output.stderr()).toMatch(re);
+      output.restore();
+    }
+  });
+});

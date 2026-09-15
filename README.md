@@ -158,11 +158,16 @@ The CLI resolves credentials in this order:
 
 ### Which org a command acts in
 
-Every command sends `X-Org-Slug` for the org it acts in. Resolution, highest first: `--org <slug>`;
+Every org-scoped command sends `X-Org-Slug` for the org it acts in (`orgs audit-feed` is the
+exception — the org is its argument, not a scope). Resolution, highest first: `--org <slug>`;
 the nearest `.uluops.json` above the current directory (`{ "org": "ulu-labs" }` — put one at the
 root of a work checkout; `{ "org": "personal" }` in a personal repo nested under it stops the walk);
-`ULUOPS_ORG_SLUG`; else your personal org. The API never infers an org from a project name.
+`ULUOPS_ORG_SLUG` — **from your shell, or from `./.env` / `~/.uluops/.env`, which the CLI loads at
+startup**; else your personal org. The API never infers an org from a project name.
 `ulu runs save` prints where the run landed. `ulu exec` hands the same org to `@uluops/core`.
+Prompts that name the source (`projects rehome`) print its provenance in full — the path of the
+`.uluops.json` that answered, or `env-file` when the variable came from a file rather than the
+shell — so a stray `.env` in a checkout cannot pass as "my shell".
 
 
 Every command accepts these flags:
@@ -278,13 +283,19 @@ ulu projects rehome my-app --org acme --to ulu-labs --reason "team took it over"
 ```
 
 `rehome` prompts with both orgs and the source's provenance (`move project "my-app" from org acme
-(explicit) to org ulu-labs at …?`); pass `-y` to skip. After the move the old address in the source
-org is a tombstone — an org-less write there answers `410 PROJECT_REHOMED` naming the new org instead
-of forking a new project; moving back is the same command the other way. A `same_org` refusal means
-it is already there and the hint says so (it is not an argument error). Other refusals name their
-reason: `name_collision` / `soft_deleted_conflict` / `rehomed_away_conflict` (the name is taken in
-the target), `export_in_progress`, `moved_during_request`; `402` means the target org is at its
-project cap.
+(workspace /path/to/.uluops.json) to org ulu-labs at …?`); pass `-y` to skip — the prompt is the
+only place the source is shown *before* the write, so with `-y` the success line repeats base URL
+and provenance and is the record a script keeps. `--to` takes the target's real slug (`personal`
+is refused). After the move the old address in the source org is a tombstone — an org-less write
+there answers `410 PROJECT_REHOMED` naming the new org instead of forking a new project; moving
+back is the same command the other way. **A re-run of the same command after the move answers
+404**, because the project is looked up in the source org where it no longer is — `same_org`
+("already there") is the answer on the *admin* path, whose lookup is by id; the CLI's hints say
+which is which. Other refusals name their reason and the CLI hints each: `name_collision` /
+`soft_deleted_conflict` / `rehomed_away_conflict` (the name is taken in the target),
+`project_soft_deleted`, `export_in_progress`, `moved_during_request`; `402 PROJECT_LIMIT` means
+the target org is at its project cap (not a subscription gate); `403 ORG_ACCESS_DENIED` on a move
+is usually about the *target*.
 
 ---
 
@@ -294,14 +305,17 @@ Reads an org's **member-visible** activity. Org creation, membership and invitat
 surfaces. `--org` does not apply here — the org is the positional argument.
 
 ```bash
-ulu orgs audit-feed <slug>        # Org-visible audit feed (any member); --limit, --cursor, --json
+ulu orgs audit-feed <slug>        # Org-visible audit feed (any member); --limit 1–100, --cursor, --json
 ```
 
 The feed carries the rows an org's writers marked visible to every member — today, projects that
 left the org for someone's personal org (an org admin may do that; the feed is how the org's owner
 sees it). Each row is one line: when, who, and `"billing" moved to alexself2 (personal org) — reason`.
 Page with the `--cursor` the previous page printed; `--json` emits the raw envelope
-(`data.entries[]`, `count`, `hasMore`, `nextCursor`).
+(`data.entries[]`, `count`, `hasMore`, `nextCursor`). The feed carries only moves *into a personal
+org* (D19) — an admin's org→org move is not in it. Rendered text is another member's free text
+(the reason, the project name): the CLI strips terminal control sequences and flattens newlines
+before printing it.
 
 ---
 
@@ -902,7 +916,7 @@ ulu runs save --file results.json -q
 ulu projects get my-project --debug
 ```
 
-> **Destructive commands in scripts and CI.** `projects delete`, `runs delete`,
+> **Destructive commands in scripts and CI.** `projects delete`, `projects rehome`, `runs delete`,
 > and `definitions delete` prompt for confirmation at an interactive terminal.
 > In a non-interactive context (CI, piped stdin, automated agent harness) there
 > is no prompt to answer, so they **fail closed**: without `--yes`/`-y` they
@@ -988,7 +1002,9 @@ The CLI provides contextual error messages with actionable hints:
 | **401 Unauthorized** | Check `ULUOPS_API_KEY` or run `ulu auth login` |
 | **403 Forbidden** | Insufficient permissions — contact admin |
 | **404 Not Found** | Verify the resource name or ID |
-| **400 Validation** | Check command arguments — run with `--help` |
+| **400 Validation** | Check command arguments — run with `--help`; a 400/409 that carries a business `reason` (re-home's `same_org`, `name_collision`, …) is explained as state instead |
+| **402 Project limit** | The destination org is at its project cap — a re-home/create refusal, not a subscription gate |
+| **410 Re-homed** | The project moved orgs; the hint names the org to pass as `--org` |
 | **429 Rate Limited** | Wait and retry — the CLI shows the retry delay |
 | **Network Error** | Check your network connection and server status |
 

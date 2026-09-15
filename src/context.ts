@@ -67,6 +67,14 @@ export interface OpsCliContext {
   /** The org this invocation acts in (`undefined` = the key holder's personal org) and where it came from. */
   org: string | undefined;
   orgSource: WorkspaceOrgSource;
+  /**
+   * Provenance as a human reads it: `explicit` | `workspace <path>` |
+   * `env (shell)` | `env-file (./.env or ~/.uluops/.env)` | `personal`. The
+   * resolver's `env` collapses "my shell" and "a file in this repo" and
+   * `workspace` says nothing about WHICH `.uluops.json` answered in a nested
+   * checkout; the prompt before a move needs both (anxiety-reader F2/F3).
+   */
+  orgProvenance: string;
 }
 
 /**
@@ -235,7 +243,26 @@ export function createOpsContext(options: GlobalOptions): OpsCliContext {
     baseUrl: config.baseUrl,
     org: resolved.org,
     orgSource: resolved.source,
+    orgProvenance: describeOrgProvenance(resolved),
   };
+}
+
+/** Render where the org came from with enough detail to catch the wrong source. */
+export function describeOrgProvenance(
+  resolved: WorkspaceOrgResolution,
+): string {
+  switch (resolved.source) {
+    case 'workspace':
+      return resolved.path !== undefined
+        ? `workspace ${resolved.path}`
+        : 'workspace';
+    case 'env':
+      return process.env.ULU_ORG_SLUG_FROM_ENV_FILE === '1'
+        ? 'env-file — ULUOPS_ORG_SLUG came from ./.env or ~/.uluops/.env, not your shell'
+        : 'env (shell)';
+    default:
+      return resolved.source;
+  }
 }
 
 /**
@@ -498,15 +525,38 @@ function extractAmbiguousTypes(message: string): {
   };
 }
 
-/** 400s that carry a business `details.reason` (project re-home, spec §4.4/§4.7). */
+/**
+ * 400/409s that carry a business `details.reason` (project re-home, spec
+ * §4.4/§4.7). Looked up with `Object.hasOwn` — `reason` is server text.
+ */
 const BUSINESS_REASON_HINTS: Record<string, string> = {
   same_org:
-    'The project is already in that org — nothing to do. (A re-run over a finished move answers this; it is not an error in your arguments.)',
+    'The project is already in that org — nothing to do. It is not an error in your arguments. (Note: this answer comes from the ADMIN path; a member-path re-run after a finished move answers 404 instead, because the lookup is in the SOURCE org where the project no longer is.)',
   project_has_no_org:
     'This project row has no org (pre-org legacy data) and cannot be moved as-is; an operator must repair the row first.',
   project_soft_deleted:
     'The project is soft-deleted. Restore it in its current org ("ulu projects restore") before moving it.',
+  name_collision:
+    'A live project with this name already exists in the target org. Rename one of them first ("ulu projects rename"), or choose a different target.',
+  soft_deleted_conflict:
+    'A soft-deleted project with this name exists in the target org and still owns the name. Restore or hard-delete it there first.',
+  rehomed_away_conflict:
+    'Another project reserved this name in the target org by moving away from it. Rename first, or choose a different target.',
+  export_in_progress:
+    'An export job holds one of the two orgs. Wait for it to finish, then retry.',
+  moved_during_request:
+    'The project changed org while this request waited. Re-read it ("ulu projects get") to see where it is now; retry at most once.',
+  deadlock_retry:
+    'The database chose this request as a deadlock victim; nothing was applied. Retry once.',
+  concurrent_modification:
+    'The project was modified concurrently; nothing was applied. Re-read it, then retry once.',
 };
+
+function businessReasonHint(reason: string): string | undefined {
+  return Object.hasOwn(BUSINESS_REASON_HINTS, reason)
+    ? BUSINESS_REASON_HINTS[reason]
+    : undefined;
+}
 
 function printApiErrorDetails(
   error: DetailedApiError,
@@ -539,27 +589,55 @@ function printApiErrorDetails(
       console.error(
         `\nHint: ${hints.notFound ?? 'The resource was not found. Check the name or ID.'}`,
       );
-    } else if (error.code === 'VALIDATION_ERROR' || error.statusCode === 400) {
-      // A 400 carrying a business `reason` is a decision, not a malformed
+    } else if (
+      typeof (error.details as Record<string, unknown> | undefined)?.reason ===
+        'string' &&
+      (error.statusCode === 400 || error.statusCode === 409)
+    ) {
+      // A 400/409 carrying a business `reason` is a decision, not a malformed
       // argument — "check the command arguments" would send the user back to
       // --help for a call that was well-formed. Re-home's `same_org` is the
-      // one that matters (it means "already there"); other reasons are named
-      // so the user sees the server's word, not a schema hint.
-      const reason = (error.details as Record<string, unknown> | undefined)
-        ?.reason;
-      if (typeof reason === 'string' && reason.length > 0) {
-        console.error(
-          `\nHint: ${BUSINESS_REASON_HINTS[reason] ?? `The server refused this for reason "${reason}" — the arguments were well-formed; the state does not allow it.`}`,
-        );
-      } else {
-        console.error(
-          `\nHint: ${hints.validation ?? 'Invalid input. Check the command arguments, or run the command with --help to see valid options and values.'}`,
-        );
-      }
-    } else if (
-      error.code === 'SUBSCRIPTION_REQUIRED' ||
-      error.statusCode === 402
-    ) {
+      // one that matters (it means "already there"); the 409 reasons were
+      // documented as hinted and were not (three lenses, 2026-09-15).
+      const reason = String((error.details as Record<string, unknown>).reason);
+      console.error(
+        `\nHint: ${businessReasonHint(reason) ?? `The server refused this for reason "${reason}" — the arguments were well-formed; the state does not allow it.`}`,
+      );
+    } else if (error.code === 'VALIDATION_ERROR' || error.statusCode === 400) {
+      console.error(
+        `\nHint: ${hints.validation ?? 'Invalid input. Check the command arguments, or run the command with --help to see valid options and values.'}`,
+      );
+    } else if (error.code === 'PROJECT_LIMIT') {
+      // Not a subscription gate: the TARGET org of a move (or the org of a
+      // create) is at its project cap. The upgrade box below fired on the bare
+      // 402 and suggested the wrong fix (dx-validator, 2026-09-15).
+      console.error(
+        '\nHint: The destination org has reached its project limit. Free a slot there, choose a different org, or have its owner raise the tier. Nothing was applied.',
+      );
+    } else if (error.code === 'PROJECT_REHOMED' || error.statusCode === 410) {
+      const target = (
+        error.details as { target_org?: { slug?: string } } | undefined
+      )?.target_org?.slug;
+      console.error(
+        `\nHint: This project was moved to another org${target ? ` (${target})` : ''}; the old address is a tombstone. Re-run the same command with --org ${target ?? '<that org>'}. Do not create a new project under the old name here.`,
+      );
+    } else if (error.code === 'SESSION_REQUIRED') {
+      console.error(
+        '\nHint: This action needs a signed-in session, not an API key. Run "ulu auth login" and retry; never mint another key to get past it.',
+      );
+    } else if (error.code === 'INSUFFICIENT_ORG_ROLE') {
+      console.error(
+        '\nHint: Your role in that org is below what this action needs. Do NOT retry without --org — that would act on your personal org, not fall back. Ask the org admin for the role.',
+      );
+    } else if (error.code === 'ORG_ACCESS_DENIED') {
+      console.error(
+        '\nHint: You are not a member of that org, or your key is bound to a different one. For "projects rehome" this is usually the TARGET (--to): you need admin/owner there, and a personal org can only receive its own owner\'s projects. Do NOT retry without --org.',
+      );
+    } else if (error.code === 'INSUFFICIENT_ROLE') {
+      console.error(
+        '\nHint: This is a platform-admin action; your account does not have that role.',
+      );
+    } else if (error.code === 'SUBSCRIPTION_REQUIRED') {
       const details = error.details as Record<string, unknown> | undefined;
       const requiredTier = details?.requiredTier as string | undefined;
       const upgradeUrl = details?.upgradeUrl as string | undefined;

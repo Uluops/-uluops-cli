@@ -1,9 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Command } from 'commander';
-import { captureOutput } from '../helpers/capture.js';
-import { createMockOpsClient, createMockOpsContext } from '../helpers/command-harness.js';
-import { createRun } from '../helpers/mock-factories.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpsCliContext } from '../../src/context.js';
+import { captureOutput } from '../helpers/capture.js';
+import {
+  createMockOpsClient,
+  createMockOpsContext,
+} from '../helpers/command-harness.js';
+import { createRun } from '../helpers/mock-factories.js';
 
 vi.mock('../../src/context.js');
 vi.mock('node:fs', async (importOriginal) => {
@@ -11,17 +14,19 @@ vi.mock('node:fs', async (importOriginal) => {
   return {
     ...actual,
     existsSync: vi.fn(() => true),
-    readFileSync: vi.fn(() => JSON.stringify({
-      project: 'test-proj',
-      workflowType: 'ship',
-      agents: [{ name: 'code-validator', score: 85, status: 'PASS' }],
-    })),
+    readFileSync: vi.fn(() =>
+      JSON.stringify({
+        project: 'test-proj',
+        workflowType: 'ship',
+        agents: [{ name: 'code-validator', score: 85, status: 'PASS' }],
+      }),
+    ),
   };
 });
 
-import { createOpsContext, handleOpsError } from '../../src/context.js';
-import { registerRunCommands } from '../../src/commands/runs.js';
 import { existsSync, readFileSync } from 'node:fs';
+import { registerRunCommands } from '../../src/commands/runs.js';
+import { createOpsContext, handleOpsError } from '../../src/context.js';
 
 const mockedCreateOpsContext = vi.mocked(createOpsContext);
 const mockedHandleOpsError = vi.mocked(handleOpsError);
@@ -32,9 +37,13 @@ let mockClient: MockClient;
 beforeEach(() => {
   mockClient = createMockOpsClient();
   mockedCreateOpsContext.mockReturnValue(
-    createMockOpsContext({ client: mockClient as unknown as OpsCliContext['client'] })
+    createMockOpsContext({
+      client: mockClient as unknown as OpsCliContext['client'],
+    }),
   );
-  mockedHandleOpsError.mockImplementation((error) => { throw error; });
+  mockedHandleOpsError.mockImplementation((error) => {
+    throw error;
+  });
 });
 
 function parse(...args: string[]) {
@@ -46,12 +55,18 @@ function parse(...args: string[]) {
 
 describe('runs list', () => {
   it('should display runs table', async () => {
-    mockClient.runs.listByProject.mockResolvedValue({ total: 0, data: [
-      createRun({ runNumber: 5, workflowType: 'ship', averageScore: 92.3 }),
-    ] });
+    mockClient.runs.listByProject.mockResolvedValue({
+      total: 0,
+      data: [
+        createRun({ runNumber: 5, workflowType: 'ship', averageScore: 92.3 }),
+      ],
+    });
     const output = captureOutput();
     await parse('runs', 'list', 'my-proj');
-    expect(mockClient.runs.listByProject).toHaveBeenCalledWith('my-proj', expect.any(Object));
+    expect(mockClient.runs.listByProject).toHaveBeenCalledWith(
+      'my-proj',
+      expect.any(Object),
+    );
     expect(output.stdout()).toContain('ship');
     output.restore();
   });
@@ -68,9 +83,12 @@ describe('runs list', () => {
     mockClient.runs.listByProject.mockResolvedValue({ total: 0, data: [] });
     const output = captureOutput();
     await parse('runs', 'list', 'my-proj', '--workflow', 'ship');
-    expect(mockClient.runs.listByProject).toHaveBeenCalledWith('my-proj', expect.objectContaining({
-      workflowType: 'ship',
-    }));
+    expect(mockClient.runs.listByProject).toHaveBeenCalledWith(
+      'my-proj',
+      expect.objectContaining({
+        workflowType: 'ship',
+      }),
+    );
     output.restore();
   });
 });
@@ -91,7 +109,10 @@ describe('runs latest', () => {
     mockClient.runs.getLatest.mockResolvedValue(createRun({ runNumber: 10 }));
     const output = captureOutput();
     await parse('runs', 'latest', 'my-proj');
-    expect(mockClient.runs.getLatest).toHaveBeenCalledWith('my-proj', undefined);
+    expect(mockClient.runs.getLatest).toHaveBeenCalledWith(
+      'my-proj',
+      undefined,
+    );
     expect(output.stdout()).toContain('Run Number: 10');
     output.restore();
   });
@@ -100,10 +121,22 @@ describe('runs latest', () => {
 describe('runs details', () => {
   it('should display detailed run info', async () => {
     mockClient.runs.getDetails.mockResolvedValue({
-      run: createRun({ runNumber: 5, workflowType: 'ship', averageScore: 88.5, allGatesPassed: true }),
-      agents: [{ name: 'code-validator', score: 90, maxScore: 100, decision: 'PASS' }],
+      run: createRun({
+        runNumber: 5,
+        workflowType: 'ship',
+        averageScore: 88.5,
+        allGatesPassed: true,
+      }),
+      agents: [
+        { name: 'code-validator', score: 90, maxScore: 100, decision: 'PASS' },
+      ],
       recommendations: [
-        { title: 'Add error handling', priority: 'suggested', severity: 'medium', agent: 'code-validator' },
+        {
+          title: 'Add error handling',
+          priority: 'suggested',
+          severity: 'medium',
+          agent: 'code-validator',
+        },
       ],
     });
     const output = captureOutput();
@@ -149,13 +182,19 @@ describe('runs save', () => {
     expect(output.stdout()).toContain('Run #7 saved');
     // Where it landed (spec 2.4 / F-6): the API's orgSlug, else the resolved org,
     // else "personal" — beside the base URL because a slug is server-relative.
-    expect(output.stdout()).toMatch(/Org: personal\s+\(personal\)\s+·\s+http:\/\/localhost:3100\/api\/v1/);
+    expect(output.stdout()).toMatch(
+      /Org: personal\s+\(personal\)\s+·\s+http:\/\/localhost:3100\/api\/v1/,
+    );
     output.restore();
   });
 
   it('prints the org the API answered with, and flags a disagreement with the flag', async () => {
     mockedCreateOpsContext.mockReturnValue(
-      createMockOpsContext({ client: mockClient as unknown as OpsCliContext['client'], org: 'acme', orgSource: 'explicit' }),
+      createMockOpsContext({
+        client: mockClient as unknown as OpsCliContext['client'],
+        org: 'acme',
+        orgSource: 'explicit',
+      }),
     );
     mockClient.runs.save.mockResolvedValue({
       run: { ...createRun({ runNumber: 8 }), orgSlug: 'ulu-labs' },
@@ -164,7 +203,9 @@ describe('runs save', () => {
     });
     const output = captureOutput();
     await parse('runs', 'save', '--file', '/tmp/run.json');
-    expect(output.stdout()).toContain('Org: ulu-labs  (explicit, API answered differently)');
+    expect(output.stdout()).toContain(
+      'Org: ulu-labs  (explicit, API answered differently)',
+    );
     output.restore();
   });
 });
@@ -174,10 +215,12 @@ describe('runs archive', () => {
     mockClient.runs.archive.mockResolvedValue({ archived: 5 });
     const output = captureOutput();
     await parse('runs', 'archive', 'my-proj', '--keep-last', '3');
-    expect(mockClient.runs.archive).toHaveBeenCalledWith(expect.objectContaining({
-      project: 'my-proj',
-      keepLast: 3,
-    }));
+    expect(mockClient.runs.archive).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project: 'my-proj',
+        keepLast: 3,
+      }),
+    );
     expect(output.stdout()).toContain('Archived 5 runs');
     output.restore();
   });
@@ -185,14 +228,18 @@ describe('runs archive', () => {
 
 describe('runs update', () => {
   it('should update run metadata by project and run number', async () => {
-    mockClient.runs.update.mockResolvedValue(createRun({ runNumber: 3, averageScore: 92 }));
+    mockClient.runs.update.mockResolvedValue(
+      createRun({ runNumber: 3, averageScore: 92 }),
+    );
     const output = captureOutput();
     await parse('runs', 'update', 'my-proj', '--number', '3', '--score', '92');
-    expect(mockClient.runs.update).toHaveBeenCalledWith(expect.objectContaining({
-      project: 'my-proj',
-      runNumber: 3,
-      averageScore: 92,
-    }));
+    expect(mockClient.runs.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        project: 'my-proj',
+        runNumber: 3,
+        averageScore: 92,
+      }),
+    );
     expect(output.stdout()).toContain('Run Number: 3');
     output.restore();
   });
@@ -301,7 +348,9 @@ describe('runs delete', () => {
 
   it('should fail closed (exit 1) without --yes in non-interactive mode', async () => {
     const output = captureOutput();
-    await expect(parse('runs', 'delete', 'run-uuid-123')).rejects.toThrow('process.exit(1)');
+    await expect(parse('runs', 'delete', 'run-uuid-123')).rejects.toThrow(
+      'process.exit(1)',
+    );
     expect(output.stderr()).toContain('not an interactive terminal');
     expect(mockClient.runs.delete).not.toHaveBeenCalled();
     output.restore();
@@ -313,9 +362,12 @@ describe('runs list with numeric options', () => {
     mockClient.runs.listByProject.mockResolvedValue({ total: 0, data: [] });
     const output = captureOutput();
     await parse('runs', 'list', 'my-proj', '--limit', '5');
-    expect(mockClient.runs.listByProject).toHaveBeenCalledWith('my-proj', expect.objectContaining({
-      limit: 5,
-    }));
+    expect(mockClient.runs.listByProject).toHaveBeenCalledWith(
+      'my-proj',
+      expect.objectContaining({
+        limit: 5,
+      }),
+    );
     output.restore();
   });
 
@@ -323,9 +375,12 @@ describe('runs list with numeric options', () => {
     mockClient.runs.listByProject.mockResolvedValue({ total: 0, data: [] });
     const output = captureOutput();
     await parse('runs', 'list', 'my-proj');
-    expect(mockClient.runs.listByProject).toHaveBeenCalledWith('my-proj', expect.objectContaining({
-      limit: 20,
-    }));
+    expect(mockClient.runs.listByProject).toHaveBeenCalledWith(
+      'my-proj',
+      expect.objectContaining({
+        limit: 20,
+      }),
+    );
     output.restore();
   });
 });
@@ -335,9 +390,11 @@ describe('runs archive with boundary values', () => {
     mockClient.runs.archive.mockResolvedValue({ archivedCount: 0 });
     const output = captureOutput();
     await parse('runs', 'archive', 'my-proj', '--keep-last', '1');
-    expect(mockClient.runs.archive).toHaveBeenCalledWith(expect.objectContaining({
-      keepLast: 1,
-    }));
+    expect(mockClient.runs.archive).toHaveBeenCalledWith(
+      expect.objectContaining({
+        keepLast: 1,
+      }),
+    );
     output.restore();
   });
 
@@ -345,41 +402,63 @@ describe('runs archive with boundary values', () => {
     mockClient.runs.archive.mockResolvedValue({ archivedCount: 3 });
     const output = captureOutput();
     await parse('runs', 'archive', 'my-proj', '--before-run', '10');
-    expect(mockClient.runs.archive).toHaveBeenCalledWith(expect.objectContaining({
-      beforeRunNumber: 10,
-    }));
+    expect(mockClient.runs.archive).toHaveBeenCalledWith(
+      expect.objectContaining({
+        beforeRunNumber: 10,
+      }),
+    );
     output.restore();
   });
 });
 
 describe('runs update with numeric options', () => {
   it('should parse score as float', async () => {
-    mockClient.runs.update.mockResolvedValue(createRun({ runNumber: 1, averageScore: 85.5 }));
+    mockClient.runs.update.mockResolvedValue(
+      createRun({ runNumber: 1, averageScore: 85.5 }),
+    );
     const output = captureOutput();
-    await parse('runs', 'update', 'my-proj', '--number', '1', '--score', '85.5');
-    expect(mockClient.runs.update).toHaveBeenCalledWith(expect.objectContaining({
-      averageScore: 85.5,
-    }));
+    await parse(
+      'runs',
+      'update',
+      'my-proj',
+      '--number',
+      '1',
+      '--score',
+      '85.5',
+    );
+    expect(mockClient.runs.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        averageScore: 85.5,
+      }),
+    );
     output.restore();
   });
 
   it('should handle score of 0', async () => {
-    mockClient.runs.update.mockResolvedValue(createRun({ runNumber: 1, averageScore: 0 }));
+    mockClient.runs.update.mockResolvedValue(
+      createRun({ runNumber: 1, averageScore: 0 }),
+    );
     const output = captureOutput();
     await parse('runs', 'update', 'my-proj', '--number', '1', '--score', '0');
-    expect(mockClient.runs.update).toHaveBeenCalledWith(expect.objectContaining({
-      averageScore: 0,
-    }));
+    expect(mockClient.runs.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        averageScore: 0,
+      }),
+    );
     output.restore();
   });
 
   it('should handle score of 100', async () => {
-    mockClient.runs.update.mockResolvedValue(createRun({ runNumber: 1, averageScore: 100 }));
+    mockClient.runs.update.mockResolvedValue(
+      createRun({ runNumber: 1, averageScore: 100 }),
+    );
     const output = captureOutput();
     await parse('runs', 'update', 'my-proj', '--number', '1', '--score', '100');
-    expect(mockClient.runs.update).toHaveBeenCalledWith(expect.objectContaining({
-      averageScore: 100,
-    }));
+    expect(mockClient.runs.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        averageScore: 100,
+      }),
+    );
     output.restore();
   });
 });
@@ -388,7 +467,9 @@ describe('readJsonInput error paths', () => {
   it('should exit when file does not exist', async () => {
     vi.mocked(existsSync).mockReturnValueOnce(false);
     const output = captureOutput();
-    await expect(parse('runs', 'save', '--file', '/tmp/missing.json')).rejects.toThrow('process.exit(1)');
+    await expect(
+      parse('runs', 'save', '--file', '/tmp/missing.json'),
+    ).rejects.toThrow('process.exit(1)');
     expect(output.stderr()).toContain('File not found');
     expect(output.stderr()).toContain('/tmp/missing.json');
     output.restore();
@@ -398,7 +479,9 @@ describe('readJsonInput error paths', () => {
     vi.mocked(existsSync).mockReturnValueOnce(true);
     vi.mocked(readFileSync).mockReturnValueOnce('not valid json {{{');
     const output = captureOutput();
-    await expect(parse('runs', 'save', '--file', '/tmp/bad.json')).rejects.toThrow('process.exit(1)');
+    await expect(
+      parse('runs', 'save', '--file', '/tmp/bad.json'),
+    ).rejects.toThrow('process.exit(1)');
     expect(output.stderr()).toContain('Invalid JSON in file');
     output.restore();
   });
@@ -416,6 +499,9 @@ describe('error handling', () => {
     const error = new Error('API fail');
     mockClient.runs.listByProject.mockRejectedValue(error);
     await expect(parse('runs', 'list', 'my-proj')).rejects.toThrow('API fail');
-    expect(mockedHandleOpsError).toHaveBeenCalledWith(error, expect.any(Object));
+    expect(mockedHandleOpsError).toHaveBeenCalledWith(
+      error,
+      expect.any(Object),
+    );
   });
 });

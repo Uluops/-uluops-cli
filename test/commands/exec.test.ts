@@ -1,7 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Command } from 'commander';
-import { captureOutput } from '../helpers/capture.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CoreCliContext } from '../../src/context.js';
+import { captureOutput } from '../helpers/capture.js';
 
 vi.mock('../../src/context.js');
 vi.mock('node:fs', async (importOriginal) => {
@@ -17,26 +17,26 @@ vi.mock('../../src/utils.js', async (importOriginal) => {
 });
 
 import { statSync } from 'node:fs';
+import {
+  applyReportModeDirective,
+  assertTargetIsDirectoryOrExit,
+  confirmInferredProjectOrExit,
+  guardShadowedVersionFlag,
+  REPORT_MODE_DIRECTIVE,
+  registerExecCommands,
+  reorderInheritedExecOptions,
+  resolveReportPath,
+} from '../../src/commands/exec.js';
+import type { CoreExecOptions, GlobalOptions } from '../../src/context.js';
 import { createCoreContext, handleCoreError } from '../../src/context.js';
 import { promptInput } from '../../src/utils.js';
-import {
-  registerExecCommands,
-  resolveReportPath,
-  applyReportModeDirective,
-  confirmInferredProjectOrExit,
-  reorderInheritedExecOptions,
-  guardShadowedVersionFlag,
-  assertTargetIsDirectoryOrExit,
-  REPORT_MODE_DIRECTIVE,
-} from '../../src/commands/exec.js';
-import type { GlobalOptions, CoreExecOptions } from '../../src/context.js';
 
-type ExecOpts = GlobalOptions &
-  CoreExecOptions & { safetyWarnings?: boolean };
+type ExecOpts = GlobalOptions & CoreExecOptions & { safetyWarnings?: boolean };
 
 function baseOpts(overrides: Partial<ExecOpts> = {}): ExecOpts {
   return overrides as ExecOpts;
 }
+
 import { resolve as resolvePath } from 'node:path';
 import type { AgentResult } from '@uluops/core';
 
@@ -68,10 +68,14 @@ beforeEach(() => {
     debug: false,
     quiet: true,
   });
-  mockedHandleCoreError.mockImplementation((error) => { throw error; });
+  mockedHandleCoreError.mockImplementation((error) => {
+    throw error;
+  });
   // Default: statSync returns a directory stat so command-execution tests pass
   // the assertTargetIsDirectoryOrExit guard without filesystem I/O.
-  mockedStatSync.mockReturnValue({ isDirectory: () => true } as ReturnType<typeof statSync>);
+  mockedStatSync.mockReturnValue({ isDirectory: () => true } as ReturnType<
+    typeof statSync
+  >);
   output = captureOutput();
   // Command-execution tests aren't testing project inference; give them a
   // project so the confirmInferredProjectOrExit gate skips. The dedicated gate
@@ -147,13 +151,26 @@ describe('exec run', () => {
   it('executes a definition by name and displays formatted result', async () => {
     mockClient.run.mockResolvedValue(createAgentResult());
     await parse('exec', 'run', 'code-validator', './src');
-    expect(mockClient.run).toHaveBeenCalledWith('code-validator', { target: './src', prompt: undefined }, undefined);
+    expect(mockClient.run).toHaveBeenCalledWith(
+      'code-validator',
+      { target: './src', prompt: undefined },
+      undefined,
+    );
     expect(output.stdout()).toContain('code-validator');
   });
 
   it('forwards --hash/--prompt-hash as integrity pins', async () => {
     mockClient.run.mockResolvedValue(createAgentResult());
-    await parse('exec', 'run', 'code-validator', './src', '--hash', 'sha256:aaa', '--prompt-hash', 'sha256:bbb');
+    await parse(
+      'exec',
+      'run',
+      'code-validator',
+      './src',
+      '--hash',
+      'sha256:aaa',
+      '--prompt-hash',
+      'sha256:bbb',
+    );
     expect(mockClient.run).toHaveBeenCalledWith(
       'code-validator',
       { target: './src', prompt: undefined },
@@ -175,7 +192,9 @@ describe('exec run', () => {
   });
 
   it('formats execution results for non-agent types', async () => {
-    mockClient.run.mockResolvedValue(createExecutionResult({ type: 'workflow' }));
+    mockClient.run.mockResolvedValue(
+      createExecutionResult({ type: 'workflow' }),
+    );
     await parse('exec', 'run', 'my-workflow', './src');
     expect(output.stdout()).toContain('my-command');
   });
@@ -183,7 +202,9 @@ describe('exec run', () => {
   it('delegates errors to handleCoreError', async () => {
     const err = new Error('Network failed');
     mockClient.run.mockRejectedValue(err);
-    await expect(parse('exec', 'run', 'code-validator', './src')).rejects.toThrow('Network failed');
+    await expect(
+      parse('exec', 'run', 'code-validator', './src'),
+    ).rejects.toThrow('Network failed');
     expect(mockedHandleCoreError).toHaveBeenCalledWith(err, expect.any(Object));
   });
 });
@@ -194,61 +215,103 @@ describe('exec agent', () => {
   it('executes an agent and displays formatted result', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
     await parse('exec', 'agent', '-t', './src', 'code-validator');
-    expect(mockClient.runAgent).toHaveBeenCalledWith('code-validator', { target: './src', prompt: undefined }, undefined);
+    expect(mockClient.runAgent).toHaveBeenCalledWith(
+      'code-validator',
+      { target: './src', prompt: undefined },
+      undefined,
+    );
     expect(output.stdout()).toContain('Score: 85/100');
   });
 
   it('passes model option to execution options', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', 'agent', '-t', './src', 'code-validator', '--model', 'haiku');
+    await parse(
+      'exec',
+      'agent',
+      '-t',
+      './src',
+      'code-validator',
+      '--model',
+      'haiku',
+    );
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       { target: './src', prompt: undefined },
-      expect.objectContaining({ model: 'haiku' })
+      expect.objectContaining({ model: 'haiku' }),
     );
   });
 
   it('passes threshold options', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', 'agent', '-t', './src', 'code-validator', '--threshold-pass', '80', '--threshold-warn', '60');
+    await parse(
+      'exec',
+      'agent',
+      '-t',
+      './src',
+      'code-validator',
+      '--threshold-pass',
+      '80',
+      '--threshold-warn',
+      '60',
+    );
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       { target: './src', prompt: undefined },
       expect.objectContaining({
         thresholds: { pass: 80, warn: 60 },
-      })
+      }),
     );
   });
 
   it('passes max-tokens and max-steps options', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', 'agent', '-t', './src', 'code-validator', '--max-tokens', '4096', '--max-steps', '25');
+    await parse(
+      'exec',
+      'agent',
+      '-t',
+      './src',
+      'code-validator',
+      '--max-tokens',
+      '4096',
+      '--max-steps',
+      '25',
+    );
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       { target: './src', prompt: undefined },
       expect.objectContaining({
         maxTokens: 4096,
         maxSteps: 25,
-      })
+      }),
     );
   });
 
   it('passes temperature option', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', 'agent', '-t', './src', 'code-validator', '--temperature', '0.7');
+    await parse(
+      'exec',
+      'agent',
+      '-t',
+      './src',
+      'code-validator',
+      '--temperature',
+      '0.7',
+    );
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       { target: './src', prompt: undefined },
       expect.objectContaining({
         temperature: 0.7,
-      })
+      }),
     );
   });
 
   it('delegates errors to handleCoreError', async () => {
     const err = new Error('Agent failed');
     mockClient.runAgent.mockRejectedValue(err);
-    await expect(parse('exec', 'agent', '-t', './src', 'code-validator')).rejects.toThrow('Agent failed');
+    await expect(
+      parse('exec', 'agent', '-t', './src', 'code-validator'),
+    ).rejects.toThrow('Agent failed');
   });
 });
 
@@ -258,7 +321,11 @@ describe('exec command', () => {
   it('executes a command and displays formatted result', async () => {
     mockClient.runCommand.mockResolvedValue(createExecutionResult());
     await parse('exec', 'command', 'my-command', './src');
-    expect(mockClient.runCommand).toHaveBeenCalledWith('my-command', { target: './src', prompt: undefined }, undefined);
+    expect(mockClient.runCommand).toHaveBeenCalledWith(
+      'my-command',
+      { target: './src', prompt: undefined },
+      undefined,
+    );
     expect(output.stdout()).toContain('my-command');
   });
 
@@ -277,12 +344,23 @@ describe('exec command', () => {
   it('delegates errors to handleCoreError', async () => {
     const err = new Error('Command failed');
     mockClient.runCommand.mockRejectedValue(err);
-    await expect(parse('exec', 'command', 'my-command', './src')).rejects.toThrow('Command failed');
+    await expect(
+      parse('exec', 'command', 'my-command', './src'),
+    ).rejects.toThrow('Command failed');
   });
 
   it('merges --hash pins into the overrides bag alongside --model', async () => {
     mockClient.runCommand.mockResolvedValue(createExecutionResult());
-    await parse('exec', 'command', 'my-command', './src', '--model', 'haiku', '--hash', 'sha256:aaa');
+    await parse(
+      'exec',
+      'command',
+      'my-command',
+      './src',
+      '--model',
+      'haiku',
+      '--hash',
+      'sha256:aaa',
+    );
     expect(mockClient.runCommand).toHaveBeenCalledWith(
       'my-command',
       { target: './src', prompt: undefined },
@@ -292,7 +370,16 @@ describe('exec command', () => {
 
   it('passes pins without --model as an overrides bag of pins only', async () => {
     mockClient.runCommand.mockResolvedValue(createExecutionResult());
-    await parse('exec', 'command', 'my-command', './src', '--hash', 'sha256:aaa', '--prompt-hash', 'sha256:bbb');
+    await parse(
+      'exec',
+      'command',
+      'my-command',
+      './src',
+      '--hash',
+      'sha256:aaa',
+      '--prompt-hash',
+      'sha256:bbb',
+    );
     expect(mockClient.runCommand).toHaveBeenCalledWith(
       'my-command',
       { target: './src', prompt: undefined },
@@ -305,13 +392,21 @@ describe('exec command', () => {
 
 describe('exec workflow', () => {
   it('executes a workflow and displays formatted result', async () => {
-    mockClient.runWorkflow.mockResolvedValue(createExecutionResult({ type: 'workflow', name: 'ship' }));
+    mockClient.runWorkflow.mockResolvedValue(
+      createExecutionResult({ type: 'workflow', name: 'ship' }),
+    );
     await parse('exec', 'workflow', 'ship', './src');
-    expect(mockClient.runWorkflow).toHaveBeenCalledWith('ship', { target: './src', prompt: undefined }, undefined);
+    expect(mockClient.runWorkflow).toHaveBeenCalledWith(
+      'ship',
+      { target: './src', prompt: undefined },
+      undefined,
+    );
   });
 
   it('forwards --hash as a YAML integrity pin', async () => {
-    mockClient.runWorkflow.mockResolvedValue(createExecutionResult({ type: 'workflow', name: 'ship' }));
+    mockClient.runWorkflow.mockResolvedValue(
+      createExecutionResult({ type: 'workflow', name: 'ship' }),
+    );
     await parse('exec', 'workflow', 'ship', './src', '--hash', 'sha256:aaa');
     expect(mockClient.runWorkflow).toHaveBeenCalledWith(
       'ship',
@@ -323,7 +418,9 @@ describe('exec workflow', () => {
   it('delegates errors to handleCoreError', async () => {
     const err = new Error('Workflow failed');
     mockClient.runWorkflow.mockRejectedValue(err);
-    await expect(parse('exec', 'workflow', 'ship', './src')).rejects.toThrow('Workflow failed');
+    await expect(parse('exec', 'workflow', 'ship', './src')).rejects.toThrow(
+      'Workflow failed',
+    );
   });
 });
 
@@ -346,7 +443,14 @@ describe('exec pipeline', () => {
     mockClient.runPipeline.mockResolvedValue(
       createExecutionResult({ type: 'pipeline', name: 'foundations' }),
     );
-    await parse('exec', 'pipeline', 'foundations', './src', '--hash', 'sha256:aaa');
+    await parse(
+      'exec',
+      'pipeline',
+      'foundations',
+      './src',
+      '--hash',
+      'sha256:aaa',
+    );
     expect(mockClient.runPipeline).toHaveBeenCalledWith(
       'foundations',
       { target: './src', prompt: undefined },
@@ -380,7 +484,10 @@ describe('exec pipeline', () => {
       debug: false,
       quiet: true,
     });
-    const result = createExecutionResult({ type: 'pipeline', name: 'foundations' });
+    const result = createExecutionResult({
+      type: 'pipeline',
+      name: 'foundations',
+    });
     mockClient.runPipeline.mockResolvedValue(result);
     await parse('exec', 'pipeline', 'foundations', './src');
     expect(output.stdout()).toContain('"name": "foundations"');
@@ -440,15 +547,18 @@ describe('confirmInferredProjectOrExit', () => {
     setTTY(true);
     mockedPrompt.mockResolvedValue('n');
     const opts = baseOpts();
-    await expect(
-      confirmInferredProjectOrExit(opts, './src'),
-    ).rejects.toThrow('process.exit(0)');
+    await expect(confirmInferredProjectOrExit(opts, './src')).rejects.toThrow(
+      'process.exit(0)',
+    );
     expect(opts.project).toBeUndefined();
   });
 
   it('skips when --project is provided', async () => {
     delete process.env['ULUOPS_PROJECT'];
-    await confirmInferredProjectOrExit(baseOpts({ project: 'my-proj' }), './src');
+    await confirmInferredProjectOrExit(
+      baseOpts({ project: 'my-proj' }),
+      './src',
+    );
     expect(mockedPrompt).not.toHaveBeenCalled();
   });
 
@@ -481,33 +591,105 @@ describe('confirmInferredProjectOrExit', () => {
 
 describe('reorderInheritedExecOptions', () => {
   it('moves --project (with its value) from after the subcommand to before it', () => {
-    const argv = ['node', 'ulu', 'exec', 'agent', 'foo', '-t', '.', '--project', 'x'];
+    const argv = [
+      'node',
+      'ulu',
+      'exec',
+      'agent',
+      'foo',
+      '-t',
+      '.',
+      '--project',
+      'x',
+    ];
     expect(reorderInheritedExecOptions(argv)).toEqual([
-      'node', 'ulu', 'exec', '--project', 'x', 'agent', 'foo', '-t', '.',
+      'node',
+      'ulu',
+      'exec',
+      '--project',
+      'x',
+      'agent',
+      'foo',
+      '-t',
+      '.',
     ]);
   });
 
   it('leaves argv unchanged when --project is already before the subcommand', () => {
-    const argv = ['node', 'ulu', 'exec', '--project', 'x', 'agent', 'foo', '-t', '.'];
+    const argv = [
+      'node',
+      'ulu',
+      'exec',
+      '--project',
+      'x',
+      'agent',
+      'foo',
+      '-t',
+      '.',
+    ];
     expect(reorderInheritedExecOptions(argv)).toEqual(argv);
   });
 
   it('does not move a flag-like value of a subcommand option (-p "--project")', () => {
-    const argv = ['node', 'ulu', 'exec', 'agent', 'foo', '-t', '.', '-p', '--project'];
+    const argv = [
+      'node',
+      'ulu',
+      'exec',
+      'agent',
+      'foo',
+      '-t',
+      '.',
+      '-p',
+      '--project',
+    ];
     expect(reorderInheritedExecOptions(argv)).toEqual(argv);
   });
 
   it('moves --no-tracking after the subcommand to before it', () => {
-    const argv = ['node', 'ulu', 'exec', 'workflow', 'ship', './src', '--no-tracking'];
+    const argv = [
+      'node',
+      'ulu',
+      'exec',
+      'workflow',
+      'ship',
+      './src',
+      '--no-tracking',
+    ];
     expect(reorderInheritedExecOptions(argv)).toEqual([
-      'node', 'ulu', 'exec', '--no-tracking', 'workflow', 'ship', './src',
+      'node',
+      'ulu',
+      'exec',
+      '--no-tracking',
+      'workflow',
+      'ship',
+      './src',
     ]);
   });
 
   it('moves a tail --no-tracking that follows --model (the natural spot)', () => {
-    const argv = ['node', 'ulu', 'exec', 'agent', 'foo', '-t', '.', '--model', 'google:gemini-3-flash-preview', '--no-tracking'];
+    const argv = [
+      'node',
+      'ulu',
+      'exec',
+      'agent',
+      'foo',
+      '-t',
+      '.',
+      '--model',
+      'google:gemini-3-flash-preview',
+      '--no-tracking',
+    ];
     expect(reorderInheritedExecOptions(argv)).toEqual([
-      'node', 'ulu', 'exec', '--no-tracking', 'agent', 'foo', '-t', '.', '--model', 'google:gemini-3-flash-preview',
+      'node',
+      'ulu',
+      'exec',
+      '--no-tracking',
+      'agent',
+      'foo',
+      '-t',
+      '.',
+      '--model',
+      'google:gemini-3-flash-preview',
     ]);
   });
 
@@ -521,7 +703,15 @@ describe('reorderInheritedExecOptions', () => {
 
 describe('guardShadowedVersionFlag', () => {
   it('errors (exit 2) on `exec describe <name> --version <v>` and points to --def-version', () => {
-    const argv = ['node', 'ulu', 'exec', 'describe', 'foo', '--version', '2.1.0'];
+    const argv = [
+      'node',
+      'ulu',
+      'exec',
+      'describe',
+      'foo',
+      '--version',
+      '2.1.0',
+    ];
     expect(() => guardShadowedVersionFlag(argv)).toThrow('process.exit(2)');
     expect(output.stderr()).toContain('shadowed');
     expect(output.stderr()).toContain('--def-version 2.1.0');
@@ -540,13 +730,28 @@ describe('guardShadowedVersionFlag', () => {
   });
 
   it('does not fire when --def-version is used correctly', () => {
-    const argv = ['node', 'ulu', 'exec', 'describe', 'foo', '--def-version', '2.1.0'];
+    const argv = [
+      'node',
+      'ulu',
+      'exec',
+      'describe',
+      'foo',
+      '--def-version',
+      '2.1.0',
+    ];
     expect(() => guardShadowedVersionFlag(argv)).not.toThrow();
   });
 
   it('is a no-op for other exec subcommands', () => {
     expect(() =>
-      guardShadowedVersionFlag(['node', 'ulu', 'exec', 'agent', 'foo', '--version']),
+      guardShadowedVersionFlag([
+        'node',
+        'ulu',
+        'exec',
+        'agent',
+        'foo',
+        '--version',
+      ]),
     ).not.toThrow();
   });
 });
@@ -556,7 +761,13 @@ describe('guardShadowedVersionFlag', () => {
 describe('exec list', () => {
   it('lists all definitions', async () => {
     mockClient.list.mockResolvedValue([
-      { name: 'code-validator', type: 'agent', version: '1.0.0', domain: 'validation', description: 'Validates code' },
+      {
+        name: 'code-validator',
+        type: 'agent',
+        version: '1.0.0',
+        domain: 'validation',
+        description: 'Validates code',
+      },
     ]);
     await parse('exec', 'list');
     expect(mockClient.list).toHaveBeenCalledWith(undefined);
@@ -566,13 +777,17 @@ describe('exec list', () => {
   it('filters by type', async () => {
     mockClient.list.mockResolvedValue([]);
     await parse('exec', 'list', '--type', 'agent');
-    expect(mockClient.list).toHaveBeenCalledWith(expect.objectContaining({ type: 'agent' }));
+    expect(mockClient.list).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'agent' }),
+    );
   });
 
   it('filters by domain', async () => {
     mockClient.list.mockResolvedValue([]);
     await parse('exec', 'list', '--domain', 'security');
-    expect(mockClient.list).toHaveBeenCalledWith(expect.objectContaining({ domain: 'security' }));
+    expect(mockClient.list).toHaveBeenCalledWith(
+      expect.objectContaining({ domain: 'security' }),
+    );
   });
 
   it('shows empty message when no definitions found', async () => {
@@ -588,7 +803,15 @@ describe('exec list', () => {
       debug: false,
       quiet: true,
     });
-    const items = [{ name: 'test', type: 'agent', version: '1.0.0', domain: 'test', description: 'Test' }];
+    const items = [
+      {
+        name: 'test',
+        type: 'agent',
+        version: '1.0.0',
+        domain: 'test',
+        description: 'Test',
+      },
+    ];
     mockClient.list.mockResolvedValue(items);
     await parse('exec', 'list');
     expect(output.stdout()).toContain('"name": "test"');
@@ -618,8 +841,20 @@ describe('exec describe', () => {
 
   it('lists all definitions when invoked with no name', async () => {
     mockClient.list.mockResolvedValue([
-      { type: 'agent', name: 'code-validator', version: '1.0.0', domain: 'qa', description: 'Code review agent' },
-      { type: 'command', name: 'validate', version: '1.0.0', domain: 'qa', description: 'Validate command' },
+      {
+        type: 'agent',
+        name: 'code-validator',
+        version: '1.0.0',
+        domain: 'qa',
+        description: 'Code review agent',
+      },
+      {
+        type: 'command',
+        name: 'validate',
+        version: '1.0.0',
+        domain: 'qa',
+        description: 'Validate command',
+      },
     ]);
     await parse('exec', 'describe');
     expect(mockClient.list).toHaveBeenCalledWith(undefined);
@@ -630,7 +865,13 @@ describe('exec describe', () => {
 
   it('filters list by --type when no name is given', async () => {
     mockClient.list.mockResolvedValue([
-      { type: 'agent', name: 'code-validator', version: '1.0.0', domain: 'qa', description: 'Code review agent' },
+      {
+        type: 'agent',
+        name: 'code-validator',
+        version: '1.0.0',
+        domain: 'qa',
+        description: 'Code review agent',
+      },
     ]);
     await parse('exec', 'describe', '--type', 'agent');
     expect(mockClient.list).toHaveBeenCalledWith({ type: 'agent' });
@@ -686,7 +927,9 @@ describe('exec describe', () => {
   it('delegates errors to handleCoreError', async () => {
     const err = new Error('Not found');
     mockClient.describe.mockRejectedValue(err);
-    await expect(parse('exec', 'describe', 'unknown')).rejects.toThrow('Not found');
+    await expect(parse('exec', 'describe', 'unknown')).rejects.toThrow(
+      'Not found',
+    );
   });
 });
 
@@ -713,7 +956,9 @@ describe('exec agent safety warnings', () => {
         aggregateRiskLevel: 'high',
       },
     });
-    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'risky-agent' }));
+    mockClient.runAgent.mockResolvedValue(
+      createAgentResult({ name: 'risky-agent' }),
+    );
     await parse('exec', 'agent', '-t', './src', 'risky-agent');
     expect(output.stderr()).toContain('Risk signal');
     expect(output.stderr()).toContain('shell exploitation');
@@ -727,7 +972,9 @@ describe('exec agent safety warnings', () => {
         aggregateRiskLevel: 'none',
       },
     });
-    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'clean-agent' }));
+    mockClient.runAgent.mockResolvedValue(
+      createAgentResult({ name: 'clean-agent' }),
+    );
     await parse('exec', 'agent', '-t', './src', 'clean-agent');
     expect(output.stderr()).not.toContain('Risk signal');
   });
@@ -737,12 +984,19 @@ describe('exec agent safety warnings', () => {
       name: 'deep-errored-agent',
       riskProfile: {
         sync: { signals: [] },
-        deep: { status: 'error', errorReason: 'no_json', findings: [], riskLevel: 'none' },
+        deep: {
+          status: 'error',
+          errorReason: 'no_json',
+          findings: [],
+          riskLevel: 'none',
+        },
         aggregateRiskLevel: 'none',
         scanStatus: 'complete',
       },
     });
-    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'deep-errored-agent' }));
+    mockClient.runAgent.mockResolvedValue(
+      createAgentResult({ name: 'deep-errored-agent' }),
+    );
     await parse('exec', 'agent', '-t', './src', 'deep-errored-agent');
     expect(output.stderr()).toContain('Deep safety analysis failed');
     expect(output.stderr()).toContain('sync-only');
@@ -758,7 +1012,9 @@ describe('exec agent safety warnings', () => {
         scanStatus: 'complete',
       },
     });
-    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'pending-deep-agent' }));
+    mockClient.runAgent.mockResolvedValue(
+      createAgentResult({ name: 'pending-deep-agent' }),
+    );
     await parse('exec', 'agent', '-t', './src', 'pending-deep-agent');
     expect(output.stderr()).not.toContain('Deep safety analysis failed');
   });
@@ -768,12 +1024,19 @@ describe('exec agent safety warnings', () => {
       name: 'risky-deep-errored-agent',
       riskProfile: {
         sync: { signals: [{ title: 'Shell exploitation pattern' }] },
-        deep: { status: 'error', errorReason: 'timeout', findings: [], riskLevel: 'none' },
+        deep: {
+          status: 'error',
+          errorReason: 'timeout',
+          findings: [],
+          riskLevel: 'none',
+        },
         aggregateRiskLevel: 'high',
         scanStatus: 'complete',
       },
     });
-    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'risky-deep-errored-agent' }));
+    mockClient.runAgent.mockResolvedValue(
+      createAgentResult({ name: 'risky-deep-errored-agent' }),
+    );
     await parse('exec', 'agent', '-t', './src', 'risky-deep-errored-agent');
     expect(output.stderr()).toContain('Risk signal');
     expect(output.stderr()).not.toContain('Deep safety analysis failed');
@@ -790,7 +1053,9 @@ describe('exec agent safety warnings', () => {
         aggregateRiskLevel: 'none',
       },
     });
-    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'shell-agent' }));
+    mockClient.runAgent.mockResolvedValue(
+      createAgentResult({ name: 'shell-agent' }),
+    );
     await parse('exec', 'agent', '-t', '/Users/me/.ssh', 'shell-agent');
     expect(output.stderr()).toContain('Advisory');
     expect(output.stderr()).toContain('sensitive path');
@@ -807,7 +1072,9 @@ describe('exec agent safety warnings', () => {
         aggregateRiskLevel: 'none',
       },
     });
-    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'shell-agent' }));
+    mockClient.runAgent.mockResolvedValue(
+      createAgentResult({ name: 'shell-agent' }),
+    );
     await parse('exec', 'agent', '-t', './src', 'shell-agent');
     expect(output.stderr()).not.toContain('Advisory');
   });
@@ -823,8 +1090,17 @@ describe('exec agent safety warnings', () => {
         aggregateRiskLevel: 'high',
       },
     });
-    mockClient.runAgent.mockResolvedValue(createAgentResult({ name: 'risky-shell-agent' }));
-    await parse('exec', '--no-safety-warnings', 'agent', '-t', '/Users/me/.ssh', 'risky-shell-agent');
+    mockClient.runAgent.mockResolvedValue(
+      createAgentResult({ name: 'risky-shell-agent' }),
+    );
+    await parse(
+      'exec',
+      '--no-safety-warnings',
+      'agent',
+      '-t',
+      '/Users/me/.ssh',
+      'risky-shell-agent',
+    );
     expect(output.stderr()).not.toContain('Risk signal');
     expect(output.stderr()).not.toContain('Advisory');
   });
@@ -835,21 +1111,36 @@ describe('exec agent safety warnings', () => {
 describe('parent options', () => {
   it('passes --no-tracking to disable result submission', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', '--no-tracking', 'agent', '-t', './src', 'code-validator');
+    await parse(
+      'exec',
+      '--no-tracking',
+      'agent',
+      '-t',
+      './src',
+      'code-validator',
+    );
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       { target: './src', prompt: undefined },
-      expect.objectContaining({ trackResults: false })
+      expect.objectContaining({ trackResults: false }),
     );
   });
 
   it('passes --project option', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', '--project', 'my-proj', 'agent', '-t', './src', 'code-validator');
+    await parse(
+      'exec',
+      '--project',
+      'my-proj',
+      'agent',
+      '-t',
+      './src',
+      'code-validator',
+    );
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'code-validator',
       { target: './src', prompt: undefined },
-      expect.objectContaining({ project: 'my-proj' })
+      expect.objectContaining({ project: 'my-proj' }),
     );
   });
 });
@@ -858,61 +1149,56 @@ describe('resolveReportPath', () => {
   // Minimal AgentResult — only `name` is read by resolveReportPath's default
   // filename branch. Other fields cast as unknown to avoid an exhaustive mock.
   const makeResult = (name: string): AgentResult =>
-    ({ name } as unknown as AgentResult);
+    ({ name }) as unknown as AgentResult;
 
   it('returns null when --report is not set', () => {
     expect(resolveReportPath(makeResult('any-agent'), {})).toBeNull();
   });
 
   it('lets --output win over a positional --report path', () => {
-    const got = resolveReportPath(
-      makeResult('any-agent'),
-      { report: './a.md', output: './b.md' },
-    );
+    const got = resolveReportPath(makeResult('any-agent'), {
+      report: './a.md',
+      output: './b.md',
+    });
     expect(got).toBe(resolvePath('./b.md'));
   });
 
   it('lets --output win over the cwd default', () => {
-    const got = resolveReportPath(
-      makeResult('any-agent'),
-      { report: true, output: './b.md' },
-    );
+    const got = resolveReportPath(makeResult('any-agent'), {
+      report: true,
+      output: './b.md',
+    });
     expect(got).toBe(resolvePath('./b.md'));
   });
 
   it('uses the positional --report argument when no --output is given', () => {
-    const got = resolveReportPath(
-      makeResult('any-agent'),
-      { report: './a.md' },
-    );
+    const got = resolveReportPath(makeResult('any-agent'), {
+      report: './a.md',
+    });
     expect(got).toBe(resolvePath('./a.md'));
   });
 
   it('constructs a cwd-relative default with timestamp YYYYMMDDTHHmmss', () => {
-    const got = resolveReportPath(
-      makeResult('wittgenstein-analyst'),
-      { report: true },
-    );
+    const got = resolveReportPath(makeResult('wittgenstein-analyst'), {
+      report: true,
+    });
     // Path is absolute and ends with the constructed filename.
-    expect(got).toMatch(
-      /\/wittgenstein-analyst-report-\d{8}T\d{6}\.md$/,
-    );
+    expect(got).toMatch(/\/wittgenstein-analyst-report-\d{8}T\d{6}\.md$/);
     expect(got!.startsWith(process.cwd())).toBe(true);
   });
 
   it('sanitizes agent name to [a-zA-Z0-9_.-] in the default filename', () => {
-    const got = resolveReportPath(
-      makeResult('weird/name with spaces'),
-      { report: true },
-    );
+    const got = resolveReportPath(makeResult('weird/name with spaces'), {
+      report: true,
+    });
     expect(got).toMatch(/\/weird_name_with_spaces-report-\d{8}T\d{6}\.md$/);
   });
 
   it('treats empty-string --output as not-set (falls through to next branch)', () => {
-    const got = resolveReportPath(
-      makeResult('any-agent'),
-      { report: './a.md', output: '' },
-    );
+    const got = resolveReportPath(makeResult('any-agent'), {
+      report: './a.md',
+      output: '',
+    });
     expect(got).toBe(resolvePath('./a.md'));
   });
 });
@@ -923,54 +1209,78 @@ describe('assertTargetIsDirectoryOrExit', () => {
   afterEach(() => {
     mockedStatSync.mockReset();
     // Restore the default directory mock for other tests.
-    mockedStatSync.mockReturnValue({ isDirectory: () => true } as ReturnType<typeof statSync>);
+    mockedStatSync.mockReturnValue({ isDirectory: () => true } as ReturnType<
+      typeof statSync
+    >);
   });
 
   it('exits 1 with not-found message when target does not exist', () => {
-    mockedStatSync.mockImplementation(() => { throw new Error('ENOENT: no such file or directory'); });
+    mockedStatSync.mockImplementation(() => {
+      throw new Error('ENOENT: no such file or directory');
+    });
     const out = captureOutput();
-    expect(() => assertTargetIsDirectoryOrExit('/no/such/path')).toThrow('process.exit(1)');
+    expect(() => assertTargetIsDirectoryOrExit('/no/such/path')).toThrow(
+      'process.exit(1)',
+    );
     expect(out.stderr()).toContain('Target not found:');
     expect(out.stderr()).toContain('/no/such/path');
     out.restore();
   });
 
   it('exits 1 with directory-required message when target is a file', () => {
-    mockedStatSync.mockReturnValue({ isDirectory: () => false } as ReturnType<typeof statSync>);
+    mockedStatSync.mockReturnValue({ isDirectory: () => false } as ReturnType<
+      typeof statSync
+    >);
     const out = captureOutput();
-    expect(() => assertTargetIsDirectoryOrExit('./package.json')).toThrow('process.exit(1)');
+    expect(() => assertTargetIsDirectoryOrExit('./package.json')).toThrow(
+      'process.exit(1)',
+    );
     expect(out.stderr()).toContain('Target is a file, not a directory:');
     expect(out.stderr()).toContain('must be a directory');
     out.restore();
   });
 
   it('does not exit when target is a valid directory', () => {
-    mockedStatSync.mockReturnValue({ isDirectory: () => true } as ReturnType<typeof statSync>);
+    mockedStatSync.mockReturnValue({ isDirectory: () => true } as ReturnType<
+      typeof statSync
+    >);
     expect(() => assertTargetIsDirectoryOrExit('./src')).not.toThrow();
   });
 
   it('exec agent exits 1 before any SDK call when target is a file', async () => {
-    mockedStatSync.mockReturnValue({ isDirectory: () => false } as ReturnType<typeof statSync>);
+    mockedStatSync.mockReturnValue({ isDirectory: () => false } as ReturnType<
+      typeof statSync
+    >);
     const out = captureOutput();
-    await expect(parse('exec', 'agent', '-t', './package.json', 'code-validator')).rejects.toThrow('process.exit(1)');
+    await expect(
+      parse('exec', 'agent', '-t', './package.json', 'code-validator'),
+    ).rejects.toThrow('process.exit(1)');
     expect(out.stderr()).toContain('Target is a file, not a directory:');
     expect(mockClient.runAgent).not.toHaveBeenCalled();
     out.restore();
   });
 
   it('exec workflow exits 1 before any SDK call when target is a file', async () => {
-    mockedStatSync.mockReturnValue({ isDirectory: () => false } as ReturnType<typeof statSync>);
+    mockedStatSync.mockReturnValue({ isDirectory: () => false } as ReturnType<
+      typeof statSync
+    >);
     const out = captureOutput();
-    await expect(parse('exec', 'workflow', 'ship', './package.json')).rejects.toThrow('process.exit(1)');
+    await expect(
+      parse('exec', 'workflow', 'ship', './package.json'),
+    ).rejects.toThrow('process.exit(1)');
     expect(out.stderr()).toContain('Target is a file, not a directory:');
     expect(mockClient.runWorkflow).not.toHaveBeenCalled();
     out.restore();
   });
 
   it('exec pipeline exits 1 before any SDK call when target is not found', async () => {
-    mockedStatSync.mockImplementation(() => { throw new Error('ENOENT: no such file or directory'); });
+    mockedStatSync.mockImplementation(() => {
+      throw new Error('ENOENT: no such file or directory');
+    });
     const out = captureOutput();
-    await expect(parse('exec', 'pipeline', 'foundations', '/no/such/dir')).rejects.toThrow('process.exit(1)');
+    await expect(
+      parse('exec', 'pipeline', 'foundations', '/no/such/dir'),
+    ).rejects.toThrow('process.exit(1)');
     expect(out.stderr()).toContain('Target not found:');
     expect(mockClient.runPipeline).not.toHaveBeenCalled();
     out.restore();
@@ -984,7 +1294,9 @@ describe('applyReportModeDirective', () => {
   });
 
   it('returns the directive alone when report mode is requested with no operator prompt', () => {
-    expect(applyReportModeDirective(undefined, true)).toBe(REPORT_MODE_DIRECTIVE);
+    expect(applyReportModeDirective(undefined, true)).toBe(
+      REPORT_MODE_DIRECTIVE,
+    );
   });
 
   it('prepends the directive, blank line, then operator prompt when both present', () => {
@@ -1032,7 +1344,14 @@ describe('--report forces reportMode + no-tracking (v0.1.1)', () => {
       debug: false,
       quiet: false,
     });
-    await parse('exec', 'agent', '-t', './src', 'wittgenstein-analyst', '--report');
+    await parse(
+      'exec',
+      'agent',
+      '-t',
+      './src',
+      'wittgenstein-analyst',
+      '--report',
+    );
 
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'wittgenstein-analyst',
@@ -1045,12 +1364,17 @@ describe('--report forces reportMode + no-tracking (v0.1.1)', () => {
 
   it('no --report → reportMode not forced, trackResults respects --no-tracking', async () => {
     mockClient.runAgent.mockResolvedValue(createAgentResult());
-    await parse('exec', '--no-tracking', 'agent', '-t', './src', 'wittgenstein-analyst');
+    await parse(
+      'exec',
+      '--no-tracking',
+      'agent',
+      '-t',
+      './src',
+      'wittgenstein-analyst',
+    );
 
     const opts = mockClient.runAgent.mock.calls[0]?.[2];
-    expect(opts).toEqual(
-      expect.objectContaining({ trackResults: false }),
-    );
+    expect(opts).toEqual(expect.objectContaining({ trackResults: false }));
     // reportMode must not be set by the CLI when --report is absent
     expect(opts?.reportMode).toBeUndefined();
     expect(output.stderr()).not.toContain('Report mode enabled');
@@ -1062,7 +1386,14 @@ describe('--report forces reportMode + no-tracking (v0.1.1)', () => {
     // off when there is no tracking intent to disclose against. Remove the
     // suite-default ULUOPS_PROJECT so trackingIntent is false.
     delete process.env['ULUOPS_PROJECT'];
-    await parse('exec', 'agent', '-t', './src', 'wittgenstein-analyst', '--report');
+    await parse(
+      'exec',
+      'agent',
+      '-t',
+      './src',
+      'wittgenstein-analyst',
+      '--report',
+    );
 
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'wittgenstein-analyst',
@@ -1079,7 +1410,14 @@ describe('--report forces reportMode + no-tracking (v0.1.1)', () => {
     // mode silently wins. The disclosure that makes the asymmetry honest must
     // survive -q in exactly this case — otherwise the run gets neither a tracker
     // record nor a notice.
-    await parse('exec', 'agent', '-t', './src', 'wittgenstein-analyst', '--report');
+    await parse(
+      'exec',
+      'agent',
+      '-t',
+      './src',
+      'wittgenstein-analyst',
+      '--report',
+    );
 
     expect(mockClient.runAgent).toHaveBeenCalledWith(
       'wittgenstein-analyst',

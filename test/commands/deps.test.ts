@@ -1,13 +1,19 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Command } from 'commander';
-import { captureOutput } from '../helpers/capture.js';
-import { createMockRegistryClient, createMockRegistryContext } from '../helpers/command-harness.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RegistryCliContext } from '../../src/context.js';
+import { captureOutput } from '../helpers/capture.js';
+import {
+  createMockRegistryClient,
+  createMockRegistryContext,
+} from '../helpers/command-harness.js';
 
 vi.mock('../../src/context.js');
 
-import { createRegistryContext, handleRegistryError } from '../../src/context.js';
 import { registerDepsCommands } from '../../src/commands/deps.js';
+import {
+  createRegistryContext,
+  handleRegistryError,
+} from '../../src/context.js';
 
 const mockedCreateRegistryContext = vi.mocked(createRegistryContext);
 const mockedHandleRegistryError = vi.mocked(handleRegistryError);
@@ -18,9 +24,13 @@ let mockClient: MockClient;
 beforeEach(() => {
   mockClient = createMockRegistryClient();
   mockedCreateRegistryContext.mockReturnValue(
-    createMockRegistryContext({ client: mockClient as unknown as RegistryCliContext['client'] })
+    createMockRegistryContext({
+      client: mockClient as unknown as RegistryCliContext['client'],
+    }),
   );
-  mockedHandleRegistryError.mockImplementation((error) => { throw error; });
+  mockedHandleRegistryError.mockImplementation((error) => {
+    throw error;
+  });
 });
 
 function parse(...args: string[]) {
@@ -51,14 +61,25 @@ describe('deps get', () => {
         ],
       },
       flat: [
-        { id: 'a', type: 'agent', name: 'dep-agent', version: '1.0.0', depth: 1 },
+        {
+          id: 'a',
+          type: 'agent',
+          name: 'dep-agent',
+          version: '1.0.0',
+          depth: 1,
+        },
       ],
       totalCount: 1,
       maxDepth: 1,
     });
     const output = captureOutput();
     await parse('deps', 'get', 'workflow', 'my-wf', '1.0.0');
-    expect(mockClient.dependencies.get).toHaveBeenCalledWith('workflow', 'my-wf', '1.0.0', undefined);
+    expect(mockClient.dependencies.get).toHaveBeenCalledWith(
+      'workflow',
+      'my-wf',
+      '1.0.0',
+      undefined,
+    );
     const out = output.stdout();
     expect(out).toContain('Dependencies for workflow/my-wf@1.0.0');
     expect(out).toContain('Total: 1 (max depth 1)');
@@ -86,7 +107,13 @@ describe('deps get', () => {
         ],
       },
       flat: [
-        { id: 'a', type: 'agent', name: 'dep-agent', version: '1.0.0', depth: 1 },
+        {
+          id: 'a',
+          type: 'agent',
+          name: 'dep-agent',
+          version: '1.0.0',
+          depth: 1,
+        },
       ],
       totalCount: 1,
       maxDepth: 1,
@@ -133,8 +160,20 @@ describe('deps get', () => {
         ],
       },
       flat: [
-        { id: 'child', type: 'agent', name: 'child-agent', version: '1.0.0', depth: 1 },
-        { id: 'gc', type: 'command', name: 'grandchild-cmd', version: '1.0.0', depth: 2 },
+        {
+          id: 'child',
+          type: 'agent',
+          name: 'child-agent',
+          version: '1.0.0',
+          depth: 1,
+        },
+        {
+          id: 'gc',
+          type: 'command',
+          name: 'grandchild-cmd',
+          version: '1.0.0',
+          depth: 2,
+        },
       ],
       totalCount: 2,
       maxDepth: 2,
@@ -144,8 +183,12 @@ describe('deps get', () => {
     const out = output.stdout();
     // Root at indent 2 ("  "), child at 4 ("    "), grandchild at 6 ("      ")
     expect(out).toMatch(/^ {2}workflow\/my-wf@1\.0\.0/m);
-    expect(out).toMatch(/^ {4}agent\/child-agent@1\.0\.0 {2}\[invokes\.agent\]/m);
-    expect(out).toMatch(/^ {6}command\/grandchild-cmd@1\.0\.0 {2}\[invokes\.command\]/m);
+    expect(out).toMatch(
+      /^ {4}agent\/child-agent@1\.0\.0 {2}\[invokes\.agent\]/m,
+    );
+    expect(out).toMatch(
+      /^ {6}command\/grandchild-cmd@1\.0\.0 {2}\[invokes\.command\]/m,
+    );
     output.restore();
   });
 
@@ -169,8 +212,7 @@ describe('deps get', () => {
       type: 'agent',
       name: `agent-${String(depth)}`,
       version: '1.0.0',
-      dependencies:
-        remaining > 0 ? [buildChain(remaining - 1, depth + 1)] : [],
+      dependencies: remaining > 0 ? [buildChain(remaining - 1, depth + 1)] : [],
     });
     const chain = buildChain(62, 0); // 63 nodes total
     mockClient.dependencies.get.mockResolvedValue({
@@ -192,7 +234,13 @@ describe('deps get', () => {
   it('shows the no-deps message when totalCount is zero', async () => {
     mockClient.dependencies.get.mockResolvedValue({
       definition: { type: 'workflow', name: 'my-wf', version: '1.0.0' },
-      graph: { id: 'root', type: 'workflow', name: 'my-wf', version: '1.0.0', dependencies: [] },
+      graph: {
+        id: 'root',
+        type: 'workflow',
+        name: 'my-wf',
+        version: '1.0.0',
+        dependencies: [],
+      },
       flat: [],
       totalCount: 0,
       maxDepth: 0,
@@ -221,7 +269,11 @@ describe('deps dependents', () => {
     });
     const output = captureOutput();
     await parse('deps', 'dependents', 'agent', 'my-agent', '1.0.0');
-    expect(mockClient.dependencies.getDependents).toHaveBeenCalledWith('agent', 'my-agent', '1.0.0');
+    expect(mockClient.dependencies.getDependents).toHaveBeenCalledWith(
+      'agent',
+      'my-agent',
+      '1.0.0',
+    );
     const out = output.stdout();
     expect(out).toContain('Dependents of agent/my-agent@1.0.0 (1)');
     expect(out).toContain('workflow/consumer-wf@2.0.0  ←  invokes.agent');
@@ -256,7 +308,13 @@ describe('deps get --json (stability anchor)', () => {
     );
     mockClient.dependencies.get.mockResolvedValue({
       definition: { type: 'workflow', name: 'my-wf', version: '1.0.0' },
-      graph: { id: 'root', type: 'workflow', name: 'my-wf', version: '1.0.0', dependencies: [] },
+      graph: {
+        id: 'root',
+        type: 'workflow',
+        name: 'my-wf',
+        version: '1.0.0',
+        dependencies: [],
+      },
       flat: [],
       totalCount: 0,
       maxDepth: 0,

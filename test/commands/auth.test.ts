@@ -1,9 +1,12 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Command } from 'commander';
-import { captureOutput } from '../helpers/capture.js';
-import { createMockOpsClient, createMockOpsContext } from '../helpers/command-harness.js';
-import { createPublicApiKey } from '../helpers/mock-factories.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpsCliContext } from '../../src/context.js';
+import { captureOutput } from '../helpers/capture.js';
+import {
+  createMockOpsClient,
+  createMockOpsContext,
+} from '../helpers/command-harness.js';
+import { createPublicApiKey } from '../helpers/mock-factories.js';
 
 vi.mock('../../src/context.js');
 const mockLogin = vi.fn();
@@ -16,7 +19,11 @@ vi.mock('@uluops/ops-sdk', async (importOriginal) => {
       login: mockLogin,
       logout: mockLogout,
     })),
-    loadConfig: vi.fn().mockReturnValue({ baseUrl: 'http://localhost:3100', debug: false, credentials: {} }),
+    loadConfig: vi.fn().mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: {},
+    }),
   };
 });
 vi.mock('node:fs', async (importOriginal) => {
@@ -27,7 +34,9 @@ vi.mock('node:fs', async (importOriginal) => {
     renameSync: vi.fn(),
     mkdirSync: vi.fn(),
     existsSync: vi.fn(() => true),
-    readFileSync: vi.fn(() => JSON.stringify({ default: { type: 'session', sessionToken: 'tok123' } })),
+    readFileSync: vi.fn(() =>
+      JSON.stringify({ default: { type: 'session', sessionToken: 'tok123' } }),
+    ),
   };
 });
 vi.mock('node:os', async (importOriginal) => {
@@ -37,12 +46,16 @@ vi.mock('node:os', async (importOriginal) => {
 
 import { readFileSync } from 'node:fs';
 import { API_KEY_PREFIX, OpsClient } from '@uluops/ops-sdk';
-import { createOpsContext, createUnauthenticatedContext, handleOpsError } from '../../src/context.js';
 import {
   extractResetToken,
   registerAuthCommands,
   resolveCredentialSource,
 } from '../../src/commands/auth.js';
+import {
+  createOpsContext,
+  createUnauthenticatedContext,
+  handleOpsError,
+} from '../../src/context.js';
 
 const mockedCreateOpsContext = vi.mocked(createOpsContext);
 const mockedCreateUnauthContext = vi.mocked(createUnauthenticatedContext);
@@ -54,7 +67,9 @@ let mockClient: MockClient;
 beforeEach(() => {
   mockClient = createMockOpsClient();
   mockedCreateOpsContext.mockReturnValue(
-    createMockOpsContext({ client: mockClient as unknown as OpsCliContext['client'] })
+    createMockOpsContext({
+      client: mockClient as unknown as OpsCliContext['client'],
+    }),
   );
   mockedCreateUnauthContext.mockReturnValue({
     baseUrl: 'http://localhost:3100',
@@ -62,7 +77,9 @@ beforeEach(() => {
     debug: false,
     quiet: true,
   } as ReturnType<typeof createUnauthenticatedContext>);
-  mockedHandleOpsError.mockImplementation((error) => { throw error; });
+  mockedHandleOpsError.mockImplementation((error) => {
+    throw error;
+  });
   mockLogin.mockReset();
   mockLogout.mockReset().mockResolvedValue({ sessionsRevoked: 2 });
 });
@@ -86,7 +103,14 @@ describe('auth login', () => {
       expiresAt: '2025-12-31T00:00:00Z',
     });
     const output = captureOutput();
-    await parse('auth', 'login', '--email', 'test@example.com', '--password', 'secret');
+    await parse(
+      'auth',
+      'login',
+      '--email',
+      'test@example.com',
+      '--password',
+      'secret',
+    );
     expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'secret');
     expect(output.stdout()).toContain('Credentials saved');
     output.restore();
@@ -206,9 +230,18 @@ describe('auth api-keys revoke', () => {
 
 describe('auth change-password', () => {
   it('should change password', async () => {
-    mockClient.auth.changePassword.mockResolvedValue({ message: 'Password changed successfully' });
+    mockClient.auth.changePassword.mockResolvedValue({
+      message: 'Password changed successfully',
+    });
     const output = captureOutput();
-    await parse('auth', 'change-password', '--current', 'oldpass', '--new-password', 'newpass');
+    await parse(
+      'auth',
+      'change-password',
+      '--current',
+      'oldpass',
+      '--new-password',
+      'newpass',
+    );
     expect(mockClient.auth.changePassword).toHaveBeenCalledWith({
       currentPassword: 'oldpass',
       newPassword: 'newpass',
@@ -220,7 +253,9 @@ describe('auth change-password', () => {
 
 describe('auth set-password', () => {
   it('should set a first-time password via the authenticated client', async () => {
-    mockClient.auth.setPassword.mockResolvedValue({ message: 'Password set successfully' });
+    mockClient.auth.setPassword.mockResolvedValue({
+      message: 'Password set successfully',
+    });
     const output = captureOutput();
     await parse('auth', 'set-password', '--password', 'NewPass123!');
     expect(mockClient.auth.setPassword).toHaveBeenCalledWith('NewPass123!');
@@ -230,12 +265,20 @@ describe('auth set-password', () => {
 
   it('should require a password when not on a TTY', async () => {
     const wasTTY = process.stdin.isTTY;
-    Object.defineProperty(process.stdin, 'isTTY', { value: false, configurable: true });
+    Object.defineProperty(process.stdin, 'isTTY', {
+      value: false,
+      configurable: true,
+    });
     try {
-      await expect(parse('auth', 'set-password')).rejects.toThrow('process.exit(1)');
+      await expect(parse('auth', 'set-password')).rejects.toThrow(
+        'process.exit(1)',
+      );
       expect(mockClient.auth.setPassword).not.toHaveBeenCalled();
     } finally {
-      Object.defineProperty(process.stdin, 'isTTY', { value: wasTTY, configurable: true });
+      Object.defineProperty(process.stdin, 'isTTY', {
+        value: wasTTY,
+        configurable: true,
+      });
     }
   });
 
@@ -244,9 +287,9 @@ describe('auth set-password', () => {
       new Error('Password already set. Use change password instead.'),
     );
     const output = captureOutput();
-    await expect(parse('auth', 'set-password', '--password', 'NewPass123!')).rejects.toThrow(
-      'process.exit(1)',
-    );
+    await expect(
+      parse('auth', 'set-password', '--password', 'NewPass123!'),
+    ).rejects.toThrow('process.exit(1)');
     expect(output.stderr()).toContain('ulu auth change-password');
     expect(mockedHandleOpsError).not.toHaveBeenCalled();
     output.restore();
@@ -261,7 +304,14 @@ describe('auth reset-password', () => {
     const constructed = vi.mocked(OpsClient).mock.calls.length;
     const output = captureOutput();
     await expect(
-      parse('auth', 'reset-password', '--token', `${API_KEY_PREFIX}abc123`, '--password', 'NewPass123!'),
+      parse(
+        'auth',
+        'reset-password',
+        '--token',
+        `${API_KEY_PREFIX}abc123`,
+        '--password',
+        'NewPass123!',
+      ),
     ).rejects.toThrow('process.exit(1)');
     expect(vi.mocked(OpsClient).mock.calls.length).toBe(constructed); // no client, no request
     expect(output.stderr()).toContain('not a reset token');
@@ -271,27 +321,44 @@ describe('auth reset-password', () => {
   });
 
   it('should accept the whole emailed link and extract the token', async () => {
-    const resetPassword = vi.fn().mockResolvedValue({ message: 'Password reset successfully' });
+    const resetPassword = vi
+      .fn()
+      .mockResolvedValue({ message: 'Password reset successfully' });
     vi.mocked(OpsClient).mockImplementationOnce(
       () => ({ auth: { resetPassword } }) as unknown as OpsClient,
     );
     const output = captureOutput();
     await parse(
-      'auth', 'reset-password',
-      '--token', 'https://app.uluops.ai/reset-password?token=abc%2Bdef',
-      '--password', 'NewPass123!',
+      'auth',
+      'reset-password',
+      '--token',
+      'https://app.uluops.ai/reset-password?token=abc%2Bdef',
+      '--password',
+      'NewPass123!',
     );
-    expect(resetPassword).toHaveBeenCalledWith({ token: 'abc+def', password: 'NewPass123!' });
+    expect(resetPassword).toHaveBeenCalledWith({
+      token: 'abc+def',
+      password: 'NewPass123!',
+    });
     output.restore();
   });
 
   it('should fall through to handleOpsError for a genuine bad token', async () => {
-    const resetPassword = vi.fn().mockRejectedValue(new Error('Invalid or expired reset token'));
+    const resetPassword = vi
+      .fn()
+      .mockRejectedValue(new Error('Invalid or expired reset token'));
     vi.mocked(OpsClient).mockImplementationOnce(
       () => ({ auth: { resetPassword } }) as unknown as OpsClient,
     );
     await expect(
-      parse('auth', 'reset-password', '--token', 'emailed-token', '--password', 'NewPass123!'),
+      parse(
+        'auth',
+        'reset-password',
+        '--token',
+        'emailed-token',
+        '--password',
+        'NewPass123!',
+      ),
     ).rejects.toThrow('Invalid or expired reset token');
     expect(mockedHandleOpsError).toHaveBeenCalled();
   });
@@ -323,23 +390,36 @@ describe('auth update-profile', () => {
       user: { email: 'me@example.com' },
     });
     const output = captureOutput();
-    await parse('auth', 'update-profile', '--username', 'newuser', '--bio', 'Updated bio');
+    await parse(
+      'auth',
+      'update-profile',
+      '--username',
+      'newuser',
+      '--bio',
+      'Updated bio',
+    );
     expect(mockClient.auth.updateProfile).toHaveBeenCalledWith(
-      expect.objectContaining({ username: 'newuser', bio: 'Updated bio' })
+      expect.objectContaining({ username: 'newuser', bio: 'Updated bio' }),
     );
     expect(output.stdout()).toContain('Profile updated');
     output.restore();
   });
 
   it('should require at least one field', async () => {
-    await expect(parse('auth', 'update-profile')).rejects.toThrow('process.exit(1)');
+    await expect(parse('auth', 'update-profile')).rejects.toThrow(
+      'process.exit(1)',
+    );
   });
 });
 
 describe('auth sessions list', () => {
   it('should list sessions', async () => {
     mockClient.auth.listSessions.mockResolvedValue([
-      { id: '550e8400-e29b-41d4-a716-446655440000', ipAddress: '10.0.0.1', createdAt: '2025-01-15T10:00:00Z' },
+      {
+        id: '550e8400-e29b-41d4-a716-446655440000',
+        ipAddress: '10.0.0.1',
+        createdAt: '2025-01-15T10:00:00Z',
+      },
     ]);
     const output = captureOutput();
     await parse('auth', 'sessions', 'list');
@@ -384,9 +464,9 @@ describe('resolveCredentialSource', () => {
   });
 
   it('reports ULUOPS_API_KEY env when no flag', () => {
-    expect(
-      resolveCredentialSource({}, { ULUOPS_API_KEY: 'ulr_env' }),
-    ).toBe('ULUOPS_API_KEY environment variable');
+    expect(resolveCredentialSource({}, { ULUOPS_API_KEY: 'ulr_env' })).toBe(
+      'ULUOPS_API_KEY environment variable',
+    );
   });
 
   it('reports email+password env (both required) below the api key', () => {
@@ -397,15 +477,18 @@ describe('resolveCredentialSource', () => {
       ),
     ).toBe('ULUOPS_EMAIL + ULUOPS_PASSWORD environment variables');
     // email alone does not qualify — falls through to profile
-    expect(resolveCredentialSource({ profile: 'default' }, { ULUOPS_EMAIL: 'a@b.co' })).toContain(
-      'profile',
-    );
+    expect(
+      resolveCredentialSource(
+        { profile: 'default' },
+        { ULUOPS_EMAIL: 'a@b.co' },
+      ),
+    ).toContain('profile');
   });
 
   it('reports ULUOPS_SESSION_TOKEN env below email/password', () => {
-    expect(
-      resolveCredentialSource({}, { ULUOPS_SESSION_TOKEN: 'tok' }),
-    ).toBe('ULUOPS_SESSION_TOKEN environment variable');
+    expect(resolveCredentialSource({}, { ULUOPS_SESSION_TOKEN: 'tok' })).toBe(
+      'ULUOPS_SESSION_TOKEN environment variable',
+    );
   });
 
   it('falls through to the named profile file when no flag or env', () => {
@@ -444,8 +527,12 @@ describe('saveCredentials: corrupt credentials breadcrumb', () => {
     // Simulate a corrupt (unparseable) credentials file by making readFileSync
     // throw a SyntaxError from JSON.parse perspective — here we throw directly
     // from readFileSync since that is what the mock intercepts.
-    const parseError = new SyntaxError('Unexpected token < in JSON at position 0');
-    mockedReadFileSync.mockImplementation(() => { throw parseError; });
+    const parseError = new SyntaxError(
+      'Unexpected token < in JSON at position 0',
+    );
+    mockedReadFileSync.mockImplementation(() => {
+      throw parseError;
+    });
     mockLogin.mockResolvedValue({
       user: { email: 'test@example.com' },
       sessionToken: 'new-token',
@@ -454,10 +541,19 @@ describe('saveCredentials: corrupt credentials breadcrumb', () => {
 
     const out = captureOutput();
     // login calls saveCredentials; the corrupt-read path must not throw
-    await parse('auth', 'login', '--email', 'test@example.com', '--password', 'secret');
+    await parse(
+      'auth',
+      'login',
+      '--email',
+      'test@example.com',
+      '--password',
+      'secret',
+    );
     const stderr = out.stderr();
     // Exactly the warning breadcrumb — one occurrence, stderr not stdout
-    expect(stderr).toContain('Warning: ~/.uluops/credentials.json was unreadable');
+    expect(stderr).toContain(
+      'Warning: ~/.uluops/credentials.json was unreadable',
+    );
     expect(stderr).toContain('Unexpected token');
     expect(stderr).toContain('being reset');
     // The error message must never carry raw file bytes or credential values
@@ -476,9 +572,13 @@ describe('extractResetToken', () => {
     expect(extractResetToken('  abc123 ')).toBe('abc123');
   });
   it('extracts token from a reset link', () => {
-    expect(extractResetToken('https://x.test/reset-password?token=t0k')).toBe('t0k');
+    expect(extractResetToken('https://x.test/reset-password?token=t0k')).toBe(
+      't0k',
+    );
   });
   it('returns a URL without a token param untouched', () => {
-    expect(extractResetToken('https://x.test/reset-password')).toBe('https://x.test/reset-password');
+    expect(extractResetToken('https://x.test/reset-password')).toBe(
+      'https://x.test/reset-password',
+    );
   });
 });

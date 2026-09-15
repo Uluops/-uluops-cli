@@ -191,6 +191,7 @@ export function createMockOpsContext(
     baseUrl: 'http://localhost:3100/api/v1',
     org: undefined,
     orgSource: 'personal',
+    orgProvenance: 'personal',
     ...overrides,
   };
 }

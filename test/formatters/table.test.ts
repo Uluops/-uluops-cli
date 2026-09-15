@@ -1,5 +1,9 @@
-import { describe, it, expect } from 'vitest';
-import { formatTable, formatKeyValue, type Column } from '../../src/formatters/table.js';
+import { describe, expect, it } from 'vitest';
+import {
+  type Column,
+  formatKeyValue,
+  formatTable,
+} from '../../src/formatters/table.js';
 
 interface TestRow {
   name: string;
@@ -10,7 +14,12 @@ interface TestRow {
 describe('formatTable', () => {
   const columns: Column<TestRow>[] = [
     { header: 'NAME', accessor: 'name', width: 15 },
-    { header: 'VALUE', accessor: (r) => String(r.value), width: 8, align: 'right' },
+    {
+      header: 'VALUE',
+      accessor: (r) => String(r.value),
+      width: 8,
+      align: 'right',
+    },
     { header: 'STATUS', accessor: 'status', width: 10 },
   ];
 
@@ -38,7 +47,11 @@ describe('formatTable', () => {
 
   it('truncates long values', () => {
     const data: TestRow[] = [
-      { name: 'a very long name that exceeds the width', value: 1, status: 'ok' },
+      {
+        name: 'a very long name that exceeds the width',
+        value: 1,
+        status: 'ok',
+      },
     ];
 
     const result = formatTable(data, columns);
@@ -77,7 +90,11 @@ describe('formatKeyValue', () => {
   });
 
   it('filters out null and undefined values', () => {
-    const result = formatKeyValue({ name: 'test', empty: null, missing: undefined });
+    const result = formatKeyValue({
+      name: 'test',
+      empty: null,
+      missing: undefined,
+    });
     expect(result).toContain('Name: test');
     expect(result).not.toContain('empty');
     expect(result).not.toContain('missing');

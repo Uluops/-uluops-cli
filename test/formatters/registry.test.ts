@@ -1,14 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  formatDefinitions,
-  formatDefinition,
-  formatModels,
-  formatModel,
   formatAliases,
   formatAliasResolution,
-  formatVersions,
-  formatVersionDiff,
+  formatDefinition,
+  formatDefinitions,
+  formatModel,
+  formatModels,
   formatValidationResult,
+  formatVersionDiff,
+  formatVersions,
 } from '../../src/formatters/registry.js';
 
 const mockDefinition = {
@@ -58,7 +58,13 @@ const mockModel = {
 };
 
 describe('formatDefinitions', () => {
-  const baseItem = { name: 'code-validator', type: 'agent', version: '1.0.0', status: 'published', visibility: 'public' };
+  const baseItem = {
+    name: 'code-validator',
+    type: 'agent',
+    version: '1.0.0',
+    status: 'published',
+    visibility: 'public',
+  };
   const format = (items: Record<string, unknown>[]) =>
     formatDefinitions(items as Parameters<typeof formatDefinitions>[0]);
 
@@ -79,20 +85,34 @@ describe('formatDefinitions', () => {
   });
 
   it('renders RISK "incomplete" for a failed-scan sentinel none — never clean (P6)', () => {
-    const result = format([{ ...baseItem, riskLevel: 'none', scanStatus: 'failed' }]);
+    const result = format([
+      { ...baseItem, riskLevel: 'none', scanStatus: 'failed' },
+    ]);
     expect(result).toContain('incomplete');
     expect(result).not.toContain('clean');
   });
 
   it('renders RISK "incomplete" for an errored deep analysis', () => {
-    const result = format([{ ...baseItem, riskLevel: 'none', scanStatus: 'complete', deepStatus: 'error' }]);
+    const result = format([
+      {
+        ...baseItem,
+        riskLevel: 'none',
+        scanStatus: 'complete',
+        deepStatus: 'error',
+      },
+    ]);
     expect(result).toContain('incomplete');
   });
 
   it('renders RISK "clean" for a trustworthy none and the level for flagged rows', () => {
     const result = format([
       { ...baseItem, riskLevel: 'none', scanStatus: 'complete' },
-      { ...baseItem, name: 'risky-agent', riskLevel: 'high', scanStatus: 'complete' },
+      {
+        ...baseItem,
+        name: 'risky-agent',
+        riskLevel: 'high',
+        scanStatus: 'complete',
+      },
     ]);
     expect(result).toContain('clean');
     expect(result).toContain('high');
@@ -110,8 +130,15 @@ describe('formatDefinition', () => {
   });
 
   it('handles missing optional fields', () => {
-    const minimal = { ...mockDefinition, description: undefined, publishedAt: undefined, tags: undefined };
-    const result = formatDefinition(minimal as Parameters<typeof formatDefinition>[0]);
+    const minimal = {
+      ...mockDefinition,
+      description: undefined,
+      publishedAt: undefined,
+      tags: undefined,
+    };
+    const result = formatDefinition(
+      minimal as Parameters<typeof formatDefinition>[0],
+    );
     expect(result).toContain('code-validator');
   });
 
@@ -132,9 +159,14 @@ describe('formatDefinition', () => {
   it('renders a failed scan as incomplete, never as "No risk signals" (P6)', () => {
     const def = {
       ...mockDefinition,
-      riskProfile: makeProfile({ scanStatus: 'failed', scanFailedReason: 'timeout' }),
+      riskProfile: makeProfile({
+        scanStatus: 'failed',
+        scanFailedReason: 'timeout',
+      }),
     };
-    const result = formatDefinition(def as Parameters<typeof formatDefinition>[0]);
+    const result = formatDefinition(
+      def as Parameters<typeof formatDefinition>[0],
+    );
     expect(result).toContain('Safety scan incomplete');
     expect(result).toContain('timeout');
     expect(result).not.toContain('No risk signals');
@@ -145,7 +177,9 @@ describe('formatDefinition', () => {
       ...mockDefinition,
       riskProfile: makeProfile({ scanStatus: 'complete' }),
     };
-    const result = formatDefinition(def as Parameters<typeof formatDefinition>[0]);
+    const result = formatDefinition(
+      def as Parameters<typeof formatDefinition>[0],
+    );
     expect(result).toContain('No risk signals');
     expect(result).not.toContain('Safety scan incomplete');
   });
@@ -165,7 +199,9 @@ describe('formatDefinition', () => {
         },
       }),
     };
-    const result = formatDefinition(def as Parameters<typeof formatDefinition>[0]);
+    const result = formatDefinition(
+      def as Parameters<typeof formatDefinition>[0],
+    );
     // Deep-aware isVerdictTrustworthy (registry-sdk 0.43.0): the deep error is
     // named as the failing layer, with its reason, and never rendered clean.
     expect(result).toContain('Deep analysis failed (no_output)');
@@ -178,7 +214,9 @@ describe('formatDefinition', () => {
       ...mockDefinition,
       riskProfile: makeProfile({ scanStatus: 'complete', deep: null }),
     };
-    const result = formatDefinition(def as Parameters<typeof formatDefinition>[0]);
+    const result = formatDefinition(
+      def as Parameters<typeof formatDefinition>[0],
+    );
     expect(result).toContain('Deep analysis pending');
     expect(result).not.toContain('Deep analysis failed');
     expect(result).toContain('No risk signals');
@@ -209,7 +247,12 @@ describe('formatModel', () => {
   it('shows "none" when no capabilities are true', () => {
     const noCapabilities = {
       ...mockModel,
-      capabilities: { vision: false, tools: false, streaming: false, extendedThinking: false },
+      capabilities: {
+        vision: false,
+        tools: false,
+        streaming: false,
+        extendedThinking: false,
+      },
     };
     const result = formatModel(noCapabilities);
     expect(result).toContain('none');
@@ -219,7 +262,13 @@ describe('formatModel', () => {
 describe('formatAliases', () => {
   it('formats a list of aliases as a table', () => {
     const aliases = [
-      { alias: 'opus', provider: 'anthropic', modelId: 'claude-opus-4-6', scope: 'global' as const, deprecated: false },
+      {
+        alias: 'opus',
+        provider: 'anthropic',
+        modelId: 'claude-opus-4-6',
+        scope: 'global' as const,
+        deprecated: false,
+      },
     ];
     const result = formatAliases(aliases);
     expect(result).toContain('ALIAS');
@@ -231,7 +280,12 @@ describe('formatAliases', () => {
 
   it('shows deprecation status', () => {
     const aliases = [
-      { alias: 'old-model', provider: 'anthropic', modelId: 'old-id', deprecated: true },
+      {
+        alias: 'old-model',
+        provider: 'anthropic',
+        modelId: 'old-id',
+        deprecated: true,
+      },
     ];
     const result = formatAliases(aliases);
     expect(result).toContain('Yes');
@@ -247,7 +301,11 @@ describe('formatAliasResolution', () => {
   });
 
   it('formats a resolved alias with model details', () => {
-    const resolution = { alias: 'opus', target: 'anthropic/claude-opus-4-6', model: mockModel };
+    const resolution = {
+      alias: 'opus',
+      target: 'anthropic/claude-opus-4-6',
+      model: mockModel,
+    };
     const result = formatAliasResolution(resolution);
     expect(result).toContain('Alias: opus');
     expect(result).toContain('Target: anthropic/claude-opus-4-6');
@@ -264,10 +322,16 @@ describe('formatAliasResolution', () => {
 describe('formatVersions', () => {
   it('formats a list of versions as a table', () => {
     const versions = [
-      { version: '1.0.0', status: 'published', createdAt: '2026-01-01T00:00:00Z' },
+      {
+        version: '1.0.0',
+        status: 'published',
+        createdAt: '2026-01-01T00:00:00Z',
+      },
       { version: '0.9.0', status: 'draft', createdAt: '2025-12-15T00:00:00Z' },
     ];
-    const result = formatVersions(versions as Parameters<typeof formatVersions>[0]);
+    const result = formatVersions(
+      versions as Parameters<typeof formatVersions>[0],
+    );
     expect(result).toContain('VERSION');
     expect(result).toContain('1.0.0');
     expect(result).toContain('0.9.0');

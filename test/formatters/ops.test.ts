@@ -1,11 +1,11 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
-  formatProjects,
-  formatProject,
-  formatRuns,
-  formatRun,
-  formatIssues,
   formatIssue,
+  formatIssues,
+  formatProject,
+  formatProjects,
+  formatRun,
+  formatRuns,
 } from '../../src/formatters/ops.js';
 
 const mockProject = {
@@ -77,7 +77,10 @@ describe('formatRuns', () => {
   });
 
   it('handles runs with no score', () => {
-    const noScore = { ...mockRun, averageScore: undefined as unknown as number };
+    const noScore = {
+      ...mockRun,
+      averageScore: undefined as unknown as number,
+    };
     const result = formatRuns([noScore]);
     expect(result).toContain('-');
   });

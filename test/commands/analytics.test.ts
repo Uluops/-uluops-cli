@@ -1,13 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Command } from 'commander';
-import { captureOutput } from '../helpers/capture.js';
-import { createMockOpsClient, createMockOpsContext } from '../helpers/command-harness.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpsCliContext } from '../../src/context.js';
+import { captureOutput } from '../helpers/capture.js';
+import {
+  createMockOpsClient,
+  createMockOpsContext,
+} from '../helpers/command-harness.js';
 
 vi.mock('../../src/context.js');
 
-import { createOpsContext, handleOpsError } from '../../src/context.js';
 import { registerAnalyticsCommands } from '../../src/commands/analytics.js';
+import { createOpsContext, handleOpsError } from '../../src/context.js';
 
 const mockedCreateOpsContext = vi.mocked(createOpsContext);
 const mockedHandleOpsError = vi.mocked(handleOpsError);
@@ -18,9 +21,13 @@ let mockClient: MockClient;
 beforeEach(() => {
   mockClient = createMockOpsClient();
   mockedCreateOpsContext.mockReturnValue(
-    createMockOpsContext({ client: mockClient as unknown as OpsCliContext['client'] })
+    createMockOpsContext({
+      client: mockClient as unknown as OpsCliContext['client'],
+    }),
   );
-  mockedHandleOpsError.mockImplementation((error) => { throw error; });
+  mockedHandleOpsError.mockImplementation((error) => {
+    throw error;
+  });
 });
 
 function parse(...args: string[]) {
@@ -33,7 +40,12 @@ function parse(...args: string[]) {
 describe('analytics agents', () => {
   it('should display agent performance table', async () => {
     mockClient.analytics.getAgentPerformance.mockResolvedValue([
-      { name: 'code-validator', totalRuns: 10, averageScore: 88.5, passRate: 90 },
+      {
+        name: 'code-validator',
+        totalRuns: 10,
+        averageScore: 88.5,
+        passRate: 90,
+      },
     ]);
     const output = captureOutput();
     await parse('analytics', 'agents');
@@ -52,10 +64,15 @@ describe('analytics agents', () => {
   });
 
   it('should output JSON in json mode', async () => {
-    const data = [{ name: 'test-validator', totalRuns: 5, averageScore: 80, passRate: 100 }];
+    const data = [
+      { name: 'test-validator', totalRuns: 5, averageScore: 80, passRate: 100 },
+    ];
     mockClient.analytics.getAgentPerformance.mockResolvedValue(data);
     mockedCreateOpsContext.mockReturnValue(
-      createMockOpsContext({ client: mockClient as unknown as OpsCliContext['client'], json: true })
+      createMockOpsContext({
+        client: mockClient as unknown as OpsCliContext['client'],
+        json: true,
+      }),
     );
     const output = captureOutput();
     await parse('analytics', 'agents');
@@ -69,7 +86,12 @@ describe('analytics reliability', () => {
   it('should display reliability stats', async () => {
     mockClient.analytics.getAgentReliability.mockResolvedValue({
       agents: [
-        { name: 'code-validator', falsePositiveRate: 5.2, resolutionRate: 85.0, reliabilityScore: 92.3 },
+        {
+          name: 'code-validator',
+          falsePositiveRate: 5.2,
+          resolutionRate: 85.0,
+          reliabilityScore: 92.3,
+        },
       ],
     });
     const output = captureOutput();
@@ -126,7 +148,12 @@ describe('analytics velocity', () => {
 describe('analytics resolution', () => {
   it('should display resolution rates table', async () => {
     mockClient.analytics.getResolutionRates.mockResolvedValue([
-      { project: 'my-proj', resolvedIssues: 15, totalIssues: 20, resolutionRate: 75.0 },
+      {
+        project: 'my-proj',
+        resolvedIssues: 15,
+        totalIssues: 20,
+        resolutionRate: 75.0,
+      },
     ]);
     const output = captureOutput();
     await parse('analytics', 'resolution');
@@ -162,8 +189,12 @@ describe('analytics taxonomy', () => {
 describe('analytics full-taxonomy', () => {
   it('should display full taxonomy breakdown', async () => {
     mockClient.analytics.getFullTaxonomy.mockResolvedValue({
-      byDomain: [{ domain: 'SEM', label: 'Semantic', count: 20, percentage: 66.7 }],
-      bySeverity: [{ severity: 'high', label: 'High', count: 10, percentage: 33.3 }],
+      byDomain: [
+        { domain: 'SEM', label: 'Semantic', count: 20, percentage: 66.7 },
+      ],
+      bySeverity: [
+        { severity: 'high', label: 'High', count: 10, percentage: 33.3 },
+      ],
     });
     const output = captureOutput();
     await parse('analytics', 'full-taxonomy');
@@ -177,8 +208,20 @@ describe('analytics full-taxonomy', () => {
 describe('analytics trends', () => {
   it('should display trend summary', async () => {
     mockClient.analytics.getTrendSummary.mockResolvedValue([
-      { period: '2025-W03', averageScore: 85.0, newIssues: 10, resolvedIssues: 15, regressions: 1 },
-      { period: '2025-W04', averageScore: 87.5, newIssues: 8, resolvedIssues: 12, regressions: 0 },
+      {
+        period: '2025-W03',
+        averageScore: 85.0,
+        newIssues: 10,
+        resolvedIssues: 15,
+        regressions: 1,
+      },
+      {
+        period: '2025-W04',
+        averageScore: 87.5,
+        newIssues: 8,
+        resolvedIssues: 12,
+        regressions: 0,
+      },
     ]);
     const output = captureOutput();
     await parse('analytics', 'trends');

@@ -1,14 +1,23 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Command } from 'commander';
-import { captureOutput } from '../helpers/capture.js';
-import { createMockRegistryClient, createMockRegistryContext } from '../helpers/command-harness.js';
-import { createDefinitionListItem, createDefinition } from '../helpers/mock-factories.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RegistryCliContext } from '../../src/context.js';
+import { captureOutput } from '../helpers/capture.js';
+import {
+  createMockRegistryClient,
+  createMockRegistryContext,
+} from '../helpers/command-harness.js';
+import {
+  createDefinition,
+  createDefinitionListItem,
+} from '../helpers/mock-factories.js';
 
 vi.mock('../../src/context.js');
 
-import { createRegistryContext, handleRegistryError } from '../../src/context.js';
 import { registerForkCommands } from '../../src/commands/forks.js';
+import {
+  createRegistryContext,
+  handleRegistryError,
+} from '../../src/context.js';
 
 const mockedCreateRegistryContext = vi.mocked(createRegistryContext);
 const mockedHandleRegistryError = vi.mocked(handleRegistryError);
@@ -19,9 +28,13 @@ let mockClient: MockClient;
 beforeEach(() => {
   mockClient = createMockRegistryClient();
   mockedCreateRegistryContext.mockReturnValue(
-    createMockRegistryContext({ client: mockClient as unknown as RegistryCliContext['client'] })
+    createMockRegistryContext({
+      client: mockClient as unknown as RegistryCliContext['client'],
+    }),
   );
-  mockedHandleRegistryError.mockImplementation((error) => { throw error; });
+  mockedHandleRegistryError.mockImplementation((error) => {
+    throw error;
+  });
 });
 
 function parse(...args: string[]) {
@@ -34,12 +47,25 @@ function parse(...args: string[]) {
 describe('forks list', () => {
   it('should list forks', async () => {
     mockClient.forks.list.mockResolvedValue({
-      forks: [{ definition: { type: 'agent', name: 'my-fork', version: '1.0.0', authorId: 'user-abc12345' } }],
+      forks: [
+        {
+          definition: {
+            type: 'agent',
+            name: 'my-fork',
+            version: '1.0.0',
+            authorId: 'user-abc12345',
+          },
+        },
+      ],
       totalForks: 1,
     });
     const output = captureOutput();
     await parse('forks', 'list', 'agent', 'base-agent', '1.0.0');
-    expect(mockClient.forks.list).toHaveBeenCalledWith('agent', 'base-agent', '1.0.0');
+    expect(mockClient.forks.list).toHaveBeenCalledWith(
+      'agent',
+      'base-agent',
+      '1.0.0',
+    );
     expect(output.stdout()).toContain('my-fork');
     output.restore();
   });
@@ -56,13 +82,30 @@ describe('forks list', () => {
 describe('forks create', () => {
   it('should create a fork', async () => {
     mockClient.forks.create.mockResolvedValue({
-      definition: createDefinition({ type: 'agent' as never, name: 'my-fork', version: '1.0.0' }),
+      definition: createDefinition({
+        type: 'agent' as never,
+        name: 'my-fork',
+        version: '1.0.0',
+      }),
     });
     const output = captureOutput();
-    await parse('forks', 'create', 'agent', 'base-agent', '1.0.0', '--fork-name', 'my-fork');
-    expect(mockClient.forks.create).toHaveBeenCalledWith('agent', 'base-agent', '1.0.0', expect.objectContaining({
-      name: 'my-fork',
-    }));
+    await parse(
+      'forks',
+      'create',
+      'agent',
+      'base-agent',
+      '1.0.0',
+      '--fork-name',
+      'my-fork',
+    );
+    expect(mockClient.forks.create).toHaveBeenCalledWith(
+      'agent',
+      'base-agent',
+      '1.0.0',
+      expect.objectContaining({
+        name: 'my-fork',
+      }),
+    );
     expect(output.stdout()).toContain('my-fork');
     output.restore();
   });
@@ -78,7 +121,10 @@ describe('forks check', () => {
   });
 
   it('should show reason when not forkable', async () => {
-    mockClient.forks.isForkable.mockResolvedValue({ canFork: false, reason: 'Definition is private' });
+    mockClient.forks.isForkable.mockResolvedValue({
+      canFork: false,
+      reason: 'Definition is private',
+    });
     const output = captureOutput();
     await parse('forks', 'check', 'agent', 'base-agent', '1.0.0');
     expect(output.stdout()).toContain('Forkable: No');

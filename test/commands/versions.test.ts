@@ -1,14 +1,23 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Command } from 'commander';
-import { captureOutput } from '../helpers/capture.js';
-import { createMockRegistryClient, createMockRegistryContext } from '../helpers/command-harness.js';
-import { createVersionListItem, createVersionDiff } from '../helpers/mock-factories.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { RegistryCliContext } from '../../src/context.js';
+import { captureOutput } from '../helpers/capture.js';
+import {
+  createMockRegistryClient,
+  createMockRegistryContext,
+} from '../helpers/command-harness.js';
+import {
+  createVersionDiff,
+  createVersionListItem,
+} from '../helpers/mock-factories.js';
 
 vi.mock('../../src/context.js');
 
-import { createRegistryContext, handleRegistryError } from '../../src/context.js';
 import { registerVersionCommands } from '../../src/commands/versions.js';
+import {
+  createRegistryContext,
+  handleRegistryError,
+} from '../../src/context.js';
 
 const mockedCreateRegistryContext = vi.mocked(createRegistryContext);
 const mockedHandleRegistryError = vi.mocked(handleRegistryError);
@@ -19,9 +28,13 @@ let mockClient: MockClient;
 beforeEach(() => {
   mockClient = createMockRegistryClient();
   mockedCreateRegistryContext.mockReturnValue(
-    createMockRegistryContext({ client: mockClient as unknown as RegistryCliContext['client'] })
+    createMockRegistryContext({
+      client: mockClient as unknown as RegistryCliContext['client'],
+    }),
   );
-  mockedHandleRegistryError.mockImplementation((error) => { throw error; });
+  mockedHandleRegistryError.mockImplementation((error) => {
+    throw error;
+  });
 });
 
 function parse(...args: string[]) {
@@ -49,7 +62,10 @@ describe('versions list', () => {
   });
 
   it('should show empty message', async () => {
-    mockClient.versions.list.mockResolvedValue({ versions: [], totalVersions: 0 });
+    mockClient.versions.list.mockResolvedValue({
+      versions: [],
+      totalVersions: 0,
+    });
     const output = captureOutput();
     await parse('versions', 'list', 'agent', 'my-agent');
     expect(output.stdout()).toContain('No versions found');
@@ -62,7 +78,12 @@ describe('versions diff', () => {
     mockClient.versions.diff.mockResolvedValue(createVersionDiff());
     const output = captureOutput();
     await parse('versions', 'diff', 'agent', 'my-agent', '1.0.0', '1.1.0');
-    expect(mockClient.versions.diff).toHaveBeenCalledWith('agent', 'my-agent', '1.0.0', '1.1.0');
+    expect(mockClient.versions.diff).toHaveBeenCalledWith(
+      'agent',
+      'my-agent',
+      '1.0.0',
+      '1.1.0',
+    );
     expect(output.stdout()).toContain('1.0.0');
     expect(output.stdout()).toContain('1.1.0');
     output.restore();

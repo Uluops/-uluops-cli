@@ -29,7 +29,19 @@ import { registerTranslationCommands } from './commands/translation.js';
 import { registerVersionCommands } from './commands/versions.js';
 import { getCliVersion } from './version.js';
 
+// Record whether ULUOPS_ORG_SLUG came from the SHELL or from an env FILE before
+// `loadEnvFiles()` merges ./.env and ~/.uluops/.env into process.env. The org
+// resolver labels both `env`; the operator reads that as "my shell", and a
+// `.env` in a checkout (or a machine-wide ~/.uluops/.env) setting the SOURCE
+// of a project move deserves its own label (anxiety-reader F3, 2026-09-15).
+const orgSlugFromShell = process.env.ULUOPS_ORG_SLUG;
 loadEnvFiles();
+if (
+  process.env.ULUOPS_ORG_SLUG !== undefined &&
+  orgSlugFromShell !== process.env.ULUOPS_ORG_SLUG
+) {
+  process.env.ULU_ORG_SLUG_FROM_ENV_FILE = '1';
+}
 
 // Handle EPIPE gracefully (e.g., piping to head, or broken pipe)
 process.stdout.on('error', (err) => {

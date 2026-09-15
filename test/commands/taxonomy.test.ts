@@ -1,13 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Command } from 'commander';
-import { captureOutput } from '../helpers/capture.js';
-import { createMockOpsClient, createMockOpsContext } from '../helpers/command-harness.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { OpsCliContext } from '../../src/context.js';
+import { captureOutput } from '../helpers/capture.js';
+import {
+  createMockOpsClient,
+  createMockOpsContext,
+} from '../helpers/command-harness.js';
 
 vi.mock('../../src/context.js');
 
-import { createOpsContext, handleOpsError } from '../../src/context.js';
 import { registerTaxonomyCommands } from '../../src/commands/taxonomy.js';
+import { createOpsContext, handleOpsError } from '../../src/context.js';
 
 const mockedCreateOpsContext = vi.mocked(createOpsContext);
 const mockedHandleOpsError = vi.mocked(handleOpsError);
@@ -18,9 +21,13 @@ let mockClient: MockClient;
 beforeEach(() => {
   mockClient = createMockOpsClient();
   mockedCreateOpsContext.mockReturnValue(
-    createMockOpsContext({ client: mockClient as unknown as OpsCliContext['client'] })
+    createMockOpsContext({
+      client: mockClient as unknown as OpsCliContext['client'],
+    }),
   );
-  mockedHandleOpsError.mockImplementation((error) => { throw error; });
+  mockedHandleOpsError.mockImplementation((error) => {
+    throw error;
+  });
 });
 
 function parse(...args: string[]) {
@@ -34,8 +41,18 @@ describe('taxonomy get', () => {
   it('should display failure taxonomy', async () => {
     mockClient.taxonomy.get.mockResolvedValue({
       domains: [
-        { code: 'STR', name: 'Structural', description: 'Structure and syntax issues', modes: [{ code: 'OMI', name: 'Omission' }] },
-        { code: 'SEM', name: 'Semantic', description: 'Meaning and logic issues', modes: [{ code: 'VAL', name: 'Validation' }] },
+        {
+          code: 'STR',
+          name: 'Structural',
+          description: 'Structure and syntax issues',
+          modes: [{ code: 'OMI', name: 'Omission' }],
+        },
+        {
+          code: 'SEM',
+          name: 'Semantic',
+          description: 'Meaning and logic issues',
+          modes: [{ code: 'VAL', name: 'Validation' }],
+        },
       ],
       severities: [
         { code: 'C', name: 'critical', weight: 4 },

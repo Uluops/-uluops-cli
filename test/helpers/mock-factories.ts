@@ -3,16 +3,16 @@
  * These produce objects matching the SDK type shapes used by formatters.
  * No Zod validation — that's the SDK's concern.
  */
-import type { Project, Run, Issue, PublicApiKey } from '@uluops/ops-sdk';
+import type { Issue, Project, PublicApiKey, Run } from '@uluops/ops-sdk';
 import type {
+  AliasResolution,
   Definition,
   DefinitionListItem,
   Model,
   ModelAlias,
-  AliasResolution,
-  VersionListItem,
-  VersionDiff,
   ValidationResult,
+  VersionDiff,
+  VersionListItem,
 } from '@uluops/registry-sdk';
 
 let idCounter = 0;
@@ -99,7 +99,9 @@ export function createIssue(overrides: Partial<Issue> = {}): Issue {
   } as Issue;
 }
 
-export function createPublicApiKey(overrides: Partial<PublicApiKey> = {}): PublicApiKey {
+export function createPublicApiKey(
+  overrides: Partial<PublicApiKey> = {},
+): PublicApiKey {
   return {
     id: nextId(),
     name: 'my-key',
@@ -114,7 +116,9 @@ export function createPublicApiKey(overrides: Partial<PublicApiKey> = {}): Publi
 // REGISTRY-SDK FACTORIES
 // ============================================
 
-export function createDefinitionListItem(overrides: Partial<DefinitionListItem> = {}): DefinitionListItem {
+export function createDefinitionListItem(
+  overrides: Partial<DefinitionListItem> = {},
+): DefinitionListItem {
   return {
     id: nextId(),
     type: 'validator',
@@ -136,7 +140,9 @@ export function createDefinitionListItem(overrides: Partial<DefinitionListItem> 
   } as DefinitionListItem;
 }
 
-export function createDefinition(overrides: Partial<Definition> = {}): Definition {
+export function createDefinition(
+  overrides: Partial<Definition> = {},
+): Definition {
   return {
     id: nextId(),
     type: 'validator',
@@ -177,7 +183,12 @@ export function createModel(overrides: Partial<Model> = {}): Model {
     displayName: 'Claude Sonnet 4.5',
     description: 'Fast and capable model',
     providerModelId: 'claude-sonnet-4-5-20250929',
-    capabilities: { vision: true, tools: true, streaming: true, extendedThinking: false },
+    capabilities: {
+      vision: true,
+      tools: true,
+      streaming: true,
+      extendedThinking: false,
+    },
     tier: 'standard',
     status: 'active',
     regions: ['us-east-1', 'eu-west-1'],
@@ -190,7 +201,9 @@ export function createModel(overrides: Partial<Model> = {}): Model {
   } as Model;
 }
 
-export function createModelAlias(overrides: Partial<ModelAlias> = {}): ModelAlias {
+export function createModelAlias(
+  overrides: Partial<ModelAlias> = {},
+): ModelAlias {
   return {
     alias: 'sonnet',
     provider: 'anthropic',
@@ -203,7 +216,9 @@ export function createModelAlias(overrides: Partial<ModelAlias> = {}): ModelAlia
   } as ModelAlias;
 }
 
-export function createAliasResolution(overrides: Partial<AliasResolution> = {}): AliasResolution {
+export function createAliasResolution(
+  overrides: Partial<AliasResolution> = {},
+): AliasResolution {
   return {
     alias: 'sonnet',
     target: 'anthropic/claude-sonnet-4-5',
@@ -212,7 +227,9 @@ export function createAliasResolution(overrides: Partial<AliasResolution> = {}):
   };
 }
 
-export function createVersionListItem(overrides: Partial<VersionListItem> = {}): VersionListItem {
+export function createVersionListItem(
+  overrides: Partial<VersionListItem> = {},
+): VersionListItem {
   return {
     version: '1.0.0',
     status: 'published',
@@ -221,17 +238,22 @@ export function createVersionListItem(overrides: Partial<VersionListItem> = {}):
   } as VersionListItem;
 }
 
-export function createVersionDiff(overrides: Partial<VersionDiff> = {}): VersionDiff {
+export function createVersionDiff(
+  overrides: Partial<VersionDiff> = {},
+): VersionDiff {
   return {
     fromVersion: '1.0.0',
     toVersion: '1.1.0',
     fromYaml: 'name: my-agent\nversion: "1.0.0"\ndescription: original',
-    toYaml: 'name: my-agent\nversion: "1.1.0"\ndescription: updated\ntags:\n  - new',
+    toYaml:
+      'name: my-agent\nversion: "1.1.0"\ndescription: updated\ntags:\n  - new',
     ...overrides,
   };
 }
 
-export function createValidationResult(overrides: Partial<ValidationResult> = {}): ValidationResult {
+export function createValidationResult(
+  overrides: Partial<ValidationResult> = {},
+): ValidationResult {
   return {
     valid: true,
     ...overrides,
