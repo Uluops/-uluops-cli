@@ -15,6 +15,8 @@ See the [changelog](./CHANGELOG.md) for release history. The npm badge above tra
 
 ## Quick Start
 
+Requires Node.js 18 or higher.
+
 ```bash
 # Install
 npm install -g @uluops/cli
@@ -51,6 +53,7 @@ ulu exec --project my-project agent code-validator -t ./src --model sonnet
   - [Auth](#auth) — Authentication & credential management
   - [Projects](#projects) (`ulu p`) — Project lifecycle management
   - [Orgs](#orgs) — An org's member-visible activity
+  - [Log](#log--the-projects-second-history) — Runs and decisions interleaved, newest first
   - [Runs](#runs) (`ulu r`) — Validation run management
   - [Issues](#issues) (`ulu i`) — Issue tracking & management
   - [Analytics](#analytics) (`ulu a`) — Validation analytics & metrics
@@ -75,7 +78,8 @@ ulu exec --project my-project agent code-validator -t ./src --model sonnet
 
 ## Features
 
-- **Unified interface**: Single `ulu` command covers both the validation tracker (ops) and definition registry APIs
+- **Unified interface**: Single `ulu` command covers both the tracker (runs, findings, issues) and the definition registry APIs
+- **The second history**: `ulu log` interleaves a project's runs and decisions newest-first (`--stat` for the rollup, `--orgs` across every org you belong to); `ulu orgs audit-feed` for an org's member-visible activity
 - **Command aliases**: `ulu p` (projects), `ulu r` (runs), `ulu i` (issues), `ulu a` (analytics), `ulu x` (exec), `ulu def` (definitions)
 - **Flexible authentication**: API key, session token, or email/password — same credential chain as the SDKs
 - **Machine-friendly output**: `--json` flag on every command for scripting and CI/CD integration
@@ -175,6 +179,7 @@ Every command accepts these flags:
 ```text
 --api-key <key>      Override API key (env: ULUOPS_API_KEY)
 --profile <name>     Config profile to use (default: 'default')
+--base-url <url>     Override the base URL of the API the command talks to (tracker or registry)
 --timeout <ms>       Request timeout in milliseconds (default: 30000 for ops/registry, 600000 for exec)
 --json               Output raw JSON for scripting
 --json-envelope      Wrap --json output in the versioned stability envelope (same as ULU_JSON_SCHEMA=1)
@@ -186,7 +191,7 @@ Every command accepts these flags:
 
 ### Security warnings
 
-The CLI surfaces security-relevant events (from `@uluops/sdk-core@0.14.0`) as `⚠ Security:` notices on **stderr**, so stdout stays clean for `--json` and pipes. They complement the normal error — you get both the plain-language notice and the detailed error — and are most valuable on best-effort paths (e.g. result tracking) where the command itself does not error, so the event would otherwise be invisible.
+The CLI surfaces security-relevant events (from `@uluops/sdk-core`) as `⚠ Security:` notices on **stderr**, so stdout stays clean for `--json` and pipes. They complement the normal error — you get both the plain-language notice and the detailed error — and are most valuable on best-effort paths (e.g. result tracking) where the command itself does not error, so the event would otherwise be invisible.
 
 | Notice | Meaning |
 |--------|---------|
@@ -1038,6 +1043,9 @@ through the single `emitJson()` chokepoint. To change an output shape you must:
 | `ULUOPS_PROJECT` | Project name for `ulu exec` result tracking when `--project` is not passed (useful in CI) | - |
 | `ULUOPS_EMAIL` | Email for session auth | - |
 | `ULUOPS_PASSWORD` | Password for session auth | - |
+| `ULUOPS_ORG_SLUG` | Org a command acts in when no `--org` flag or `.uluops.json` answers — see [Which org a command acts in](#which-org-a-command-acts-in) | personal org |
+| `ULUOPS_BASE_URL` | Tracker API base URL (the `--base-url` flag overrides it) | `https://api.uluops.ai/api/v1` |
+| `ULUOPS_REGISTRY_URL` | Registry API base URL (the `--base-url` flag overrides it on registry commands) | `https://api.uluops.ai/api/v1/registry` |
 | `ULUOPS_DEBUG` | Enable debug logging (also expands the global unhandled-error handler's output) | `false` |
 | `ULU_JSON_SCHEMA` | Set to `1` to wrap `--json` output in the versioned stability envelope | - |
 | `ANTHROPIC_API_KEY` | API key for AI model execution (required for `ulu exec` commands). `ulu exec` executes against Anthropic models today regardless of a `--model` value's provider prefix; non-Anthropic execution is not yet supported (tracked in issue b9c5ac1e). <!-- revisit when b9c5ac1e multi-provider execution ships --> | - |
@@ -1096,7 +1104,7 @@ source ~/.bashrc
 
 | Package | Description |
 |---------|-------------|
-| [`@uluops/ops-sdk`](https://www.npmjs.com/package/@uluops/ops-sdk) | TypeScript SDK for the validation tracker API |
+| [`@uluops/ops-sdk`](https://www.npmjs.com/package/@uluops/ops-sdk) | TypeScript SDK for the tracker API — runs, findings, issues, analytics |
 | [`@uluops/registry-sdk`](https://www.npmjs.com/package/@uluops/registry-sdk) | TypeScript SDK for the definition registry API |
 
 ## License

@@ -125,6 +125,7 @@ type RunLike = Pick<
   | 'createdAt'
 >;
 
+/** Render one run as the key/value view (`runs get`, and the `runs save` write echo). */
 export function formatRun(run: RunLike): string {
   return formatKeyValue({
     runNumber: run.runNumber,

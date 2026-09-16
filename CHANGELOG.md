@@ -4,6 +4,20 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Changed
+
+- **`ulu --help` top line and the npm `description` now say what the product is** — "the operations layer for agentic work: runs, findings, issues and the definition registry" — instead of "validation tracking and registry management". No command, flag or output changes; this is the agent-read surface the messaging foundation (§4.10) names: a harness that reads `ulu --help` was being taught the retired category. README first paragraph matches (2026-09-16).
+- **README**: `ulu log` in the table of contents; `ulu log` / `ulu orgs audit-feed` in the Features list; the global `--base-url <url>` flag documented (it was accepted by every command and mentioned nowhere); `ULUOPS_ORG_SLUG`, `ULUOPS_BASE_URL` and `ULUOPS_REGISTRY_URL` in the environment-variables table; the Node.js requirement stated ahead of the Quick Start; the sdk-core provenance note no longer pins a stale version; "validation tracker" retired from the Features list and the Related Packages table (consumer-validate run #22).
+
+### Fixed
+
+- **`ulu projects bulk-update-issues` now prints the failed IDs in human mode**, as `ulu issues bulk-update` already did — the API returns `{ updated, failed[] }` and the projects variant dropped `failed` unless `--json` was passed (consumer-validate run #22, dx-validator).
+- **`issues create` / `issues edit` `--priority` help text lists `high`** — the runtime enum is `critical, high, suggested, backlog`; the two write commands' help omitted `high` while `issues list` and the README had it.
+- **`--file` not-found errors carry the same path hint on every command** — the stdin/file loader used by `runs save --file` printed the bare `File not found`, while `readFileOption()` added the hint.
+- **CHANGELOG**: `[Unreleased]` was mid-file (below 0.29.0) and had captured the 2026-09-16 entry; moved to the top.
+
 ## [0.31.0] - 2026-09-15
 
 ### Added
@@ -59,12 +73,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 
 - **`@uluops/ops-sdk` 5.21.0 → 6.3.0 (a MAJOR across the 6.0.0 strict-shape flip) and `@uluops/core` ^0.41.0 → 0.43.1 (exact)** — the whole delivery train shares one ops-sdk version so no consumer nests a second copy. Visible effects here: `projects list` and `runs list` unwrap the 6.0.0 `{ data, total }` envelope; `analytics agents` prints `-` for a null pass rate; `formatRun` accepts the write echo. `@uluops/registry-sdk` 0.49.0 still pins `@uluops/sdk-core` 0.15.0 exactly, so that copy stays nested beside the 0.17.0 the others share — this CLI already treats API errors structurally (`ApiErrorLike`) for exactly that reason, so nothing changes in error handling.
-
-## [Unreleased]
-
-### Changed
-
-- **`ulu --help` top line and the npm `description` now say what the product is** — "the operations layer for agentic work: runs, findings, issues and the definition registry" — instead of "validation tracking and registry management". No command, flag or output changes; this is the agent-read surface the messaging foundation (§4.10) names: a harness that reads `ulu --help` was being taught the retired category. README first paragraph matches (2026-09-16).
 
 ## [0.28.0] - 2026-09-10
 

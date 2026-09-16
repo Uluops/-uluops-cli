@@ -540,7 +540,9 @@ export async function readJsonInput(options: {
 
   if (options.file) {
     if (!existsSync(options.file)) {
-      exitWithError(`File not found: ${options.file}`);
+      exitWithError(
+        `File not found: ${options.file}\n\nHint: Check the path passed to --file. Use an absolute path or a path relative to the current directory.`,
+      );
     }
     let content: string;
     try {

@@ -561,7 +561,7 @@ Examples:
     .requiredOption('-t, --title <text>', 'Issue title')
     .requiredOption(
       '--priority <priority>',
-      'Priority (critical, suggested, backlog)',
+      'Priority (critical, high, suggested, backlog)',
     )
     .option(
       '--severity <severity>',
@@ -630,7 +630,7 @@ Examples:
     )
     .option(
       '--priority <priority>',
-      'New priority (critical, suggested, backlog)',
+      'New priority (critical, high, suggested, backlog)',
     )
     .option('--category <category>', 'New category')
     .option('--file-path <path>', 'New file path')

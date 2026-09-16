@@ -456,6 +456,9 @@ source), not "already there".
           emitJson(ctx, results, 'project.bulkUpdateIssues');
         } else {
           console.log(`Updated ${results.updated} issues in project ${name}`);
+          if (results.failed.length > 0) {
+            console.log(`Failed: ${results.failed.join(', ')}`);
+          }
         }
       } catch (error) {
         handleOpsError(error, ctx);
