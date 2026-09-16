@@ -62,6 +62,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`ulu --help` top line and the npm `description` now say what the product is** — "the operations layer for agentic work: runs, findings, issues and the definition registry" — instead of "validation tracking and registry management". No command, flag or output changes; this is the agent-read surface the messaging foundation (§4.10) names: a harness that reads `ulu --help` was being taught the retired category. README first paragraph matches (2026-09-16).
+
 ## [0.28.0] - 2026-09-10
 
 ### Added

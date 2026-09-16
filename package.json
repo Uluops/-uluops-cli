@@ -1,7 +1,7 @@
 {
   "name": "@uluops/cli",
   "version": "0.31.0",
-  "description": "Unified CLI for UluOps - validation tracking and registry management",
+  "description": "Unified CLI for UluOps — runs, findings, issues and the definition registry from a single command",
   "type": "module",
   "bin": {
     "ulu": "dist/cli.js"
