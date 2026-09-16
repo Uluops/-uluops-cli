@@ -95,7 +95,9 @@ const program = new Command();
 
 program
   .name('ulu')
-  .description('UluOps CLI — the operations layer for agentic work: runs, findings, issues and the definition registry')
+  .description(
+    'UluOps CLI — the operations layer for agentic work: runs, findings, issues and the definition registry',
+  )
   .version(version, '-V, --version', 'Output the version number')
   .option('--api-key <key>', 'API key (overrides environment variable)')
   .option('--profile <name>', 'Config profile to use', 'default')
