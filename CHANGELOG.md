@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 
+- **`@uluops/ops-sdk` 6.5.0 → 6.5.1.** Behaviour the CLI inherits: `ulu auth logout` now clears the local session so the next call cannot silently re-login with the retained password; concurrent org-scoped calls share one token refresh (per-call views used to each start their own, revoking each other under the API's single-session default); `runs save` with an empty analysis array no longer throws a false echo mismatch after a successful write. No CLI code changes.
 - **`ulu --help` top line and the npm `description` now say what the product is** — "the operations layer for agentic work: runs, findings, issues and the definition registry" — instead of "validation tracking and registry management". No command, flag or output changes; this is the agent-read surface the messaging foundation (§4.10) names: a harness that reads `ulu --help` was being taught the retired category. README first paragraph matches (2026-09-16).
 - **README**: `ulu log` in the table of contents; `ulu log` / `ulu orgs audit-feed` in the Features list; the global `--base-url <url>` flag documented (it was accepted by every command and mentioned nowhere); `ULUOPS_ORG_SLUG`, `ULUOPS_BASE_URL` and `ULUOPS_REGISTRY_URL` in the environment-variables table; the Node.js requirement stated ahead of the Quick Start; the sdk-core provenance note no longer pins a stale version; "validation tracker" retired from the Features list and the Related Packages table (consumer-validate run #22).
 
