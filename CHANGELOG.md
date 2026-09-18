@@ -6,7 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`ulu analytics reliability` shows a DECLINED column** — the `wontfix` share of an agent's
+  issues, a judgment not to act, in neither the false-positive nor the resolution numerator
+  and never scored. `--json` output carries it as `declinedRate`. ops-api has emitted it since
+  `262bc93` (2026-09-17); `@uluops/ops-sdk` ≤ 6.5.2 stripped it (tracker `aa3ab1ed`).
+
 ### Changed
+
+- **`@uluops/ops-sdk` 6.5.1 → 6.6.0.** Carries `AgentReliability.declinedRate`. Read the
+  FALSE POS column as false-positive ONLY since 2026-09-17 — `wontfix` moved out of it, so the
+  number fell and RELIABILITY rose for agents with declined issues, with no CLI change.
 
 - **`@uluops/ops-sdk` 6.5.0 → 6.5.1.** Behaviour the CLI inherits: `ulu auth logout` now clears the local session so the next call cannot silently re-login with the retained password; concurrent org-scoped calls share one token refresh (per-call views used to each start their own, revoking each other under the API's single-session default); `runs save` with an empty analysis array no longer throws a false echo mismatch after a successful write. No CLI code changes.
 - **`ulu --help` top line and the npm `description` now say what the product is** — "the operations layer for agentic work: runs, findings, issues and the definition registry" — instead of "validation tracking and registry management". No command, flag or output changes; this is the agent-read surface the messaging foundation (§4.10) names: a harness that reads `ulu --help` was being taught the retired category. README first paragraph matches (2026-09-16).

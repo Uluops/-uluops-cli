@@ -89,6 +89,7 @@ describe('analytics reliability', () => {
         {
           name: 'code-validator',
           falsePositiveRate: 5.2,
+          declinedRate: 11.7,
           resolutionRate: 85.0,
           reliabilityScore: 92.3,
         },
@@ -98,6 +99,8 @@ describe('analytics reliability', () => {
     await parse('analytics', 'reliability');
     expect(output.stdout()).toContain('code-validator');
     expect(output.stdout()).toContain('5.2%');
+    expect(output.stdout()).toContain('DECLINED');
+    expect(output.stdout()).toContain('11.7%');
     output.restore();
   });
 });

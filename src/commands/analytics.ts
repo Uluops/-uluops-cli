@@ -141,6 +141,21 @@ Examples:
               align: 'right',
             },
             {
+              // wontfix share — a judgment not to act; in neither the false-positive nor the
+              // resolution numerator and never scored (ops-api >= 262bc93, ops-sdk >= 6.6.0).
+              header: 'DECLINED',
+              accessor: (v) => {
+                const rate = getFlexibleProperty(
+                  v,
+                  'declinedRate',
+                  null as number | null,
+                );
+                return `${rate?.toFixed(1) ?? '-'}%`;
+              },
+              width: 10,
+              align: 'right',
+            },
+            {
               header: 'RESOLUTION',
               accessor: (v) => {
                 const rate = getFlexibleProperty(

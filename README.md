@@ -558,7 +558,7 @@ Validation analytics and trend metrics. Alias: `a`.
 
 ```bash
 ulu analytics agents              # Agent performance (avg score, pass rate)
-ulu analytics reliability         # Agent reliability (false positive rate)
+ulu analytics reliability         # Agent reliability (false-positive, declined, resolution rates)
 ulu analytics hotspots            # Files with most issues
 ulu analytics burndown            # Taxonomy burndown time series
 ulu analytics velocity            # Rate of change per failure mode
