@@ -4,6 +4,10 @@ All notable changes to `@uluops/cli` will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [0.31.1] - 2026-09-18
+
+- Use registry-sdk 0.53.1 and ops-sdk 6.6.1; display the actual upgrade result and previous version (F08).
+
 ## [Unreleased]
 
 ### Changed
