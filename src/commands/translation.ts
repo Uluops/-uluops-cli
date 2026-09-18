@@ -132,9 +132,7 @@ Examples:
           emitJson(ctx, result, 'translation.upgrade');
         } else {
           console.log(`Upgraded: ${type}/${name}@${result.version}`);
-          if (result.changes && Object.keys(result.changes).length > 0) {
-            console.log(`Changes: ${JSON.stringify(result.changes)}`);
-          }
+          console.log(`Previous version: ${result.previousVersion}`);
         }
       } catch (error) {
         handleRegistryError(error, ctx);
