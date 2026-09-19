@@ -325,6 +325,19 @@ describe('formatExecutionResult', () => {
     expect(result).not.toContain('Score:');
   });
 
+  // ExecutionResult.score is `number | null` (types/execution.ts), not just
+  // `number | undefined` — a fully-scoreless workflow/pipeline or an all-skipped run
+  // legitimately carries `null`, distinct from the `undefined` case above. The guard
+  // here used to be `!== undefined`, which `null` passes (`null !== undefined` is
+  // true), printing "Score: null/100" to the CLI. Found via a three-agent spec review
+  // that traced the aggregation chain end-to-end (2026-09-18); formatAgentResult
+  // already used the correct `!= null` guard for the same field shape.
+  it('omits score when null, not just when undefined', () => {
+    const result = formatExecutionResult(createExecResult({ score: null }));
+    expect(result).not.toContain('Score:');
+    expect(result).not.toContain('null');
+  });
+
   it('renders duration', () => {
     const result = formatExecutionResult(
       createExecResult({ durationMs: 3000 }),

@@ -14,6 +14,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`formatExecutionResult` no longer prints `Score: null/100`.** Its score guard was `result.score !== undefined` on a field typed `number | null` (`@uluops/core`'s `ExecutionResult.score`); a legitimately-null score — a fully-scoreless workflow/pipeline, or an all-skipped run — passed the guard (`null !== undefined` is `true`) and rendered a literal `null` in the human-readable output of `ulu exec run|command|workflow|pipeline`. `formatAgentResult` in the same file already used the correct `!= null` guard for the identical field shape. Found via a three-agent spec review of `@uluops/core`'s score-aggregation chain (2026-09-18) that traced the defect class into this consumer.
 - **`ulu projects bulk-update-issues` now prints the failed IDs in human mode**, as `ulu issues bulk-update` already did — the API returns `{ updated, failed[] }` and the projects variant dropped `failed` unless `--json` was passed (consumer-validate run #22, dx-validator).
 - **`issues create` / `issues edit` `--priority` help text lists `high`** — the runtime enum is `critical, high, suggested, backlog`; the two write commands' help omitted `high` while `issues list` and the README had it.
 - **`--file` not-found errors carry the same path hint on every command** — the stdin/file loader used by `runs save --file` printed the bare `File not found`, while `readFileOption()` added the hint.

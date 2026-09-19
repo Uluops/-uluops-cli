@@ -157,7 +157,12 @@ export function formatExecutionResult(result: ExecutionResult): string {
 
   lines.push(`${capitalize(result.type)}: ${result.name} v${result.version}`);
   lines.push(`Decision: ${result.decision}`);
-  if (result.score !== undefined) {
+  // `!== undefined` on a `number | null` field (types/execution.ts) let a legitimately
+  // null score (a fully-scoreless workflow/pipeline, or an all-skipped run) through this
+  // guard and print "Score: null/100" — `null !== undefined` is true. formatAgentResult
+  // above (:54) already uses `!= null` on the same shape; this site did not. Found via a
+  // three-agent spec review that traced the aggregation chain end-to-end (2026-09-18).
+  if (result.score != null) {
     lines.push(`Score: ${result.score}/100`);
   }
   lines.push(`Duration: ${formatDuration(result.durationMs)}`);
