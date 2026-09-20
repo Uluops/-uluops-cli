@@ -90,8 +90,6 @@ describe('translation retranslate', () => {
 describe('translation upgrade', () => {
   it('should upgrade legacy YAML', async () => {
     mockClient.translation.upgradeDefinition.mockResolvedValue({
-      type: 'agent',
-      name: 'test-agent',
       previousVersion: '1.0.0',
       version: '2.0.0',
       translatorVersion: '0.71.0',
@@ -113,7 +111,8 @@ describe('translation upgrade', () => {
         yaml: 'name: test-agent\nversion: 1.0.0\n',
       },
     );
-    expect(output.stdout()).toContain('Upgraded');
+    expect(output.stdout()).toContain('Upgraded: agent/test-agent@2.0.0');
+    expect(output.stdout()).not.toContain('undefined');
     expect(output.stdout()).toContain('2.0.0');
     expect(output.stdout()).toContain('Previous version: 1.0.0');
     output.restore();
