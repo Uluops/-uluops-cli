@@ -13,6 +13,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and never scored. `--json` output carries it as `declinedRate`. ops-api has emitted it since
   `262bc93` (2026-09-17); `@uluops/ops-sdk` ≤ 6.5.2 stripped it (tracker `aa3ab1ed`).
 
+## [0.31.1] - 2026-09-20
+
+### Fixed
+
+- Print the actual version and previous version returned by a legacy definition upgrade, without assuming absent type/name response fields.
+
+### Dependencies
+
+- Pin registry-sdk 0.54.0, ops-sdk 6.7.0 and sdk-core 0.18.0. Require Node.js 20.3 or newer to match the SDKs.
+
 ### Changed
 
 - **`@uluops/ops-sdk` 6.5.1 → 6.6.0.** Carries `AgentReliability.declinedRate`. Read the

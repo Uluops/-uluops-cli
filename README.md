@@ -6,7 +6,7 @@
 
 [![npm version](https://img.shields.io/npm/v/@uluops/cli.svg)](https://www.npmjs.com/package/@uluops/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![Node.js](https://img.shields.io/badge/Node.js-18+-green.svg)](https://nodejs.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-20.3+-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
 Unified CLI for UluOps — runs, findings, issues and the definition registry from a single command. Wraps both the [ops-sdk](https://www.npmjs.com/package/@uluops/ops-sdk) and [registry-sdk](https://www.npmjs.com/package/@uluops/registry-sdk) into an ergonomic terminal interface.
@@ -15,7 +15,7 @@ See the [changelog](./CHANGELOG.md) for release history. The npm badge above tra
 
 ## Quick Start
 
-Requires Node.js 18 or higher.
+Requires Node.js 20.3 or higher.
 
 ```bash
 # Install
@@ -105,7 +105,7 @@ node dist/cli.js --help
 ```
 
 **Requirements:**
-- Node.js 18.0.0 or higher
+- Node.js 20.3.0 or higher
 
 ## Authentication
 
@@ -934,6 +934,8 @@ ulu executions stats <type> <name> <version>     # Get statistics (--window)
 ### Translation
 
 Definition translation and legacy upgrades.
+
+A successful legacy upgrade prints the requested type/name with the returned new version and previous version. With `--json`, it emits the upgrade response, including translation artifact metadata. Registry API 0.59.4 or newer provides these semantics. Current-format drafts and definitions with translation artifacts cannot use legacy upgrade; follow the API guidance to publish or retranslate. If response validation fails after a write, read the definition and its versions before retrying—the write may have committed.
 
 ```bash
 ulu translation version                          # Get translator version
