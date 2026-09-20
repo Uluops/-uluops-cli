@@ -16,6 +16,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   it, so the number fell and RELIABILITY rose for agents with declined issues, with no CLI
   change (same column, narrower meaning).
 
+### Changed
+
+- **`@uluops/core` 0.43.5 → 0.43.6.** Core now pins the same sdk-core 0.18.0 / registry-sdk
+  0.54.0 / ops-sdk 6.7.0 the CLI pinned in 0.31.1, so the install tree holds ONE
+  `@uluops/sdk-core` again — 0.31.1 shipped with three (0.18.0 hoisted, core's 0.17.0 and a
+  0.15.0 under its registry-sdk nested), i.e. two `SdkApiError` class identities in one process
+  and every `instanceof`-based guard silently missing errors minted on the other side. Also
+  inherited: scoreless runs no longer submit `averageScore: 0`, client-side truncation leaves a
+  correlatable marker recommendation (core 0.43.6 changelog).
+
 ## [0.31.1] - 2026-09-20
 
 ### Fixed
