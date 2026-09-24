@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.31.2] - 2026-09-24
+
 ### Added
 
 - **`ulu analytics reliability` shows a DECLINED column** — the `wontfix` share of an agent's
@@ -25,6 +27,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   and every `instanceof`-based guard silently missing errors minted on the other side. Also
   inherited: scoreless runs no longer submit `averageScore: 0`, client-side truncation leaves a
   correlatable marker recommendation (core 0.43.6 changelog).
+
+### Fixed
+
+- **The `--failure-code` examples taught a code the tracker rejects.** `ulu issues create --help` and
+  the README's create example used `SEM-VAL/H` — well-formed but not in the closed set of 28 modes
+  (VAL is an EPI mode; modes are domain-bound). Now `SEM-INC/H` in the help text and `SEM-INC/C` in
+  the README, the latter chosen to agree with the example's own `--domain SEM` and
+  `--severity critical`. Text only; the CLI does not validate the code client-side.
 
 ## [0.31.1] - 2026-09-20
 
