@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.32.0] - 2026-10-03
+
+### Changed
+
+- **`@uluops/core` 0.43.6 → 0.44.0, `@uluops/ops-sdk` 6.7.0 → 6.14.0, `@uluops/sdk-core` 0.18.0 → 0.18.1 (all exact, moved together, so there is one sdk-core under core and ops-sdk).**
+  - Issue reads accept domain issue types instead of throwing (ops-sdk 6.13.0). `ulu issues` on a project holding a `design`- or `architecture`-typed issue used to fail with a `ZodError`.
+  - Twelve response fields the SDK used to strip silently now come through (6.14.0, found by the ops-api strip guard, tracker `a6cc132a`).
+  - **One split remains, tolerated by design:** `registry-sdk` 0.54.0 keeps its own sdk-core 0.18.0; see core 0.44.0.
+
+### Security
+
+- **GHSA-866g-f22w-33x8 (`@ai-sdk/provider-utils`, high):** fixed by core 0.44.0, which moves the AI SDK stack to patched releases within the same major.
+- **`brace-expansion`:** in-range lockfile fix for the recursion and quadratic-expansion DoS advisories. `npm audit --omit=dev` is clean, so the prepublish gate passes again.
+
 ## [0.31.2] - 2026-09-24
 
 ### Added
