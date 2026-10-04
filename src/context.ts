@@ -316,9 +316,16 @@ export function createRegistryContext(
     ? parseIntOption(options.timeout, '--timeout')
     : DEFAULT_TIMEOUT_MS;
 
+  // Same org chain as the ops commands and `ulu exec` (--org > .uluops.json > ULUOPS_ORG_SLUG >
+  // personal). Never wired here before 0.33.0, so every registry command ignored the org the README
+  // says it acts in. registry-sdk >= 0.57 sends it on definition WRITES only; reads carry no org
+  // header and return the marketplace view (visibility spec v0.5.1 I-3).
+  const resolvedOrg = resolveOrg(options);
+
   let client: RegistryClient;
   try {
     client = new RegistryClient({
+      ...(resolvedOrg.org !== undefined ? { orgSlug: resolvedOrg.org } : {}),
       apiKey: config.credentials.apiKey,
       email: config.credentials.email,
       password: config.credentials.password,
@@ -777,9 +784,15 @@ export function handleCoreError(
 
   if (error instanceof ConfigurationError) {
     console.error(`Error: ${error.message}`);
-    if (isAuthRelatedMessage(error.message)) {
+    // Name the key the error is about. The fixed "ULUOPS_API_KEY and ANTHROPIC_API_KEY" hint
+    // pointed OpenRouter/OpenAI/Google users at two variables unrelated to their failure, right
+    // under a message that already named the right one (consumer-validate, 2026-10-04).
+    const namedKey = /\b([A-Z][A-Z0-9_]*_API_KEY)\b/.exec(error.message)?.[1];
+    if (namedKey) {
+      console.error(`\nHint: Check the ${namedKey} environment variable.`);
+    } else if (isAuthRelatedMessage(error.message)) {
       console.error(
-        '\nHint: Check ULUOPS_API_KEY and ANTHROPIC_API_KEY environment variables.',
+        "\nHint: Check ULUOPS_API_KEY and the API key for your model's provider (e.g. ANTHROPIC_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY).",
       );
     } else {
       const { name, types } = extractAmbiguousTypes(error.message);

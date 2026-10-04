@@ -313,6 +313,43 @@ describe('exec agent', () => {
       parse('exec', 'agent', '-t', './src', 'code-validator'),
     ).rejects.toThrow('Agent failed');
   });
+
+  // Multi-agent batch exit code (consumer-validate dx-validator, 2026-10-04): the batch printed
+  // "Failed:" and "0/2 agents completed" and exited 0, so `ulu exec agent a b && deploy` went
+  // green with nothing run. A failed EXECUTION exits 1, as in the single-agent path; a FAIL
+  // verdict does not (it never did for one agent either).
+  it('multi-agent: any agent that fails to execute makes the batch exit 1', async () => {
+    mockClient.runAgent
+      .mockResolvedValueOnce(createAgentResult())
+      .mockRejectedValueOnce(new Error('No such agent'));
+    await expect(
+      parse('exec', 'agent', '-t', './src', 'code-validator', 'bogus-agent'),
+    ).rejects.toThrow('process.exit(1)');
+  });
+
+  it('multi-agent --json: the same failure exits 1 after printing the batch JSON', async () => {
+    mockedCreateCoreContext.mockReturnValue({
+      client: mockClient as unknown as CoreCliContext['client'],
+      json: true,
+      debug: false,
+      quiet: true,
+    });
+    mockClient.runAgent
+      .mockRejectedValueOnce(new Error('No such agent'))
+      .mockRejectedValueOnce(new Error('No such agent'));
+    await expect(
+      parse('exec', 'agent', '-t', './src', 'a-one', 'a-two'),
+    ).rejects.toThrow('process.exit(1)');
+  });
+
+  it('CONTROL — multi-agent: all executed (one FAIL verdict) exits normally', async () => {
+    mockClient.runAgent
+      .mockResolvedValueOnce(createAgentResult())
+      .mockResolvedValueOnce(createAgentResult({ decision: 'FAIL', score: 40 }));
+    await expect(
+      parse('exec', 'agent', '-t', './src', 'code-validator', 'other-agent'),
+    ).resolves.not.toThrow();
+  });
 });
 
 // ── exec command ─────────────────────────────────────────────────────────

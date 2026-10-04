@@ -936,6 +936,18 @@ describe('handleCoreError', () => {
     output.restore();
   });
 
+  it('the auth hint names the key the error names, not a fixed ANTHROPIC_API_KEY', () => {
+    const output = captureOutput();
+    const error = new ConfigurationError(
+      'AI provider "openrouter" is not configured. Set the OPENROUTER_API_KEY environment variable or add it to config.ai.providers',
+    );
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    const hint = output.stderr().split('Hint:')[1] ?? '';
+    expect(hint).toContain('OPENROUTER_API_KEY');
+    expect(hint).not.toContain('ANTHROPIC_API_KEY');
+    output.restore();
+  });
+
   it('should handle ConfigurationError with disambiguation hint for ambiguous-name errors', () => {
     const output = captureOutput();
     const error = new ConfigurationError(
@@ -1300,6 +1312,37 @@ describe('org routing (spec §3.4 / D13): --org reaches the clients through the 
     mockedResolve.mockReturnValue({ org: undefined, source: 'personal' });
     createCoreContext({ tracking: true });
     const cfg = mockedUluOpsClient.mock.calls[0]![0] as Record<string, unknown>;
+    expect('orgSlug' in cfg).toBe(false);
+  });
+});
+
+describe('org routing for registry commands (ulu def/versions/forks/deps/models/…)', () => {
+  // Until 0.33.0 createRegistryContext never resolved an org: --org, .uluops.json and
+  // ULUOPS_ORG_SLUG were inert for every registry command, so a definition write ignored the org
+  // the README says it acts in (consumer-validate, docs-validator, 2026-10-04). registry-sdk 0.58
+  // sends the org only on definition writes; reads carry none, so this changes writes only.
+  const mockedResolve = vi.mocked(resolveWorkspaceOrg);
+  beforeEach(() => {
+    mockedRegistryClient.mockClear();
+    mockedResolve.mockReset();
+    vi.mocked(loadOpsConfig).mockReturnValue({ baseUrl: 'http://localhost:3100', debug: false, credentials: {} } as never);
+    vi.mocked(loadRegistryConfig).mockReturnValue({
+      baseUrl: 'http://localhost:3200', authBaseUrl: 'http://localhost:3100', debug: false,
+      credentials: { apiKey: 'ulr_test-key' },
+    } as never);
+  });
+
+  it('the resolved org (flag, workspace or env) becomes the client orgSlug', () => {
+    mockedResolve.mockReturnValue({ org: 'acme', source: 'explicit' });
+    createRegistryContext({ org: 'acme' });
+    expect(mockedResolve).toHaveBeenCalledWith({ explicit: 'acme', cwd: process.cwd(), env: process.env });
+    expect(mockedRegistryClient).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: 'acme' }));
+  });
+
+  it('CONTROL — personal: no orgSlug key on the client config', () => {
+    mockedResolve.mockReturnValue({ org: undefined, source: 'personal' });
+    createRegistryContext({});
+    const cfg = mockedRegistryClient.mock.calls[0]![0] as Record<string, unknown>;
     expect('orgSlug' in cfg).toBe(false);
   });
 });

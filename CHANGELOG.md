@@ -14,13 +14,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   together).** One copy each of core, registry-sdk and sdk-core in the tree; the registry-sdk /
   sdk-core split 0.32.0 tolerated is gone. Moving registry-sdk with core keeps `ulu exec` (which
   resolves through core's registry-sdk) and `ulu def …` on the same read rules.
-- **Registry reads under an org return the marketplace view (registry-sdk 0.57.0).** With `--org`,
-  `.uluops.json` or `ULUOPS_ORG_SLUG` set, `ulu def list` / `ulu def get` used to send the org
-  header on every request, which the registry treats as a hard scope: other orgs' public
-  definitions were unreadable by bare name. Reads now carry no org header (your org's private
-  definitions are still included, by membership); writes still target your org. A list you relied
-  on as "my org only" now includes other orgs' rows — filter by the `namespace` column. Per the
-  definition-visibility spec v0.5.1 (I-3); the registry MCP made the same change in 0.11.0.
+- **Registry commands now act in the org you set — for writes.** `--org`, `.uluops.json` and
+  `ULUOPS_ORG_SLUG` were ignored by every registry command (`ulu def`, `versions`, `forks`, `deps`,
+  `models`, …): `createRegistryContext` never resolved an org, so a definition create, update or
+  publish landed wherever the API defaulted, despite the README's org rule. They now resolve the
+  org the same way the ops commands and `ulu exec` do. With registry-sdk 0.58 the org is sent on
+  definition **writes** only; registry **reads** carry no org header and return the marketplace
+  view, your org's private definitions included by membership (definition-visibility spec v0.5.1,
+  I-3). **What changes for you:** with an org set, `ulu def create/update/publish/deprecate/…` now
+  writes into that org. Reads are unchanged — they never carried the org from the CLI. To tell
+  same-named rows from different orgs apart, use `namespace` in `--json` output (the table view
+  does not show it).
 - **`ulu exec` runs on the provider your `--model` names, and the README says so.** The README
   claimed execution was Anthropic-only (issue `b9c5ac1e`); core executes against any provider whose
   `<PROVIDER>_API_KEY` is set. New README section *Providers and shell access*, including
@@ -30,6 +34,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`ulu exec agent a b …` exits 1 when an agent fails to execute.** The multi-agent batch printed
+  "Failed:" and "0/2 agents completed" and exited 0, so `ulu exec agent a b && deploy` went green
+  with nothing run. It now exits 1 when any agent fails to execute, as a single-agent run already
+  did. A FAIL verdict is not an execution failure and does not change the exit code.
+- **The missing-key hint names the key that is missing.** It always said "Check ULUOPS_API_KEY and
+  ANTHROPIC_API_KEY", including under an error that named `OPENROUTER_API_KEY`.
 - **`ulu models get` works for model ids containing `/` (registry-sdk 0.58.0).** Every OpenRouter
   model is one (`deepseek/deepseek-v4-flash`); 0.32.0 sent the id in the URL path, the registry's
   edge decoded the slash, and the lookup came back "not found". Checked both ways: 0.32.0 →

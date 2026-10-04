@@ -1039,6 +1039,14 @@ Examples:
             `\n${succeeded.length}/${agentNames.length} agents completed | Average score: ${avgScore}`,
           );
         }
+
+        // An agent that failed to EXECUTE fails the batch, as it fails a single-agent run
+        // (handleCoreError, exit 1). Without this the batch exited 0 with "0/N agents completed",
+        // and `ulu exec agent a b && deploy` went green with nothing run. A FAIL verdict is not
+        // an execution failure and does not change the exit code (it never did for one agent).
+        if (failed.length > 0) {
+          process.exit(1);
+        }
       },
     );
 

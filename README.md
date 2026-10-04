@@ -9,7 +9,7 @@
 [![Node.js](https://img.shields.io/badge/Node.js-20.3+-green.svg)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.0+-blue.svg)](https://www.typescriptlang.org/)
 
-Unified CLI for UluOps — runs, findings, issues and the definition registry from a single command. Wraps both the [ops-sdk](https://www.npmjs.com/package/@uluops/ops-sdk) and [registry-sdk](https://www.npmjs.com/package/@uluops/registry-sdk) into an ergonomic terminal interface.
+Unified CLI for UluOps — runs, findings, issues, the definition registry, and executing agents, commands, workflows and pipelines against your AI provider (`ulu exec`), from a single command. Wraps both the [ops-sdk](https://www.npmjs.com/package/@uluops/ops-sdk) and [registry-sdk](https://www.npmjs.com/package/@uluops/registry-sdk) into an ergonomic terminal interface.
 
 See the [changelog](./CHANGELOG.md) for release history. The npm badge above tracks the published version.
 
@@ -170,6 +170,11 @@ root of a work checkout; `{ "org": "personal" }` in a personal repo nested under
 `ULUOPS_ORG_SLUG` — **from your shell, or from `./.env` / `~/.uluops/.env`, which the CLI loads at
 startup**; else your personal org. The API never infers an org from a project name.
 `ulu runs save` prints where the run landed. `ulu exec` hands the same org to `@uluops/core`.
+**Registry commands** (`ulu def`, `versions`, `forks`, `deps`, …) send the org on definition
+**writes** only (create, update, publish, deprecate, archive, delete, fork); registry **reads** carry
+no org header and return the marketplace view, with your org's private definitions included by
+membership — filter by `namespace` (in `--json` output) to tell orgs' same-named rows apart.
+Before 0.33.0 registry commands ignored the org entirely.
 Prompts that name the source (`projects rehome`) print its provenance in full — the path of the
 `.uluops.json` that answered, or `env-file` when the variable came from a file rather than the
 shell — so a stray `.env` in a checkout cannot pass as "my shell".
@@ -247,6 +252,11 @@ ulu auth whoami
 ---
 
 ### Projects
+
+> **Names that start with `-`** (e.g. a project named after the repo `-uluops-core`) look like
+> options to the argument parser: `ulu projects get -uluops-core` fails with `unknown option`. Put
+> the name after `--`, with any flags before it: `ulu projects get -- -uluops-core`,
+> `ulu issues list --status open -- -uluops-core`.
 
 Project lifecycle management. Alias: `p`.
 
@@ -748,8 +758,9 @@ ulu lang adl -o adl-schema.json   # Write JSON Schema to file
 AI model catalog.
 
 ```bash
-ulu models list                   # List models (--provider, --tier, --capability)
+ulu models list                   # List models (--provider, --tier, --capability, --status)
 ulu models get <provider> <id>    # Get model details
+ulu models get openrouter deepseek/deepseek-v4-flash   # ids containing "/" work too
 ulu models providers              # List providers
 ulu models aliases                # List model aliases
 ulu models resolve <alias>        # Resolve alias to concrete model
@@ -807,6 +818,7 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `--project <name>` | Project name for result tracking |
 | `--no-tracking` | Disable validation service submission |
 | `--no-safety-warnings` | Suppress risk warnings and runtime advisories |
+| `--registry-url <url>` | Override the registry URL definitions are resolved from |
 
 > **Parent options work before OR after the subcommand** (since 0.21.2). They
 > belong to `ulu exec`, not the subcommand, but the CLI relocates them
@@ -1065,6 +1077,7 @@ through the single `emitJson()` chokepoint. To change an output shape you must:
 | `ULUOPS_ORG_SLUG` | Org a command acts in when no `--org` flag or `.uluops.json` answers — see [Which org a command acts in](#which-org-a-command-acts-in) | personal org |
 | `ULUOPS_BASE_URL` | Tracker API base URL (the `--base-url` flag overrides it) | `https://api.uluops.ai/api/v1` |
 | `ULUOPS_REGISTRY_URL` | Registry API base URL (the `--base-url` flag overrides it on registry commands) | `https://api.uluops.ai/api/v1/registry` |
+| `ULUOPS_SUBMISSION_URL` | Where `ulu exec` submits tracked results, when it should differ from the tracker base URL | the tracker base URL |
 | `ULUOPS_DEBUG` | Enable debug logging (also expands the global unhandled-error handler's output) | `false` |
 | `ULU_JSON_SCHEMA` | Set to `1` to wrap `--json` output in the versioned stability envelope | - |
 | `ANTHROPIC_API_KEY` | API key for Anthropic models (the default provider for `ulu exec`) | - |
