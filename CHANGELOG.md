@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.33.1] - 2026-10-04
+
+### Fixed
+
+- **A project name starting with `-` gets a usable error.** `ulu log -uluops-cli` — every project
+  here is named after its repo — failed with "unknown option '-uluops-cli'" and the command's help,
+  nothing saying what to do; quoting doesn't help, since the shell strips the quotes. The error now
+  prints the exact command to run instead (`ulu log -- -uluops-cli`) and notes the `--flag=value`
+  form. A genuine mistyped option (`-x`, `--stats`) prints as before. Reported on 0.33.0 the day the
+  README gained a note on it — the note was not where the user was looking.
+
 ## [0.33.0] - 2026-10-04
 
 ### Changed

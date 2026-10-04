@@ -1,6 +1,6 @@
 {
   "name": "@uluops/cli",
-  "version": "0.33.0",
+  "version": "0.33.1",
   "description": "Unified CLI for UluOps — runs, findings, issues and the definition registry from a single command",
   "type": "module",
   "bin": {

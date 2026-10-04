@@ -256,7 +256,9 @@ ulu auth whoami
 > **Names that start with `-`** (e.g. a project named after the repo `-uluops-core`) look like
 > options to the argument parser: `ulu projects get -uluops-core` fails with `unknown option`. Put
 > the name after `--`, with any flags before it: `ulu projects get -- -uluops-core`,
-> `ulu issues list --status open -- -uluops-core`.
+> `ulu issues list --status open -- -uluops-core`. Quoting does not help (the shell removes the
+> quotes); a flag that takes the name accepts it with `=` (`--project=-uluops-core`). Since 0.33.1
+> the error itself prints the command to run.
 
 Project lifecycle management. Alias: `p`.
 

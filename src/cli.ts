@@ -28,6 +28,7 @@ import { registerRunCommands } from './commands/runs.js';
 import { registerTaxonomyCommands } from './commands/taxonomy.js';
 import { registerTranslationCommands } from './commands/translation.js';
 import { registerVersionCommands } from './commands/versions.js';
+import { dashNameHint } from './dashNameHint.js';
 import { getCliVersion } from './version.js';
 
 // Record whether ULUOPS_ORG_SLUG came from the SHELL or from an env FILE before
@@ -117,6 +118,16 @@ program
   )
   .option('--debug', 'Enable debug output')
   .option('-q, --quiet', 'Suppress spinners and non-essential output')
+  // Set before the subcommands are registered: commander copies output settings into each
+  // subcommand at creation. A name starting with "-" (`ulu log -uluops-cli`) is read as an
+  // unknown option; say how to pass it, right under the error (src/dashNameHint.ts).
+  .configureOutput({
+    outputError: (str, write) => {
+      write(str);
+      const hint = dashNameHint(str, process.argv.slice(2));
+      if (hint) write(hint);
+    },
+  })
   .showHelpAfterError(true);
 
 // Ops commands
