@@ -6,6 +6,46 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.33.0] - 2026-10-04
+
+### Changed
+
+- **`@uluops/core` 0.44.0 → 0.46.0 and `@uluops/registry-sdk` 0.54.0 → 0.58.0 (both exact, moved
+  together).** One copy each of core, registry-sdk and sdk-core in the tree; the registry-sdk /
+  sdk-core split 0.32.0 tolerated is gone. Moving registry-sdk with core keeps `ulu exec` (which
+  resolves through core's registry-sdk) and `ulu def …` on the same read rules.
+- **Registry reads under an org return the marketplace view (registry-sdk 0.57.0).** With `--org`,
+  `.uluops.json` or `ULUOPS_ORG_SLUG` set, `ulu def list` / `ulu def get` used to send the org
+  header on every request, which the registry treats as a hard scope: other orgs' public
+  definitions were unreadable by bare name. Reads now carry no org header (your org's private
+  definitions are still included, by membership); writes still target your org. A list you relied
+  on as "my org only" now includes other orgs' rows — filter by the `namespace` column. Per the
+  definition-visibility spec v0.5.1 (I-3); the registry MCP made the same change in 0.11.0.
+- **`ulu exec` runs on the provider your `--model` names, and the README says so.** The README
+  claimed execution was Anthropic-only (issue `b9c5ac1e`); core executes against any provider whose
+  `<PROVIDER>_API_KEY` is set. New README section *Providers and shell access*, including
+  OpenRouter (experimental): install `@openrouter/ai-sdk-provider@2.10.0` next to the CLI (`-g` for a
+  global `ulu`), then `--model openrouter:<slug>`. Verified with a globally installed tarball:
+  `openrouter:deepseek/deepseek-v4-flash`, code-validator, PASS 100.
+
+### Fixed
+
+- **`ulu models get` works for model ids containing `/` (registry-sdk 0.58.0).** Every OpenRouter
+  model is one (`deepseek/deepseek-v4-flash`); 0.32.0 sent the id in the URL path, the registry's
+  edge decoded the slash, and the lookup came back "not found". Checked both ways: 0.32.0 →
+  not found, 0.33.0 → the model.
+
+### Security
+
+- **`ULUOPS_ALLOWED_TOOLS=bash` now does what it says (core 0.46.0).** Until this release no agent
+  run through `ulu exec` was ever offered a shell, whatever you set (core tracker `38ce9462`). Now
+  an agent that declares `Bash`, on Anthropic, OpenAI or OpenRouter, runs model-generated commands
+  via `sh -c` — starting in the target directory, not confined to it, no sandbox — when bash is
+  allowed. The allowlist matches case-insensitively (`Bash` counts), and it is read from the
+  environment, including a `./.env` or `~/.uluops/.env` the CLI loads. Core prints a warning when a
+  shell is active and removes API keys and tokens from the shell's environment. The default is
+  unchanged: no allowlist, no shell. If you set this long ago, check it is still what you want.
+
 ## [0.32.0] - 2026-10-03
 
 ### Changed

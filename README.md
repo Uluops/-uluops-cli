@@ -66,6 +66,7 @@ ulu exec --project my-project agent code-validator -t ./src --model sonnet
   - [Languages](#languages) (`ulu lang`) — Definition language schemas
   - [Models](#models) — AI model catalog
   - [Exec](#exec) (`ulu x`) — Execute agents, commands, workflows, and pipelines
+  - [Providers and shell access](#providers-and-shell-access) — Which models `ulu exec` can run; OpenRouter; bash
   - [Executions](#executions) — Execution tracking
   - [Translation](#translation) — Definition translation & upgrades
   - [Completion](#completion) — Shell completion scripts
@@ -754,7 +755,7 @@ ulu models aliases                # List model aliases
 ulu models resolve <alias>        # Resolve alias to concrete model
 ```
 
-> **Note:** `ulu models providers` lists the providers the platform catalog knows about. This is distinct from what `ulu exec` can currently execute against — execution is Anthropic-only today (issue b9c5ac1e). <!-- revisit when b9c5ac1e multi-provider execution ships -->
+> **Note:** `ulu models providers` lists the providers the platform catalog knows about. `ulu exec` executes against any provider whose API key is set (see [Providers and shell access](#providers-and-shell-access)); the catalog listing does not imply a key is configured.
 
 ---
 
@@ -835,7 +836,7 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | Option | Description |
 |--------|-------------|
 | `-p, --prompt <text>` | Operator directive or context for the agent |
-| `-m, --model <model>` | Model override (alias, tier, or provider:modelId). The `provider:` prefix is parsed and accepted; however, `ulu exec` currently only executes against Anthropic — non-Anthropic providers are not yet supported at the execution layer (issue b9c5ac1e). <!-- revisit when b9c5ac1e multi-provider execution ships --> |
+| `-m, --model <model>` | Model override (alias, tier, or provider:modelId, e.g. `openai:gpt-5`, `openrouter:deepseek/deepseek-v4-flash`). The provider's API key must be set; see [Providers and shell access](#providers-and-shell-access). |
 | `--hash <sha256:...>` | **Optional.** Pin the expected YAML hash (from a trusted channel). Verifies the resolved definition source + config before executing; refuses on mismatch (**exit 4**). Available on `run`, `agent`, `command`, `workflow`, and `pipeline` (requires `@uluops/core@0.32.0`). |
 | `--prompt-hash <sha256:...>` | **Optional.** Pin the expected rendered-prompt hash. Pair with `--hash` for full agent/command executed-prompt integrity. Only `run`, `agent`, and `command` — workflows/pipelines have no rendered prompt, so supplying it for one is refused as "unavailable" (**exit 4**). |
 
@@ -919,6 +920,22 @@ ulu exec command validate ./src --hash sha256:… --prompt-hash sha256:…
 > refs resolve downstream and are not individually pinned).
 
 ---
+
+### Providers and shell access
+
+`ulu exec` runs on any provider whose API key is set in the environment (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, …); pick one with `--model provider:modelId`. Anthropic, OpenAI and Google are bundled.
+
+**OpenRouter (experimental).** Install the provider package next to the CLI, at the version core is built against — globally if `ulu` is installed globally:
+
+```bash
+npm install -g @openrouter/ai-sdk-provider@2.10.0
+export OPENROUTER_API_KEY=your_openrouter_key
+ulu exec agent code-validator -t ./src --model openrouter:deepseek/deepseek-v4-flash
+```
+
+The error core prints when the package is missing says `npm install …`; for a global `ulu`, add `-g`. Everything the agent reads, and any shell output, goes to OpenRouter and on to whichever upstream serves the request: do not point it at private code without a data-retention decision of your own (see [`@uluops/core`'s OpenRouter notes](https://github.com/Uluops/-uluops-core#openrouter-experimental)).
+
+**Shell access.** Agents that declare `Bash` get a shell only when you allow it: `ULUOPS_ALLOWED_TOOLS=bash` (any case; a comma-separated list), including from a `./.env` or `~/.uluops/.env` the CLI loads. When a shell is active, core prints a warning once per run. Commands run via `sh -c`, start in the target directory but are not confined to it, run without a sandbox, and do not see your API keys or tokens. Allowing bash allows it for every agent that declares it. Providers with a shell: Anthropic, OpenAI and OpenRouter; on others the agent runs without one and core warns. Before `@uluops/core` 0.46.0 (CLI 0.33.0) this setting had no effect at all; if you set it long ago, check it is still what you want.
 
 ### Executions
 
@@ -1050,7 +1067,9 @@ through the single `emitJson()` chokepoint. To change an output shape you must:
 | `ULUOPS_REGISTRY_URL` | Registry API base URL (the `--base-url` flag overrides it on registry commands) | `https://api.uluops.ai/api/v1/registry` |
 | `ULUOPS_DEBUG` | Enable debug logging (also expands the global unhandled-error handler's output) | `false` |
 | `ULU_JSON_SCHEMA` | Set to `1` to wrap `--json` output in the versioned stability envelope | - |
-| `ANTHROPIC_API_KEY` | API key for AI model execution (required for `ulu exec` commands). `ulu exec` executes against Anthropic models today regardless of a `--model` value's provider prefix; non-Anthropic execution is not yet supported (tracked in issue b9c5ac1e). <!-- revisit when b9c5ac1e multi-provider execution ships --> | - |
+| `ANTHROPIC_API_KEY` | API key for Anthropic models (the default provider for `ulu exec`) | - |
+| `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, … | API key for that provider's models; any `<PROVIDER>_API_KEY` that is set makes the provider available to `ulu exec` (`GOOGLE_GENERATIVE_AI_API_KEY` also works for Google) | - |
+| `ULUOPS_ALLOWED_TOOLS` | Comma-separated tool allowlist for `ulu exec`; `bash` (any case) gives agents that declare Bash a shell — see [Providers and shell access](#providers-and-shell-access) | bash denied |
 | `ULUOPS_MAX_CONCURRENCY` | Engine-wide cap on concurrent in-flight LLM calls for `ulu exec` (distinct from `exec agent -c/--concurrency`); honored by `@uluops/core` | `8` |
 | `ULUOPS_THINKING_BUDGET` | Token budget for extended thinking (optional) | - |
 
