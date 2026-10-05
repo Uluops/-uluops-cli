@@ -66,7 +66,7 @@ ulu exec --project my-project agent code-validator -t ./src --model sonnet
   - [Languages](#languages) (`ulu lang`) — Definition language schemas
   - [Models](#models) — AI model catalog
   - [Exec](#exec) (`ulu x`) — Execute agents, commands, workflows, and pipelines
-  - [Providers and shell access](#providers-and-shell-access) — Which models `ulu exec` can run; OpenRouter; bash
+  - [Providers and shell access](#providers-and-shell-access) — Which models `ulu exec` can run; OpenRouter; cost; bash
   - [Executions](#executions) — Execution tracking
   - [Translation](#translation) — Definition translation & upgrades
   - [Completion](#completion) — Shell completion scripts

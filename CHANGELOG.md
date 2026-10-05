@@ -18,7 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   registry estimate was printed: a run on a model the catalog does not list (which has a bill
   but no estimate) printed no cost at all, and a billed run printed as "Estimated cost".
   An unpriced run prints `Cost: unknown` rather than nothing; a run that calls no model prints
-  no cost. `--json` output carries all four fields.
+  no cost. `--json` output carries all four fields. Every `ulu exec` subcommand's `--help`
+  explains the cost line and its basis vocabulary.
 
 ### Changed
 

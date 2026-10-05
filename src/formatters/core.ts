@@ -214,6 +214,9 @@ export function formatExecutionResult(result: ExecutionResult): string {
  * - `'none'` (no model was called): nothing printed.
  * - A result with no `costBasis` (a producer older than core 0.47.0) keeps the old
  *   estimate-only line.
+ *
+ * @param metrics - The cost fields of an AgentResult or ExecutionResult's metrics.
+ * @returns Zero, one or two lines (two-space indented) for the Token Usage block.
  */
 export function formatCostLines(metrics: {
   costUsd?: number;
@@ -229,7 +232,7 @@ export function formatCostLines(metrics: {
   if (costBasis === 'none') return [];
   if (costBasis === 'unpriced' || costUsdTotal === undefined) {
     return [
-      '  Cost: unknown (a model could not be priced, or an agent failed after spending)',
+      '  Cost: unknown (a model had no price, or an agent failed after spending)',
     ];
   }
   const lines = [`  Cost: ${formatUsd(costUsdTotal)} (${costBasis})`];
