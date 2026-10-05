@@ -534,7 +534,6 @@ describe('formatDefinitionDetails', () => {
   });
 });
 
-
 /**
  * Slice 1f (D19): the core 0.47.0 cost contract reaches the human-readable output.
  * NEGATIVE CONTROL: every case below that expects a "Cost:" line fails against 0.33.1, which
@@ -543,43 +542,74 @@ describe('formatDefinitionDetails', () => {
  */
 describe('formatCostLines (core 0.47.0 cost contract)', () => {
   it('a billed-only run (no estimate) prints the total and its basis', () => {
-    const out = formatAgentResult(createValidatorResult({
-      metrics: createMetrics({ costUsdBilled: 0.009148, costUsdTotal: 0.009148, costBasis: 'billed' } as never),
-    }));
+    const out = formatAgentResult(
+      createValidatorResult({
+        metrics: createMetrics({
+          costUsdBilled: 0.009148,
+          costUsdTotal: 0.009148,
+          costBasis: 'billed',
+        } as never),
+      }),
+    );
     expect(out).toContain('Cost: $0.009148 (billed)');
     expect(out).not.toContain('Estimated cost');
   });
 
   it('a bill equal to the estimate still says billed — the basis is never hidden', () => {
-    expect(formatCostLines({ costUsd: 0.036784, costUsdTotal: 0.036784, costBasis: 'billed' }))
-      .toEqual(['  Cost: $0.036784 (billed)']);
+    expect(
+      formatCostLines({
+        costUsd: 0.036784,
+        costUsdTotal: 0.036784,
+        costBasis: 'billed',
+      }),
+    ).toEqual(['  Cost: $0.036784 (billed)']);
   });
 
   it('a bill that differs from the estimate prints both, for reconciliation', () => {
-    expect(formatCostLines({ costUsd: 0.010302, costUsdTotal: 0.007513, costBasis: 'billed' }))
-      .toEqual(['  Cost: $0.007513 (billed)', '  Estimated cost: $0.010302']);
+    expect(
+      formatCostLines({
+        costUsd: 0.010302,
+        costUsdTotal: 0.007513,
+        costBasis: 'billed',
+      }),
+    ).toEqual(['  Cost: $0.007513 (billed)', '  Estimated cost: $0.010302']);
   });
 
   it('a mixed total says mixed', () => {
-    expect(formatCostLines({ costUsdTotal: 0.06, costBasis: 'mixed' })).toEqual(['  Cost: $0.060000 (mixed)']);
+    expect(formatCostLines({ costUsdTotal: 0.06, costBasis: 'mixed' })).toEqual(
+      ['  Cost: $0.060000 (mixed)'],
+    );
   });
 
   it("an unpriced run prints 'unknown' instead of vanishing", () => {
-    expect(formatCostLines({ costBasis: 'unpriced' })[0]).toContain('Cost: unknown');
+    expect(formatCostLines({ costBasis: 'unpriced' })[0]).toContain(
+      'Cost: unknown',
+    );
   });
 
   it("'none' (no model called) prints nothing", () => {
-    expect(formatCostLines({ costUsd: 0, costUsdTotal: 0, costBasis: 'none' })).toEqual([]);
+    expect(
+      formatCostLines({ costUsd: 0, costUsdTotal: 0, costBasis: 'none' }),
+    ).toEqual([]);
   });
 
   it('a real per-request OpenRouter cost is not rounded to $0.0000', () => {
-    expect(formatCostLines({ costUsdTotal: 0.000002658, costBasis: 'billed' })[0]).toContain('$0.000003');
+    expect(
+      formatCostLines({ costUsdTotal: 0.000002658, costBasis: 'billed' })[0],
+    ).toContain('$0.000003');
   });
 
   it('commands, workflows and pipelines get the same lines', () => {
-    const out = formatExecutionResult(createExecResult({
-      metrics: { ...createExecResult().metrics, costUsdBilled: 0.021715, costUsdTotal: 0.021715, costBasis: 'billed' } as never,
-    }));
+    const out = formatExecutionResult(
+      createExecResult({
+        metrics: {
+          ...createExecResult().metrics,
+          costUsdBilled: 0.021715,
+          costUsdTotal: 0.021715,
+          costBasis: 'billed',
+        } as never,
+      }),
+    );
     expect(out).toContain('Cost: $0.021715 (billed)');
   });
 });

@@ -665,7 +665,15 @@ function printApiErrorDetails(
       }
       console.error('└─────────────────────────────────────────────────┘');
     } else if (error.code === 'RATE_LIMITED' || error.statusCode === 429) {
-      console.error('\nHint: Rate limited. Wait a moment and try again.');
+      // core 0.48.0 sets retryAfter (seconds) from the provider's reset header when it has one.
+      const retryAfter =
+        (error as { retryAfter?: unknown }).retryAfter ??
+        (error.details as Record<string, unknown> | undefined)?.retryAfter;
+      console.error(
+        typeof retryAfter === 'number' && retryAfter > 0
+          ? `\nHint: Rate limited. Try again in ${retryAfter} seconds.`
+          : '\nHint: Rate limited. Wait a moment and try again.',
+      );
     } else if (
       error.code === 'SERVICE_UNAVAILABLE' ||
       error.statusCode === 503
@@ -773,6 +781,30 @@ export function handleCoreError(
     process.exit(1);
   }
 
+  // A model provider refused for lack of credit (core 0.48.0 ProviderCreditError). Keyed on the
+  // stable `code`, not `instanceof`, and handled BEFORE the API-error branch: the error carries
+  // statusCode 402, which that branch would print with no hint — or, copying the "402 means
+  // subscription" reading, point at an UluOps upgrade for an OpenRouter balance.
+  if (
+    error instanceof Error &&
+    (error as { code?: unknown }).code === 'PROVIDER_CREDIT'
+  ) {
+    if (ctx.json) {
+      const json = (error as { toJSON?: () => unknown }).toJSON?.();
+      console.error(
+        JSON.stringify(json ?? { message: error.message }, null, 2),
+      );
+    } else {
+      console.error(`Error: ${error.message}`);
+      console.error(
+        /can only afford|fewer max_tokens|Lower maxTokens/i.test(error.message)
+          ? "\nHint: The request's worst case exceeds the remaining balance. Pass a lower --max-tokens, or add credit to the provider account."
+          : "\nHint: Add credit to the provider account (for OpenRouter: https://openrouter.ai/settings/credits) or raise the key's limit.",
+      );
+    }
+    process.exit(1);
+  }
+
   if (isApiErrorLike(error)) {
     printApiErrorDetails(error, ctx, {
       unauthorized: 'Check your ULUOPS_API_KEY environment variable.',
@@ -811,8 +843,12 @@ export function handleCoreError(
 
   if (error instanceof ModelNotFoundError) {
     console.error(`Error: ${error.message}`);
+    // Since core 0.48.0 this also arrives from OpenRouter rejecting a slug mid-run; the alias
+    // hint would contradict a message that already says where to look up the slug.
     console.error(
-      '\nHint: Use --model with a known alias (haiku, sonnet, opus) or provider:modelId format.',
+      /openrouter/i.test(error.message)
+        ? '\nHint: Check the slug with `ulu models list --provider openrouter` or at https://openrouter.ai/models.'
+        : '\nHint: Use --model with a known alias (haiku, sonnet, opus) or provider:modelId format.',
     );
     process.exit(1);
   }
