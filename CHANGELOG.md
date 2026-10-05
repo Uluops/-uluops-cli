@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.34.0] - 2026-10-05
+
+### Added
+
+- **The run output shows billed cost and what the total is made of (OpenRouter plan slice 1f).**
+  `@uluops/core` 0.47.0 reports a provider-billed figure (`costUsdBilled`), a best-available
+  total (`costUsdTotal`) and its basis (`costBasis`). Under Token Usage, agent, command,
+  workflow and pipeline output now prints `Cost: $<total> (billed|estimated|mixed)`, plus an
+  `Estimated cost` line when the estimate differs from the total. Before this, only the
+  registry estimate was printed: a run on a model the catalog does not list (which has a bill
+  but no estimate) printed no cost at all, and a billed run printed as "Estimated cost".
+  An unpriced run prints `Cost: unknown` rather than nothing; a run that calls no model prints
+  no cost. `--json` output carries all four fields. Every `ulu exec` subcommand's `--help`
+  explains the cost line and its basis vocabulary.
+
+### Changed
+
+- **`@uluops/core` 0.46.0 → 0.47.0** (exact pin).
+- **Cost prints to six decimals, not four.** One OpenRouter request can cost $0.000003, which
+  four decimals showed as `$0.0000`. Output parsed by its old `$0.0000` shape changes width.
+
 ## [0.33.1] - 2026-10-04
 
 ### Fixed

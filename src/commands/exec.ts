@@ -327,6 +327,15 @@ Inherited options (from \`ulu exec\`, work before OR after the subcommand):
 
 Inherited global options (see \`ulu --help\`):
   --api-key, --profile, --base-url, --timeout, --json, --debug, -q/--quiet
+
+Cost line (under Token Usage):
+  Cost: $<total> (billed)     the provider's own bill (OpenRouter reports one per request)
+  Cost: $<total> (estimated)  tokens priced at the registry catalog's rates
+  Cost: $<total> (mixed)      some agents billed, some estimated, added together
+  Estimated cost: $<n>        printed when the catalog estimate differs from the total
+  Cost: unknown               a model had no price, or an agent failed after spending
+                              (a failed run also shows Completeness above)
+  Cost is shown locally only; it is not sent to the Tracker.
 `;
 
 /** Read a string option from Commander's untyped opts record. */
