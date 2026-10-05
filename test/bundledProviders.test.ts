@@ -10,10 +10,14 @@ import { describe, expect, it } from 'vitest';
 import { AIProvider } from '@uluops/core';
 
 const require = createRequire(import.meta.url);
-const pkg = require('../package.json') as { dependencies: Record<string, string> };
+const pkg = require('../package.json') as {
+  dependencies: Record<string, string>;
+};
 
 describe('bundled OpenRouter provider', () => {
-  const corePin = /@openrouter\/ai-sdk-provider@(\S+)$/.exec(AIProvider.installHintFor('openrouter'))?.[1];
+  const corePin = /@openrouter\/ai-sdk-provider@(\S+)$/.exec(
+    AIProvider.installHintFor('openrouter'),
+  )?.[1];
 
   it("core names the provider version it is built against (the test's own premise)", () => {
     expect(corePin).toMatch(/^\d+\.\d+\.\d+$/);
@@ -24,7 +28,9 @@ describe('bundled OpenRouter provider', () => {
   });
 
   it('resolves from the CLI, where core will look for it', () => {
-    const installed = require('@openrouter/ai-sdk-provider/package.json') as { version: string };
+    const installed = require('@openrouter/ai-sdk-provider/package.json') as {
+      version: string;
+    };
     expect(installed.version).toBe(corePin);
   });
 });

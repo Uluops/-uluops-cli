@@ -6,6 +6,30 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.35.0] - 2026-10-05
+
+### Changed
+
+- **`@uluops/core` 0.47.0 → 0.48.0** (exact pin), which types OpenRouter's errors and fails a
+  pipeline run on a provider credit refusal:
+  - **A pipeline stopped by an out-of-credit (402) response now fails**: later stages are
+    skipped, running agents are aborted, and `ulu exec pipeline` exits 1 with the provider's
+    text. Before, the same run could report a failing stage and continue.
+  - **A mistyped provider** (`--model openrouer:x`) is reported as unknown, with the valid
+    providers listed, instead of "Set the OPENROUER_API_KEY environment variable".
+
+### Added
+
+- **Hints for the new errors.**
+  - **Out of credit (402):** when the provider refused before running (the request's
+    `max_tokens` worst case exceeds the balance), the hint says to pass a lower `--max-tokens`
+    or add credit; otherwise, to add credit (OpenRouter's credits page) or raise the key's
+    limit. It is printed before the generic API-error output, which would otherwise show a 402
+    with no hint.
+  - **Unknown OpenRouter slug:** points at `ulu models list --provider openrouter` and
+    openrouter.ai/models, not at the haiku/sonnet/opus aliases.
+  - **Rate limited (429):** names the wait in seconds when the provider says when to retry.
+
 ## [0.34.1] - 2026-10-05
 
 ### Changed

@@ -870,6 +870,90 @@ describe('handleRegistryError', () => {
 });
 
 describe('handleCoreError', () => {
+  // core 0.48.0 (OpenRouter 1d). NEGATIVE CONTROL: against 0.34.1 the credit error falls into the
+  // API-error branch with no hint, the OpenRouter slug gets the haiku/sonnet/opus hint, and the
+  // 429 hint ignores retryAfter.
+  const creditError = (message: string) =>
+    Object.assign(new Error(message), {
+      name: 'ProviderCreditError',
+      code: 'PROVIDER_CREDIT',
+      statusCode: 402,
+      provider: 'openrouter',
+      toJSON() {
+        return {
+          name: 'ProviderCreditError',
+          code: 'PROVIDER_CREDIT',
+          message,
+          statusCode: 402,
+        };
+      },
+    });
+
+  it('a pre-flight provider 402 hints at --max-tokens, not an UluOps upgrade', () => {
+    const output = captureOutput();
+    const error = creditError(
+      'Provider "openrouter" refused the request before running it (HTTP 402): Lower maxTokens or add credit. Provider message: can only afford 83666',
+    );
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
+    expect(output.stderr()).toContain('can only afford 83666');
+    expect(output.stderr()).toContain('--max-tokens');
+    expect(output.stderr()).not.toContain('Subscription required');
+    output.restore();
+  });
+
+  it('an exhausted-credit 402 hints at adding credit', () => {
+    const output = captureOutput();
+    const error = creditError(
+      'Out of credit with provider "openrouter" (HTTP 402). Provider message: Insufficient credits',
+    );
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
+    expect(output.stderr()).toContain('openrouter.ai/settings/credits');
+    output.restore();
+  });
+
+  it('a pipeline stopped by a provider 402 exits non-zero with the provider text', () => {
+    const output = captureOutput();
+    const error = new PipelineError(
+      'Pipeline pipeline_1 failed: Out of credit with provider "openrouter" (HTTP 402)',
+      {},
+    );
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
+    expect(output.stderr()).toContain('Out of credit');
+    output.restore();
+  });
+
+  it('an OpenRouter unknown slug points at the slug list, not at aliases', () => {
+    const output = captureOutput();
+    const error = new ModelNotFoundError(
+      'OpenRouter does not recognize the model "deepseek/nope" (HTTP 400).',
+    );
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
+    expect(output.stderr()).toContain('ulu models list --provider openrouter');
+    expect(output.stderr()).not.toContain('haiku, sonnet, opus');
+    output.restore();
+  });
+
+  it('a 429 with retryAfter names the wait', () => {
+    const output = captureOutput();
+    const error = Object.assign(
+      new SdkApiError(429, 'Rate limit exceeded', 'RATE_LIMITED'),
+      { retryAfter: 42 },
+    );
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
+    expect(output.stderr()).toContain('Try again in 42 seconds');
+    output.restore();
+  });
+
   it('should handle SdkApiError with core-specific hints', () => {
     const output = captureOutput();
     const error = new SdkApiError(401, 'Unauthorized', 'UNAUTHORIZED');
@@ -941,7 +1025,9 @@ describe('handleCoreError', () => {
     const error = new ConfigurationError(
       'AI provider "openrouter" is not configured. Set the OPENROUTER_API_KEY environment variable or add it to config.ai.providers',
     );
-    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow('process.exit(1)');
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
     const hint = output.stderr().split('Hint:')[1] ?? '';
     expect(hint).toContain('OPENROUTER_API_KEY');
     expect(hint).not.toContain('ANTHROPIC_API_KEY');
@@ -1325,9 +1411,15 @@ describe('org routing for registry commands (ulu def/versions/forks/deps/models/
   beforeEach(() => {
     mockedRegistryClient.mockClear();
     mockedResolve.mockReset();
-    vi.mocked(loadOpsConfig).mockReturnValue({ baseUrl: 'http://localhost:3100', debug: false, credentials: {} } as never);
+    vi.mocked(loadOpsConfig).mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: {},
+    } as never);
     vi.mocked(loadRegistryConfig).mockReturnValue({
-      baseUrl: 'http://localhost:3200', authBaseUrl: 'http://localhost:3100', debug: false,
+      baseUrl: 'http://localhost:3200',
+      authBaseUrl: 'http://localhost:3100',
+      debug: false,
       credentials: { apiKey: 'ulr_test-key' },
     } as never);
   });
@@ -1335,14 +1427,23 @@ describe('org routing for registry commands (ulu def/versions/forks/deps/models/
   it('the resolved org (flag, workspace or env) becomes the client orgSlug', () => {
     mockedResolve.mockReturnValue({ org: 'acme', source: 'explicit' });
     createRegistryContext({ org: 'acme' });
-    expect(mockedResolve).toHaveBeenCalledWith({ explicit: 'acme', cwd: process.cwd(), env: process.env });
-    expect(mockedRegistryClient).toHaveBeenCalledWith(expect.objectContaining({ orgSlug: 'acme' }));
+    expect(mockedResolve).toHaveBeenCalledWith({
+      explicit: 'acme',
+      cwd: process.cwd(),
+      env: process.env,
+    });
+    expect(mockedRegistryClient).toHaveBeenCalledWith(
+      expect.objectContaining({ orgSlug: 'acme' }),
+    );
   });
 
   it('CONTROL — personal: no orgSlug key on the client config', () => {
     mockedResolve.mockReturnValue({ org: undefined, source: 'personal' });
     createRegistryContext({});
-    const cfg = mockedRegistryClient.mock.calls[0]![0] as Record<string, unknown>;
+    const cfg = mockedRegistryClient.mock.calls[0]![0] as Record<
+      string,
+      unknown
+    >;
     expect('orgSlug' in cfg).toBe(false);
   });
 });

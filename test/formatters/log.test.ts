@@ -72,20 +72,64 @@ function fixture(): ProjectLogPage {
     at: '2026-09-13T14:02:00.400Z',
     seq: 900,
   });
-  events.push(decision(1, '2026-09-13T14:20:00.100Z', 'open', 'deferred', 'after the auth migration'));
-  events.push(decision(2, '2026-09-13T14:20:00.200Z', 'wontfix', 'open', 'Reverted - file is still needed'));
-  events.push(decision(3, '2026-09-13T14:21:00.000Z', 'open', 'wontfix', null, 'agent'));
+  events.push(
+    decision(
+      1,
+      '2026-09-13T14:20:00.100Z',
+      'open',
+      'deferred',
+      'after the auth migration',
+    ),
+  );
+  events.push(
+    decision(
+      2,
+      '2026-09-13T14:20:00.200Z',
+      'wontfix',
+      'open',
+      'Reverted - file is still needed',
+    ),
+  );
+  events.push(
+    decision(3, '2026-09-13T14:21:00.000Z', 'open', 'wontfix', null, 'agent'),
+  );
   // Two INTERLEAVED bursts in ONE second: 25 completed<-open (no reason) and 25 observation<-open "triage".
   for (let i = 0; i < 25; i++) {
-    events.push(decision(100 + i, `2026-06-15T10:00:00.${String(i * 2).padStart(3, '0')}Z`, 'open', 'completed', null));
-    events.push(decision(200 + i, `2026-06-15T10:00:00.${String(i * 2 + 1).padStart(3, '0')}Z`, 'open', 'observation', 'triage'));
+    events.push(
+      decision(
+        100 + i,
+        `2026-06-15T10:00:00.${String(i * 2).padStart(3, '0')}Z`,
+        'open',
+        'completed',
+        null,
+      ),
+    );
+    events.push(
+      decision(
+        200 + i,
+        `2026-06-15T10:00:00.${String(i * 2 + 1).padStart(3, '0')}Z`,
+        'open',
+        'observation',
+        'triage',
+      ),
+    );
   }
   // A status-mixed select-all in one second: 3 from open, 2 from deferred, all -> completed, same reason.
-  events.push(decision(301, '2026-06-01T09:00:00.000Z', 'open', 'completed', 'sweep'));
-  events.push(decision(302, '2026-06-01T09:00:00.001Z', 'deferred', 'completed', 'sweep'));
-  events.push(decision(303, '2026-06-01T09:00:00.002Z', 'open', 'completed', 'sweep'));
-  events.push(decision(304, '2026-06-01T09:00:00.003Z', 'deferred', 'completed', 'sweep'));
-  events.push(decision(305, '2026-06-01T09:00:00.004Z', 'open', 'completed', 'sweep'));
+  events.push(
+    decision(301, '2026-06-01T09:00:00.000Z', 'open', 'completed', 'sweep'),
+  );
+  events.push(
+    decision(302, '2026-06-01T09:00:00.001Z', 'deferred', 'completed', 'sweep'),
+  );
+  events.push(
+    decision(303, '2026-06-01T09:00:00.002Z', 'open', 'completed', 'sweep'),
+  );
+  events.push(
+    decision(304, '2026-06-01T09:00:00.003Z', 'deferred', 'completed', 'sweep'),
+  );
+  events.push(
+    decision(305, '2026-06-01T09:00:00.004Z', 'open', 'completed', 'sweep'),
+  );
   // A regression whose run is unresolvable, unattributed.
   events.push({
     type: 'regression',
@@ -124,7 +168,12 @@ function fixture(): ProjectLogPage {
     counts: null,
     agents: [],
   });
-  return { data: events, count: events.length, hasMore: true, nextCursor: 'CURSOR' };
+  return {
+    data: events,
+    count: events.length,
+    hasMore: true,
+    nextCursor: 'CURSOR',
+  };
 }
 
 describe('formatLogStream — §3.4 vocabulary + D11 collapse', () => {
@@ -171,29 +220,54 @@ describe('formatLogStream — §3.4 vocabulary + D11 collapse', () => {
 
     const expanded = formatLogStream(page, { collapse: false });
     expect(expanded.collapsed).toEqual({ decisions: 0, lines: 0 });
-    expect(expanded.text.split('\n').length).toBe(collapsed.split('\n').length + 55 - 4);
+    expect(expanded.text.split('\n').length).toBe(
+      collapsed.split('\n').length + 55 - 4,
+    );
     expect(expanded.text).toContain('ffffffffff64  fixed <- open'); // issue 100 rendered individually
-    expect(formatLogFooter(page, expanded.collapsed)).toBe('63 events shown; more: --cursor CURSOR');
+    expect(formatLogFooter(page, expanded.collapsed)).toBe(
+      '63 events shown; more: --cursor CURSOR',
+    );
   });
 
   it('collapse is page-local: the same group on a second page is a second line with its own count', () => {
     const page2: ProjectLogPage = {
-      data: [decision(900, '2026-06-15T10:00:00.900Z', 'open', 'completed', null), decision(901, '2026-06-15T10:00:00.901Z', 'open', 'completed', null)],
+      data: [
+        decision(900, '2026-06-15T10:00:00.900Z', 'open', 'completed', null),
+        decision(901, '2026-06-15T10:00:00.901Z', 'open', 'completed', null),
+      ],
       count: 2,
       hasMore: false,
     };
     const r = formatLogStream(page2);
-    expect(r.text).toBe('decided   2026-06-15 10:00   2 issues      fixed <- open        no reason recorded');
-    expect(formatLogFooter(page2, r.collapsed)).toBe('2 events shown; 2 decisions collapsed into 1 line (--no-collapse to expand)');
+    expect(r.text).toBe(
+      'decided   2026-06-15 10:00   2 issues      fixed <- open        no reason recorded',
+    );
+    expect(formatLogFooter(page2, r.collapsed)).toBe(
+      '2 events shown; 2 decisions collapsed into 1 line (--no-collapse to expand)',
+    );
   });
 
   it('a long reason is cut at 120 chars with "..." (full text is in --json); never rendered as "no reason recorded"', () => {
     const long = 'x'.repeat(200);
-    const r = formatLogStream({ data: [decision(1, '2026-01-01T00:00:00.000Z', 'open', 'completed', long)], count: 1, hasMore: false });
+    const r = formatLogStream({
+      data: [
+        decision(1, '2026-01-01T00:00:00.000Z', 'open', 'completed', long),
+      ],
+      count: 1,
+      hasMore: false,
+    });
     expect(r.text).toContain(`"${'x'.repeat(117)}..."`);
     expect(r.text).not.toContain('no reason recorded');
     const exact = 'y'.repeat(120);
-    expect(formatLogStream({ data: [decision(2, '2026-01-01T00:00:00.000Z', 'open', 'completed', exact)], count: 1, hasMore: false }).text).toContain(`"${exact}"`);
+    expect(
+      formatLogStream({
+        data: [
+          decision(2, '2026-01-01T00:00:00.000Z', 'open', 'completed', exact),
+        ],
+        count: 1,
+        hasMore: false,
+      }).text,
+    ).toContain(`"${exact}"`);
   });
 
   it('formatLogTime is UTC and deterministic', () => {
@@ -224,12 +298,32 @@ const statBody: Omit<ProjectLogStat, 'projectId'> = {
     'false-positive': 2,
     observation: 3,
     open: 3,
-    withReason: { completed: 22, deferred: 6, wontfix: 3, 'false-positive': 2, observation: 2 },
+    withReason: {
+      completed: 22,
+      deferred: 6,
+      wontfix: 3,
+      'false-positive': 2,
+      observation: 2,
+    },
   },
-  cameBack: { detected: 2, detectedEvents: 3, reopened: 4, reopenedEvents: 4, lastDetectedAtAllTime: '2026-05-04T00:00:00.000Z' },
+  cameBack: {
+    detected: 2,
+    detectedEvents: 3,
+    reopened: 4,
+    reopenedEvents: 4,
+    lastDetectedAtAllTime: '2026-05-04T00:00:00.000Z',
+  },
   activity: {
     decisions: 122,
-    byStatus: { completed: 90, deferred: 12, wontfix: 9, 'false-positive': 4, observation: 3, open: 4, merged: 0 },
+    byStatus: {
+      completed: 90,
+      deferred: 12,
+      wontfix: 9,
+      'false-positive': 4,
+      observation: 3,
+      open: 4,
+      merged: 0,
+    },
     restated: 7,
     runsWithCorrelation: 47,
   },
@@ -237,7 +331,10 @@ const statBody: Omit<ProjectLogStat, 'projectId'> = {
 
 describe('formatProjectLogStat — §3.3 as §3.4 renders it', () => {
   it('renders the spec example, with the frames named and `merged` omitted when 0', () => {
-    const text = formatProjectLogStat({ projectId: 'p', ...statBody }, { subject: 'ops-uluops-api', orgLine: 'org: ulu-labs, workspace' });
+    const text = formatProjectLogStat(
+      { projectId: 'p', ...statBody },
+      { subject: 'ops-uluops-api', orgLine: 'org: ulu-labs, workspace' },
+    );
     expect(text.split('\n')).toEqual([
       'UluOps log - ops-uluops-api   (org: ulu-labs, workspace)',
       '',
@@ -254,8 +351,18 @@ describe('formatProjectLogStat — §3.3 as §3.4 renders it', () => {
   });
 
   it('wraps the byWorkflow line at ~90 columns, continuation lines indented', () => {
-    const many = Array.from({ length: 12 }, (_, i) => ({ workflowType: `workflow-number-${i}`, runs: i + 1 }));
-    const text = formatProjectLogStat({ projectId: 'p', ...statBody, examined: { ...statBody.examined, byWorkflow: many } }, { subject: 'p' });
+    const many = Array.from({ length: 12 }, (_, i) => ({
+      workflowType: `workflow-number-${i}`,
+      runs: i + 1,
+    }));
+    const text = formatProjectLogStat(
+      {
+        projectId: 'p',
+        ...statBody,
+        examined: { ...statBody.examined, byWorkflow: many },
+      },
+      { subject: 'p' },
+    );
     const wf = text.split('\n').filter((l) => l.includes('workflow-number-'));
     expect(wf.length).toBeGreaterThan(1);
     for (const l of wf) {
@@ -271,7 +378,11 @@ describe('formatProjectLogStat — §3.3 as §3.4 renders it', () => {
         projectId: 'p',
         ...statBody,
         window: { since: '2026-01-01T00:00:00.000Z', until: null },
-        activity: { ...statBody.activity, byStatus: { ...statBody.activity.byStatus, merged: 1 }, restated: 0 },
+        activity: {
+          ...statBody.activity,
+          byStatus: { ...statBody.activity.byStatus, merged: 1 },
+          restated: 0,
+        },
         cameBack: { ...statBody.cameBack, lastDetectedAtAllTime: null },
       },
       { subject: 'p' },
@@ -286,8 +397,24 @@ describe('formatProjectLogStat — §3.3 as §3.4 renders it', () => {
 
 describe('formatOrgLogStats — §3.6', () => {
   it('one block per org: org line with totals and as-of, then a row per project', () => {
-    const org: OrgListEntry = { id: 'o', name: 'Ulu Labs', slug: 'ulu-labs', isPersonal: false, role: 'owner', memberCount: 3, subscriptionTier: 'enterprise', paymentStatus: 'none', suspendedAt: null };
-    const personal: OrgListEntry = { ...org, id: 'p', name: 'alexself2', slug: 'alexself2', isPersonal: true };
+    const org: OrgListEntry = {
+      id: 'o',
+      name: 'Ulu Labs',
+      slug: 'ulu-labs',
+      isPersonal: false,
+      role: 'owner',
+      memberCount: 3,
+      subscriptionTier: 'enterprise',
+      paymentStatus: 'none',
+      suspendedAt: null,
+    };
+    const personal: OrgListEntry = {
+      ...org,
+      id: 'p',
+      name: 'alexself2',
+      slug: 'alexself2',
+      isPersonal: true,
+    };
     const stat: OrgLogStat = {
       org: 'ulu-labs',
       computedAt: '2026-09-15T21:44:44.938Z',
@@ -297,15 +424,45 @@ describe('formatOrgLogStats — §3.6', () => {
       decided: { ...statBody.decided, completed: 2101 },
       cameBack: { ...statBody.cameBack, detected: 31 },
       projects: [
-        { name: 'ops-uluops-api', runs: 47, issues: 41, fixed: 24, regressions: 2, lastRunAt: '2026-09-13T00:00:00.000Z' },
-        { name: 'quiet', runs: 0, issues: 0, fixed: 0, regressions: 0, lastRunAt: null },
-        { name: `${'n'.repeat(60)}`, runs: 1, issues: 1, fixed: 1, regressions: 1, lastRunAt: null },
+        {
+          name: 'ops-uluops-api',
+          runs: 47,
+          issues: 41,
+          fixed: 24,
+          regressions: 2,
+          lastRunAt: '2026-09-13T00:00:00.000Z',
+        },
+        {
+          name: 'quiet',
+          runs: 0,
+          issues: 0,
+          fixed: 0,
+          regressions: 0,
+          lastRunAt: null,
+        },
+        {
+          name: `${'n'.repeat(60)}`,
+          runs: 1,
+          issues: 1,
+          fixed: 1,
+          regressions: 1,
+          lastRunAt: null,
+        },
       ],
       hasMoreProjects: true,
     };
     const text = formatOrgLogStats([
       { org, stat },
-      { org: personal, stat: { ...stat, org: 'alexself2', projects: [], hasMoreProjects: false, examined: { ...statBody.examined, runs: 88 } } },
+      {
+        org: personal,
+        stat: {
+          ...stat,
+          org: 'alexself2',
+          projects: [],
+          hasMoreProjects: false,
+          examined: { ...statBody.examined, runs: 88 },
+        },
+      },
     ]);
     expect(text.split('\n')).toEqual([
       'ulu-labs   (owner)   3+ projects . 1,203 runs . 2,847 findings . 2,101 fixed . 31 regressions   (as of 2026-09-15 21:44 UTC)',

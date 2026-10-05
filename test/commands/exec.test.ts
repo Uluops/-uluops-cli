@@ -345,7 +345,9 @@ describe('exec agent', () => {
   it('CONTROL — multi-agent: all executed (one FAIL verdict) exits normally', async () => {
     mockClient.runAgent
       .mockResolvedValueOnce(createAgentResult())
-      .mockResolvedValueOnce(createAgentResult({ decision: 'FAIL', score: 40 }));
+      .mockResolvedValueOnce(
+        createAgentResult({ decision: 'FAIL', score: 40 }),
+      );
     await expect(
       parse('exec', 'agent', '-t', './src', 'code-validator', 'other-agent'),
     ).resolves.not.toThrow();
