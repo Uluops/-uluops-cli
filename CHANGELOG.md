@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.34.1] - 2026-10-05
+
+### Changed
+
+- **OpenRouter works out of the box: `@openrouter/ai-sdk-provider` is now a dependency of the
+  CLI** (exact `2.10.0`, the version `@uluops/core` 0.47.0 is built against). Until now every
+  OpenRouter user had to install it themselves, next to the CLI — and the error core printed
+  when it was missing said `npm install …` without `-g`, which for a global `ulu` installs it
+  where the CLI never looks. Core loads the provider with a dynamic `import()` from its own
+  location inside the CLI's `node_modules`, so a package the CLI depends on is found there.
+  OpenRouter stays opt-in: nothing reaches it unless `OPENROUTER_API_KEY` is set and an
+  `openrouter:` model is selected. Install size grows by about 2.5 MB. A provider installed
+  globally for an earlier CLI is no longer used and can be uninstalled. Library users of
+  `@uluops/core` still install the provider themselves.
+
 ## [0.34.0] - 2026-10-05
 
 ### Added

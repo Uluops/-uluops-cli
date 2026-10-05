@@ -108,6 +108,8 @@ node dist/cli.js --help
 **Requirements:**
 - Node.js 20.3.0 or higher
 
+Every model provider `ulu exec` supports — Anthropic, OpenAI, Google and OpenRouter — ships with the CLI; there is nothing else to install. Set the provider's API key to use it (see [Providers and shell access](#providers-and-shell-access)).
+
 ## Authentication
 
 The CLI supports three authentication methods, resolved in priority order:
@@ -937,17 +939,16 @@ ulu exec command validate ./src --hash sha256:… --prompt-hash sha256:…
 
 ### Providers and shell access
 
-`ulu exec` runs on any provider whose API key is set in the environment (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, …); pick one with `--model provider:modelId`. Anthropic, OpenAI and Google are bundled.
+`ulu exec` runs on any provider whose API key is set in the environment (`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, …); pick one with `--model provider:modelId`. Anthropic, OpenAI, Google and OpenRouter are bundled.
 
-**OpenRouter (experimental).** Install the provider package next to the CLI, at the version core is built against — globally if `ulu` is installed globally:
+**OpenRouter (experimental).** Bundled since CLI 0.34.1 — set the key and pick a model:
 
 ```bash
-npm install -g @openrouter/ai-sdk-provider@2.10.0
 export OPENROUTER_API_KEY=your_openrouter_key
 ulu exec agent code-validator -t ./src --model openrouter:deepseek/deepseek-v4-flash
 ```
 
-The error core prints when the package is missing says `npm install …`; for a global `ulu`, add `-g`. Everything the agent reads, and any shell output, goes to OpenRouter and on to whichever upstream serves the request: do not point it at private code without a data-retention decision of your own (see [`@uluops/core`'s OpenRouter notes](https://github.com/Uluops/-uluops-core#openrouter-experimental)).
+The CLI carries `@openrouter/ai-sdk-provider` at the exact version its `@uluops/core` is built against (2.10.0, which targets the AI SDK 6 that core runs; the package's npm `latest` is 3.x and targets AI SDK 7). If you installed it globally for an earlier CLI (`npm install -g @openrouter/ai-sdk-provider@2.10.0`), that copy is no longer used and can be removed with `npm uninstall -g @openrouter/ai-sdk-provider`. Using `@uluops/core` as a library instead of the CLI? There you still install the provider yourself — see core's notes linked below. OpenRouter stays opt-in: nothing is sent to it unless `OPENROUTER_API_KEY` is set and you select an `openrouter:` model. Everything the agent reads, and any shell output, goes to OpenRouter and on to whichever upstream serves the request: do not point it at private code without a data-retention decision of your own (see [`@uluops/core`'s OpenRouter notes](https://github.com/Uluops/-uluops-core#openrouter-experimental)).
 
 **Cost.** Each run prints `Cost: $<total> (<basis>)` under Token Usage. The basis says what the total is made of: `billed` (the provider's own bill — OpenRouter reports one per request, including BYOK, where it is OpenRouter's fee plus your upstream key's charge), `estimated` (tokens priced at the registry's catalog rates), or `mixed`. When the bill and the estimate differ, an `Estimated cost` line follows for reconciliation. `Cost: unknown` means a model could not be priced or an agent failed after spending; runs that call no model print no cost. Costs print to six decimals, since one OpenRouter request can cost $0.000003. `--json` carries the raw `costUsd`, `costUsdBilled`, `costUsdTotal` and `costBasis` fields. Cost is shown locally only: it is not sent to the Tracker.
 
