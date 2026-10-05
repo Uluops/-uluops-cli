@@ -142,9 +142,7 @@ export function formatAgentResult(
   lines.push(
     `  Total effective: ${result.metrics.totalEffectiveTokens.toLocaleString()}`,
   );
-  if (result.metrics.costUsd !== undefined) {
-    lines.push(`  Estimated cost: $${result.metrics.costUsd.toFixed(4)}`);
-  }
+  lines.push(...formatCostLines(result.metrics));
 
   return lines.join('\n');
 }
@@ -196,11 +194,57 @@ export function formatExecutionResult(result: ExecutionResult): string {
   lines.push(
     `  Total effective: ${result.metrics.totalEffectiveTokens.toLocaleString()}`,
   );
-  if (result.metrics.costUsd !== undefined) {
-    lines.push(`  Estimated cost: $${result.metrics.costUsd.toFixed(4)}`);
-  }
+  lines.push(...formatCostLines(result.metrics));
 
   return lines.join('\n');
+}
+
+/**
+ * Cost lines for a result's metrics (OpenRouter plan slice 1f, D19; core 0.47.0 cost contract).
+ *
+ * `costUsdTotal` is the best-available spend and `costBasis` says what it is made of, so the
+ * basis is ALWAYS printed beside the total. D19 worded this as "when they differ from
+ * costUsd"; read literally that hides the basis whenever a bill equals the estimate — which
+ * it does on any upstream priced at the catalog rate (verified live on DeepSeek, 2026-10-04) —
+ * and a billed run would then print as "Estimated cost". The estimate gets its own line only
+ * when it differs from the total, for reconciliation.
+ *
+ * - `'unpriced'` (no total): printed as unknown, not omitted. Money was spent; the line used
+ *   to vanish, which read as free.
+ * - `'none'` (no model was called): nothing printed.
+ * - A result with no `costBasis` (a producer older than core 0.47.0) keeps the old
+ *   estimate-only line.
+ */
+export function formatCostLines(metrics: {
+  costUsd?: number;
+  costUsdTotal?: number;
+  costBasis?: 'billed' | 'estimated' | 'mixed' | 'unpriced' | 'none';
+}): string[] {
+  const { costUsd, costUsdTotal, costBasis } = metrics;
+  if (costBasis === undefined) {
+    return costUsd !== undefined
+      ? [`  Estimated cost: ${formatUsd(costUsd)}`]
+      : [];
+  }
+  if (costBasis === 'none') return [];
+  if (costBasis === 'unpriced' || costUsdTotal === undefined) {
+    return [
+      '  Cost: unknown (a model could not be priced, or an agent failed after spending)',
+    ];
+  }
+  const lines = [`  Cost: ${formatUsd(costUsdTotal)} (${costBasis})`];
+  if (costUsd !== undefined && costUsd !== costUsdTotal) {
+    lines.push(`  Estimated cost: ${formatUsd(costUsd)}`);
+  }
+  return lines;
+}
+
+/**
+ * USD to six decimals. Four rounded a real OpenRouter request ($0.000003) to a reassuring
+ * $0.0000 (core 0.47.0 crew run #106, anxiety-reader F4).
+ */
+function formatUsd(usd: number): string {
+  return `$${usd.toFixed(6)}`;
 }
 
 /**
