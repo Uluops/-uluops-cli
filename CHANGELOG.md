@@ -6,6 +6,29 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.36.0] - 2026-10-05
+
+### Added
+
+- **Hint for an OpenRouter data-policy miss.** When no endpoint for the model passes
+  `data_collection: 'deny'` (routing step "Filter by Data Policy" — most `:free` models), the
+  hint offers another model, or allowing collection for **one command**:
+  `OPENROUTER_DATA_COLLECTION=allow ulu exec …`, and says not to export it from a shell profile,
+  where it would cover every later run, private code included. The CLI takes no per-request
+  provider options, so a one-command env prefix is its narrowest lever.
+
+### Changed
+
+- **`@uluops/core` 0.48.0 → 0.49.0** (exact pin). **Behaviour change: OpenRouter requests now
+  deny data-collecting upstreams by default** (`provider.data_collection: 'deny'`). A model that
+  only data-collecting upstreams serve now fails instead of running. Opt in with
+  `OPENROUTER_DATA_COLLECTION=allow`; while it is in effect, the run's first OpenRouter request
+  logs a warning naming it. A misspelled value means deny. `deny` is OpenRouter's per-provider
+  policy flag, not zero data retention; the OpenRouter account privacy setting is what enforces
+  it.
+- README: the OpenRouter paragraph's "data-retention decision of your own" is replaced by the
+  deny default and the one-command opt-in.
+
 ## [0.35.0] - 2026-10-05
 
 ### Changed
