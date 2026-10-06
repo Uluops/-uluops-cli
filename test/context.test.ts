@@ -889,6 +889,41 @@ describe('handleCoreError', () => {
       },
     });
 
+  // core 0.49.0 (D7). NEGATIVE CONTROL: against 0.35.0 a data-policy CapabilityError prints
+  // the message with no hint, leaving `export OPENROUTER_DATA_COLLECTION=allow` as the obvious fix.
+  const capabilityError = (message: string) =>
+    Object.assign(new Error(message), {
+      name: 'CapabilityError',
+      code: 'CAPABILITY_ERROR',
+    });
+
+  it('a data-policy miss hints at a one-command allow, not an exported one', () => {
+    const output = captureOutput();
+    const error = capabilityError(
+      "No provider endpoint for openrouter:liquid/lfm-2.5-2.6b:free accepted the request (routing step \"Filter by Data Policy\"). The model exists; the routing constraints sent left no endpoint: provider.require_parameters (every endpoint must support: max_tokens); provider.data_collection = 'deny' (only upstreams that do not retain or train on prompts are eligible; to allow one run, pass providerOptions.openrouter.provider.data_collection: 'allow', or set ai.openRouterDataCollection / OPENROUTER_DATA_COLLECTION, which applies to every run). Provider message: No endpoints found matching your data policy",
+    );
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
+    const err = output.stderr();
+    expect(err).toContain('Filter by Data Policy');
+    expect(err).toContain('OPENROUTER_DATA_COLLECTION=allow ulu exec');
+    expect(err).toContain("Don't export it");
+    output.restore();
+  });
+
+  it('a non-data-policy CapabilityError gets no data-collection hint', () => {
+    const output = captureOutput();
+    const error = capabilityError(
+      'No provider endpoint for openrouter:x accepted the request (routing step "Filter by Parameters"). The model exists; the routing constraints sent left no endpoint: provider.require_parameters (every endpoint must support: tools).',
+    );
+    expect(() => handleCoreError(error, { json: false, debug: false })).toThrow(
+      'process.exit(1)',
+    );
+    expect(output.stderr()).not.toContain('OPENROUTER_DATA_COLLECTION');
+    output.restore();
+  });
+
   it('a pre-flight provider 402 hints at --max-tokens, not an UluOps upgrade', () => {
     const output = captureOutput();
     const error = creditError(

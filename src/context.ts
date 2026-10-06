@@ -841,6 +841,26 @@ export function handleCoreError(
     process.exit(1);
   }
 
+  // An OpenRouter data-policy miss (core 0.49.0, D7): no upstream that refuses to collect data
+  // serves the model. The CLI takes no providerOptions, so the narrowest lever it has is the env
+  // var on ONE invocation. The hint says so explicitly: the obvious fix — exporting
+  // OPENROUTER_DATA_COLLECTION=allow in a shell profile — silently covers every later run in every
+  // repo, which is the leak D7 closes (perverse-outcome P1, core run #109).
+  if (
+    error instanceof Error &&
+    (error as { code?: unknown }).code === 'CAPABILITY_ERROR' &&
+    /data_collection = 'deny'/.test(error.message)
+  ) {
+    console.error(`Error: ${error.message}`);
+    console.error(
+      '\nHint: Every endpoint for this model may retain or train on prompts (`:free` models usually do). ' +
+        'Pick another model, or allow it for this one command only: ' +
+        '`OPENROUTER_DATA_COLLECTION=allow ulu exec …`. ' +
+        "Don't export it from a shell profile: it would apply to every later run, including on private code.",
+    );
+    process.exit(1);
+  }
+
   if (error instanceof ModelNotFoundError) {
     console.error(`Error: ${error.message}`);
     // Since core 0.48.0 this also arrives from OpenRouter rejecting a slug mid-run; the alias
