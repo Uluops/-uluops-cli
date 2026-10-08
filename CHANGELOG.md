@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.37.0] - 2026-10-07
+
+### Changed
+
+- **`@uluops/core` 0.49.0 → 0.50.0** (exact pin). What a CLI user can see:
+  - **When a provider credit refusal (402) stops a pipeline, the agents it cut off are recorded
+    `ABORTED`, not as crashes.** They carry no recommendation, so `ulu exec pipeline` with
+    tracking on no longer files a critical "Agent X failed" issue for each innocent sibling; the
+    agent that received the 402 keeps its crash record. The run still fails and the command still
+    exits 1. In the per-agent output an `ABORTED` agent shows `✗` (only a positive verdict shows
+    `✓`).
+  - **Semantics without signature:** a workflow phase whose every step crashed is no longer
+    softened to `warned` by `on_failure: warn`, so such a workflow reads `BLOCK` where it read
+    `HOLD`. The exit code does not change — `ulu exec` never gated on the verdict — but anything
+    reading the printed or `--json` decision will see the new word.
+  - The CLI passes no abort signal and has no cancel, so core's other stop changes (user cancel,
+    caller deadline, "crash decides", "finished keeps verdict") have no CLI entry point today.
+
 ## [0.36.0] - 2026-10-05
 
 ### Added
