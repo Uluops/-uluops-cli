@@ -762,7 +762,7 @@ ulu lang adl -o adl-schema.json   # Write JSON Schema to file
 AI model catalog.
 
 ```bash
-ulu models list                   # List models (--provider, --tier, --capability, --status)
+ulu models list                   # List models (--provider, --tier, --capability vision|tools|reasoning, --status)
 ulu models get <provider> <id>    # Get model details
 ulu models get openrouter deepseek/deepseek-v4-flash   # ids containing "/" work too
 ulu models providers              # List providers
@@ -823,6 +823,7 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `--no-tracking` | Disable validation service submission |
 | `--no-safety-warnings` | Suppress risk warnings and runtime advisories |
 | `--registry-url <url>` | Override the registry URL definitions are resolved from |
+| `--extended-thinking` / `--no-extended-thinking` | Turn extended thinking on or off for this run (every subcommand). Off by default; overrides `ULUOPS_EXTENDED_THINKING`. Thinking tokens are billed as output. Works on OpenAI, Google and OpenRouter models; on direct Anthropic models (the default `sonnet`) it prints "requested but not applied: no-mapping" until `@uluops/core` 0.52.0 — use an `openrouter:anthropic/…` model for Claude thinking today. What each run actually did is recorded on the result (`runConditions`). |
 
 > **Parent options work before OR after the subcommand** (since 0.21.2). They
 > belong to `ulu exec`, not the subcommand, but the CLI relocates them
@@ -1091,7 +1092,8 @@ through the single `emitJson()` chokepoint. To change an output shape you must:
 | `OPENAI_API_KEY`, `GOOGLE_API_KEY`, `OPENROUTER_API_KEY`, … | API key for that provider's models; any `<PROVIDER>_API_KEY` that is set makes the provider available to `ulu exec` (`GOOGLE_GENERATIVE_AI_API_KEY` also works for Google) | - |
 | `ULUOPS_ALLOWED_TOOLS` | Comma-separated tool allowlist for `ulu exec`; `bash` (any case) gives agents that declare Bash a shell — see [Providers and shell access](#providers-and-shell-access) | bash denied |
 | `ULUOPS_MAX_CONCURRENCY` | Engine-wide cap on concurrent in-flight LLM calls for `ulu exec` (distinct from `exec agent -c/--concurrency`); honored by `@uluops/core` | `8` |
-| `ULUOPS_THINKING_BUDGET` | Token budget for extended thinking (optional) | - |
+| `ULUOPS_EXTENDED_THINKING` | `on` or `off`: extended thinking for every `ulu exec` run (the flags above win). Anything else is off with a warning. **A value in `./.env` or `~/.uluops/.env` applies to every run in that directory or machine** — the CLI prints a caution when that is where it came from | `off` |
+| `ULUOPS_THINKING_BUDGET` | Thinking budget in tokens when thinking is on (Google, OpenRouter; ignored by OpenAI, which takes an effort). Whole numbers only — anything else is ignored with a warning. Capped by core so the answer keeps at least half of `--max-tokens` | core default (10000) |
 
 Create a `.env` file in your project directory:
 

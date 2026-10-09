@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Added
+
+- **`ulu exec --extended-thinking` / `--no-extended-thinking`** on every exec subcommand (`agent`,
+  `command`, `workflow`, `pipeline`, `run`), before or after the subcommand. The flag writes the client
+  setting (`ai.extendedThinking`), not a per-run value, so it reaches commands, workflows and pipelines
+  as well as single agents. Neither flag leaves it unset: `ULUOPS_EXTENDED_THINKING` decides, else off.
+  Thinking is billed as output; it works on OpenAI, Google and OpenRouter models. **On direct Anthropic
+  models — including the default `sonnet` — it prints "requested but not applied: no-mapping" until
+  core 0.52.0**; use an `openrouter:anthropic/…` model for Claude thinking today.
+- **A caution when `ULUOPS_EXTENDED_THINKING` or `ULUOPS_THINKING_BUDGET` came from `./.env` or
+  `~/.uluops/.env`**, not the shell — such a value is sticky across every run in that directory (or on
+  the machine). Core records it as `env` either way; only the CLI can tell (spec OD-21).
+
+### Changed
+
+- **`@uluops/core` 0.50.0 → 0.51.0** and **`@uluops/registry-sdk` 0.58.0 → 0.61.0** (exact pins). Core
+  0.51.0 makes extended thinking an explicit opt-in (off by default) and records what each run executed
+  under (`runConditions`); registry-sdk 0.61.0 surfaces the `reasoning` capability the registry serves.
+  `ulu models get … --json` now shows `capabilities.reasoning` (and its deprecated alias
+  `extendedThinking`, now `true`/`false` where it was always missing).
+- `ulu models list -c` help names the capabilities the registry filters on: `vision|tools|reasoning`.
+  (`-c extendedThinking` still works — the registry treats it as `reasoning` since 2026-10-08.)
+
+### Fixed
+
+- **`ULUOPS_THINKING_BUDGET` is parsed strictly.** `parseInt` read `"8000abc"` as 8000 and `"1.5e4"`
+  as 1, silently; now anything but a whole number is ignored with a warning.
+
 ## [0.37.0] - 2026-10-07
 
 ### Changed

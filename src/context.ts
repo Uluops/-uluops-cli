@@ -34,6 +34,10 @@ import { RegistryClient } from '@uluops/registry-sdk';
 import { loadConfig as loadRegistryConfig } from '@uluops/registry-sdk/config';
 import { RegistryApiError } from '@uluops/registry-sdk/errors';
 import {
+  envFileThinkingCautions,
+  parseThinkingBudget,
+} from './thinkingLevers.js';
+import {
   createSecurityEventHandler,
   exitWithError,
   parseIntOption,
@@ -95,6 +99,8 @@ export interface CoreExecOptions {
   registryUrl?: string;
   project?: string;
   tracking?: boolean;
+  /** `--extended-thinking` (true) / `--no-extended-thinking` (false); undefined when neither was given. */
+  extendedThinking?: boolean;
 }
 
 /**
@@ -407,10 +413,16 @@ export function createCoreContext(
     requireCredentials(false, options.profile ?? 'default');
   }
 
-  const thinkingBudgetEnv = process.env.ULUOPS_THINKING_BUDGET;
-  const thinkingBudget = thinkingBudgetEnv
-    ? parseInt(thinkingBudgetEnv, 10)
-    : undefined;
+  const budget = parseThinkingBudget(process.env.ULUOPS_THINKING_BUDGET);
+  const thinkingBudget = budget.value;
+  if (!options.quiet) {
+    if (budget.warning) console.error(`Warning: ${budget.warning}`);
+    for (const caution of envFileThinkingCautions(
+      options.extendedThinking !== undefined,
+    )) {
+      console.error(`Caution: ${caution}`);
+    }
+  }
   // Org routing (spec §3.5): `ulu exec` resolves the org the same way the ops
   // commands do (--org > .uluops.json > ULUOPS_ORG_SLUG) and hands it to core,
   // so the two writers a CLI user can reach agree. Core resolves env itself,
@@ -424,10 +436,21 @@ export function createCoreContext(
     submissionUrl: process.env.ULUOPS_SUBMISSION_URL ?? opsConfig.baseUrl,
     ...(resolvedOrg.org !== undefined ? { orgSlug: resolvedOrg.org } : {}),
     debug: options.debug,
-    ...(thinkingBudget !== undefined && !Number.isNaN(thinkingBudget)
+    ...(thinkingBudget !== undefined
       ? { defaultThinkingBudget: thinkingBudget }
       : {}),
   };
+
+  // --extended-thinking / --no-extended-thinking write the CLIENT setting, not a per-run value
+  // (spec OD-16): in a one-shot process config beats env, so the flag works on every exec subcommand
+  // — agent, command, workflow, pipeline, run — not only on runAgent. Neither flag leaves it unset, so
+  // ULUOPS_EXTENDED_THINKING (or core's default, off) decides.
+  if (options.extendedThinking !== undefined) {
+    config.ai = {
+      ...config.ai,
+      extendedThinking: options.extendedThinking ? 'on' : 'off',
+    } as typeof config.ai;
+  }
 
   if (modelOverride) {
     config.ai = { ...config.ai, modelOverride } as typeof config.ai;

@@ -57,6 +57,10 @@ function getMergedOptions(cmd: Command): ExecOptions {
     project: typeof merged.project === 'string' ? merged.project : undefined,
     tracking:
       typeof merged.tracking === 'boolean' ? merged.tracking : undefined,
+    extendedThinking:
+      typeof merged.extendedThinking === 'boolean'
+        ? merged.extendedThinking
+        : undefined,
     safetyWarnings:
       typeof merged.safetyWarnings === 'boolean'
         ? merged.safetyWarnings
@@ -156,6 +160,8 @@ const INHERITED_EXEC_FLAGS = [
   '--local-definitions',
   '--registry-url',
   '--no-safety-warnings',
+  '--extended-thinking',
+  '--no-extended-thinking',
 ];
 
 /** Subset of inherited exec flags that take a value (the rest are booleans). */
@@ -592,6 +598,14 @@ export function registerExecCommands(program: Command): void {
     .option(
       '--no-safety-warnings',
       'Suppress risk warnings and runtime advisories',
+    )
+    .option(
+      '--extended-thinking',
+      'Turn extended thinking ON for this run (billed as output; OpenAI, Google, OpenRouter — direct Anthropic from core 0.52.0)',
+    )
+    .option(
+      '--no-extended-thinking',
+      'Turn extended thinking OFF for this run, overriding ULUOPS_EXTENDED_THINKING',
     )
     .addHelpText(
       'after',

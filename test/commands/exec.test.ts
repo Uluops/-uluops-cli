@@ -1485,3 +1485,90 @@ describe('--report forces reportMode + no-tracking (v0.1.1)', () => {
     expect(mockClient.runAgent).not.toHaveBeenCalled();
   });
 });
+
+// ── T17: --extended-thinking / --no-extended-thinking (thinking-capability-restore §4.4, OD-16) ──
+
+describe('exec --extended-thinking / --no-extended-thinking', () => {
+  const runs: Record<string, string[]> = {
+    agent: ['agent', 'code-validator', '-t', '/tmp/t'],
+    command: ['command', 'validate', '/tmp/t'],
+    workflow: ['workflow', 'ship', '/tmp/t'],
+    pipeline: ['pipeline', 'foundations', '/tmp/t'],
+    run: ['run', 'code-validator', '/tmp/t'],
+  };
+  const sentThinking = () =>
+    (
+      mockedCreateCoreContext.mock.calls.at(-1)![0] as {
+        extendedThinking?: boolean;
+      }
+    ).extendedThinking;
+
+  for (const [sub, args] of Object.entries(runs)) {
+    it(`reaches ${sub}: on, off, and unset when neither flag is given`, async () => {
+      await parse('exec', '--extended-thinking', ...args).catch(() => {});
+      expect(sentThinking()).toBe(true);
+      await parse('exec', '--no-extended-thinking', ...args).catch(() => {});
+      expect(sentThinking()).toBe(false);
+      await parse('exec', ...args).catch(() => {});
+      expect(sentThinking()).toBeUndefined();
+    });
+  }
+
+  it('both flags are relocated ahead of the subcommand, like every inherited exec flag', () => {
+    expect(
+      reorderInheritedExecOptions([
+        'node',
+        'ulu',
+        'exec',
+        'agent',
+        'a',
+        '-t',
+        '.',
+        '--no-extended-thinking',
+      ]),
+    ).toEqual([
+      'node',
+      'ulu',
+      'exec',
+      '--no-extended-thinking',
+      'agent',
+      'a',
+      '-t',
+      '.',
+    ]);
+    expect(
+      reorderInheritedExecOptions([
+        'node',
+        'ulu',
+        'exec',
+        'workflow',
+        'ship',
+        '.',
+        '--extended-thinking',
+      ]),
+    ).toEqual([
+      'node',
+      'ulu',
+      'exec',
+      '--extended-thinking',
+      'workflow',
+      'ship',
+      '.',
+    ]);
+  });
+
+  it('works after the subcommand too (relocated like the other inherited exec flags)', async () => {
+    const argv = reorderInheritedExecOptions([
+      'node',
+      'ulu',
+      'exec',
+      'agent',
+      'code-validator',
+      '-t',
+      '/tmp/t',
+      '--extended-thinking',
+    ]);
+    await parse(...argv.slice(2)).catch(() => {});
+    expect(sentThinking()).toBe(true);
+  });
+});

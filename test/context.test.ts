@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { captureOutput } from './helpers/capture.js';
 
 // Mock node:fs to prevent isSessionExpired from reading real credentials
@@ -485,6 +485,74 @@ describe('createUnauthenticatedContext', () => {
     expect(ctx.baseUrl).toBe('http://localhost:3100');
     expect(ctx.json).toBe(true);
     expect(ctx.quiet).toBe(true);
+  });
+});
+
+describe('createCoreContext — extended thinking (thinking-capability-restore §4.4, OD-16, OD-21)', () => {
+  const okConfig = () =>
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { apiKey: 'ulr_test-key' },
+    } as ReturnType<typeof loadOpsConfig>);
+  const lastConfig = () =>
+    mockedUluOpsClient.mock.calls.at(-1)![0] as {
+      ai?: { extendedThinking?: string };
+      defaultThinkingBudget?: number;
+    };
+  const ENV_KEYS = [
+    'ULUOPS_EXTENDED_THINKING',
+    'ULUOPS_THINKING_BUDGET',
+    'ULU_EXTENDED_THINKING_FROM_ENV_FILE',
+    'ULU_THINKING_BUDGET_FROM_ENV_FILE',
+  ];
+  afterEach(() => {
+    for (const k of ENV_KEYS) delete process.env[k];
+  });
+
+  it('the flag writes the CLIENT setting: true → on, false → off, absent → unset', () => {
+    okConfig();
+    createCoreContext({ extendedThinking: true });
+    expect(lastConfig().ai?.extendedThinking).toBe('on');
+    createCoreContext({ extendedThinking: false });
+    expect(lastConfig().ai?.extendedThinking).toBe('off');
+    createCoreContext({});
+    expect(lastConfig().ai?.extendedThinking).toBeUndefined();
+  });
+
+  it('a .env-sourced ULUOPS_EXTENDED_THINKING prints the caution; a shell one does not; a flag silences it', () => {
+    okConfig();
+    process.env.ULUOPS_EXTENDED_THINKING = 'on';
+    let out = captureOutput();
+    createCoreContext({});
+    expect(out.stderr()).not.toContain('came from ./.env');
+    out.restore();
+
+    process.env.ULU_EXTENDED_THINKING_FROM_ENV_FILE = '1';
+    out = captureOutput();
+    createCoreContext({});
+    expect(out.stderr()).toContain(
+      'ULUOPS_EXTENDED_THINKING=on came from ./.env or ~/.uluops/.env',
+    );
+    out.restore();
+
+    out = captureOutput();
+    createCoreContext({ extendedThinking: false });
+    expect(out.stderr()).not.toContain('ULUOPS_EXTENDED_THINKING=on came from');
+    out.restore();
+  });
+
+  it('ULUOPS_THINKING_BUDGET is parsed strictly: "8000abc" is dropped with a warning, not read as 8000', () => {
+    okConfig();
+    process.env.ULUOPS_THINKING_BUDGET = '8000abc';
+    const out = captureOutput();
+    createCoreContext({});
+    expect(lastConfig().defaultThinkingBudget).toBeUndefined();
+    expect(out.stderr()).toContain('is not a whole number of tokens');
+    out.restore();
+    process.env.ULUOPS_THINKING_BUDGET = ' 12000 ';
+    createCoreContext({});
+    expect(lastConfig().defaultThinkingBudget).toBe(12000);
   });
 });
 

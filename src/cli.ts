@@ -29,6 +29,7 @@ import { registerTaxonomyCommands } from './commands/taxonomy.js';
 import { registerTranslationCommands } from './commands/translation.js';
 import { registerVersionCommands } from './commands/versions.js';
 import { dashNameHint } from './dashNameHint.js';
+import { markEnvFileThinkingLevers } from './thinkingLevers.js';
 import { getCliVersion } from './version.js';
 
 // Record whether ULUOPS_ORG_SLUG came from the SHELL or from an env FILE before
@@ -37,6 +38,10 @@ import { getCliVersion } from './version.js';
 // `.env` in a checkout (or a machine-wide ~/.uluops/.env) setting the SOURCE
 // of a project move deserves its own label (anxiety-reader F3, 2026-09-15).
 const orgSlugFromShell = process.env.ULUOPS_ORG_SLUG;
+// Same snapshot for the extended-thinking levers (thinking-capability-restore OD-21): core reads the
+// merged process.env and cannot tell a shell value from a file value, so the CLI says so itself.
+const thinkingFromShell = process.env.ULUOPS_EXTENDED_THINKING;
+const thinkingBudgetFromShell = process.env.ULUOPS_THINKING_BUDGET;
 loadEnvFiles();
 if (
   process.env.ULUOPS_ORG_SLUG !== undefined &&
@@ -44,6 +49,7 @@ if (
 ) {
   process.env.ULU_ORG_SLUG_FROM_ENV_FILE = '1';
 }
+markEnvFileThinkingLevers(thinkingFromShell, thinkingBudgetFromShell);
 
 // Handle EPIPE gracefully (e.g., piping to head, or broken pipe)
 process.stdout.on('error', (err) => {

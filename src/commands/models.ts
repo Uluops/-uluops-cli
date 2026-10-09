@@ -46,7 +46,9 @@ Examples:
     )
     .option(
       '-c, --capability <cap>',
-      'Filter by capability (vision|tools|streaming|extendedThinking)',
+      // The registry filters on these three; anything else returns the unfiltered list. `extendedThinking` is
+      // accepted as an alias of `reasoning` by the registry (2026-10-08), not mapped here.
+      'Filter by capability (vision|tools|reasoning)',
     )
     .action(async (options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
