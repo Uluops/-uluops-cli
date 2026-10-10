@@ -325,7 +325,7 @@ Reads an org's **member-visible** activity. Org creation, membership and invitat
 surfaces. `--org` does not apply here — the org is the positional argument.
 
 ```bash
-ulu orgs audit-feed <slug>        # Org-visible audit feed (any member); --limit 1–100, --cursor, --json
+ulu orgs audit-feed <slug>        # Org-visible audit feed (any member); ACTOR = user id prefix, system (org purge) or unknown; --limit 1–100, --cursor, --json
 ```
 
 The feed carries the rows an org's writers marked visible to every member — today, projects that

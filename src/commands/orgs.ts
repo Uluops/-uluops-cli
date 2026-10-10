@@ -1,4 +1,8 @@
-import { type OrgAuditEntry, readRehomeAuditDetails } from '@uluops/ops-sdk';
+import {
+  describeAuditActor,
+  type OrgAuditEntry,
+  readRehomeAuditDetails,
+} from '@uluops/ops-sdk';
 import type { Command } from 'commander';
 import {
   createOpsContext,
@@ -30,6 +34,20 @@ function safeText(value: string): string {
  * today) is described; any other org-visible row falls back to its
  * `details.action` or the platform action so nothing is silently dropped.
  */
+/**
+ * The ACTOR column (system-actor-principal v0.3.2, Phase 2): `system` for any `system:*`
+ * actorKind (the org purge records the reserved principal `00000000-…-0000000000a1`, which
+ * would otherwise print as `00000000`), `unknown` for a null or unmapped reserved actor, the
+ * first 8 characters of a user id otherwise. Without `actorKind` (an ops-api before its
+ * platform 1.35.0 pin) it keeps the old rendering: the id prefix, or `system` for null.
+ */
+export function feedActorLabel(
+  e: Pick<OrgAuditEntry, 'actorId' | 'actorKind'>,
+): string {
+  const label = describeAuditActor(e);
+  return label === e.actorId ? label.slice(0, 8) : label;
+}
+
 export function describeFeedEntry(entry: OrgAuditEntry): string {
   const d = readRehomeAuditDetails(entry);
   if (d === null) {
@@ -130,7 +148,7 @@ Examples:
           },
           {
             header: 'ACTOR',
-            accessor: (e) => (e.actorId ?? 'system').slice(0, 8),
+            accessor: (e) => feedActorLabel(e),
             width: 10,
           },
           { header: 'EVENT', accessor: (e) => describeFeedEntry(e), width: 90 },

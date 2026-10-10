@@ -11,6 +11,7 @@ vi.mock('../../src/context.js');
 
 import {
   describeFeedEntry,
+  feedActorLabel,
   registerOrgCommands,
 } from '../../src/commands/orgs.js';
 import { createOpsContext, handleOpsError } from '../../src/context.js';
@@ -66,6 +67,25 @@ const other = {
   createdAt: '2026-09-15T09:00:00.000Z',
   details: { visibility: 'org', action: 'something.else' },
 };
+
+describe('feedActorLabel — the ACTOR column (system-actor-principal Phase 2)', () => {
+  const PRINCIPAL = '00000000-0000-4000-8000-0000000000a1';
+  it('D: the purge principal renders as system, not its id prefix [control: before 0.39.0 it printed 00000000]', () => {
+    expect(feedActorLabel({ actorId: PRINCIPAL, actorKind: 'system:org_lifecycle' })).toBe('system');
+    expect(PRINCIPAL.slice(0, 8)).toBe('00000000'); // what the old accessor printed
+  });
+  it('D: a future system:* kind is system too, and unknown is unknown', () => {
+    expect(feedActorLabel({ actorId: '00000000-0000-4000-8000-0000000000b2', actorKind: 'system:some_future' })).toBe('system');
+    expect(feedActorLabel({ actorId: null, actorKind: 'unknown' })).toBe('unknown');
+  });
+  it('P: a user renders as the id prefix', () => {
+    expect(feedActorLabel({ actorId: 'c12204a2-76d2-4ead-b549-8a29d3884c03', actorKind: 'user' })).toBe('c12204a2');
+  });
+  it('P: without actorKind (older server) the rendering is unchanged: id prefix, or system for null', () => {
+    expect(feedActorLabel({ actorId: 'c12204a2-76d2-4ead-b549-8a29d3884c03' })).toBe('c12204a2');
+    expect(feedActorLabel({ actorId: null })).toBe('system');
+  });
+});
 
 describe('orgs audit-feed', () => {
   it('fetches the named org with the default limit and renders one line per entry', async () => {

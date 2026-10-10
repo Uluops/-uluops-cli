@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.39.0] - 2026-10-09
+
+### Changed
+
+- **`ulu orgs audit-feed`'s ACTOR column reads `actorKind`** (system-actor-principal spec v0.3.2, Phase 2). Since ops-api's `@uluops/platform` 1.35.0 pin the org purge records the reserved principal `00000000-0000-4000-8000-0000000000a1`; the column printed its prefix, `00000000`. It now shows `system` for any `system:*` kind, `unknown` for `unknown` (a null or unmapped reserved actor), the 8-character id prefix for a user, and — when the server sends no `actorKind` — exactly what it showed before (the prefix, or `system` for null). `--json` already carried the server's envelope; it now includes `actorKind`.
+- `@uluops/ops-sdk` 6.14.0 → 6.17.0 (exact): `actorKind` on feed entries and `describeAuditActor`; also brings 6.15.x (read-scoped keys keep `INSUFFICIENT_SCOPE` in typed edit capabilities) and 6.16.0 (actionable project logs, `effectiveDescription` on issue reads), both additive.
+
 ## [0.38.0] - 2026-10-08
 
 ### Added
