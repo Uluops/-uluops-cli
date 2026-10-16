@@ -6,9 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.39.1] - 2026-10-16
+
 ### Changed
 
 - **`--render-profile` help and README describe the declared-only `core`** (definition-factory spec 25 D2; registry-api on factory 0.81.0 since 2026-10-16). The help now says what an omitted profile renders (the registry's stored `uluops-full`) and quotes the factory's `CORE_PROFILE_GLOSS` for `core`. The README example said `uluops-full` was "instead of the lean core profile", which implied `core` was the default. It never was for this CLI: the registry renders its stored `uluops-full` when the flag is omitted. Test: the `def render --help` output contains the gloss and fails against the old text.
+- **`@uluops/registry-sdk` stays at 0.61.0 on purpose.** Bumping it to 0.62.0 would nest a second copy: `@uluops/core` 0.51.0 pins 0.61.0 exactly, which puts two SDK class identities in one process, and `instanceof` checks on errors thrown inside core stop matching. This CLI prints only rendered markdown, so it gains nothing from 0.62.0's new render fields. The bump comes with a core release that moves to 0.62.0.
 
 ## [0.39.0] - 2026-10-09
 
