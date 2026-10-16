@@ -42,9 +42,14 @@ Examples:
 `,
     );
 
+  // The 'core' wording quotes definition-factory's CORE_PROFILE_GLOSS (factory >= 0.81.0, the
+  // registry since 2026-10-16). This CLI does not depend on the factory, so the sentence is
+  // copied; the registry's 400 for a bad profile quotes the same constant.
   const renderProfileOption = new Option(
     '--render-profile <profile>',
-    'Render profile for agent definitions',
+    "Render profile for agent definitions. Omitted: the registry's stored profile, 'uluops-full' " +
+      "(the full prompt). 'core' renders only what the definition declares — no factory-supplied " +
+      'output contract, scoring instruction or tone.',
   ).choices(['core', 'uluops-full']);
 
   const targetOption = new Option(

@@ -236,3 +236,16 @@ describe('error handling', () => {
     );
   });
 });
+
+describe('--render-profile help (definition-factory spec 25 D2)', () => {
+  it("says what an omitted profile renders and quotes the factory's core gloss", () => {
+    const program = new Command();
+    program.exitOverride();
+    registerDefinitionCommands(program);
+    const render = program.commands.find((c) => c.name() === 'definitions')!.commands.find((c) => c.name() === 'render')!;
+    const help = render.helpInformation().replace(/\s+/g, ' ');
+    expect(help).toContain("'core' renders only what the definition declares — no factory-supplied output contract, scoring instruction or tone.");
+    expect(help).toContain("'uluops-full' (the full prompt)");
+  });
+});
+

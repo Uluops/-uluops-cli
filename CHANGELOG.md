@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **`--render-profile` help and README describe the declared-only `core`** (definition-factory spec 25 D2; registry-api on factory 0.81.0 since 2026-10-16). The help now says what an omitted profile renders (the registry's stored `uluops-full`) and quotes the factory's `CORE_PROFILE_GLOSS` for `core`. The README example said `uluops-full` was "instead of the lean core profile", which implied `core` was the default. It never was for this CLI: the registry renders its stored `uluops-full` when the flag is omitted. Test: the `def render --help` output contains the gloss and fails against the old text.
+
 ## [0.39.0] - 2026-10-09
 
 ### Changed

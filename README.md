@@ -671,8 +671,10 @@ ulu def get agent code-validator --rendered -o ./code-validator.md
 ulu def validate --file my-agent.agent.yaml
 ulu def render --file my-agent.agent.yaml
 
-# Render with the full UluOps profile (platform preamble) instead of the lean core profile
-ulu def render --file my-agent.agent.yaml --render-profile uluops-full
+# Render the declared-only core profile: only what the definition declares, with no
+# factory-supplied output contract, scoring instruction or tone (registry on definition-factory
+# >= 0.81.0). Omitting --render-profile renders the registry's stored profile, uluops-full.
+ulu def render --file my-agent.agent.yaml --render-profile core
 
 # Create, validate, and publish a new agent
 ulu def validate agent --file my-agent.yaml
