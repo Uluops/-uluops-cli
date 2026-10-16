@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.39.2] - 2026-10-16
+
+### Changed
+
+- **`@uluops/core` 0.51.0 → 0.51.1 and `@uluops/registry-sdk` 0.61.0 → 0.62.0, together** (exact pins). They move in one release because core pins registry-sdk exactly: core 0.51.1 is the release that moves to 0.62.0, so the tree still resolves one registry-sdk copy (`npm ls @uluops/registry-sdk` → 0.62.0, deduped under core) and one sdk-core (0.18.1). The 0.39.1 entry deferred the SDK bump for exactly this reason.
+  - **What changes for CLI users: nothing visible.** registry-sdk 0.62.0 stops stripping the render facts (`factoryVersion`, `renderStack`, `resolvedProfile`, `scaffolding`, `declaredOutputShape`); this CLI prints only the rendered markdown, so it does not display them.
+  - core 0.51.1's two fixes (a caller-set `providerOptions.openrouter.max_tokens` now sizes the thinking budget; a `null`/`undefined` value is treated as unset) **are not reachable from this CLI**: `ulu exec` passes no `providerOptions` (see `context.ts`). They matter to library callers of core.
+  - Unchanged and pre-existing: core 0.51.1 pins `@uluops/ops-sdk` 6.14.0 exactly while this CLI pins 6.17.0, so two ops-sdk copies are installed (as under 0.39.1). `handleOpsError`'s `instanceof OpsApiError` matches errors from the CLI's own copy only.
+
 ## [0.39.1] - 2026-10-16
 
 ### Changed

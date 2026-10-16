@@ -1,6 +1,6 @@
 {
   "name": "@uluops/cli",
-  "version": "0.39.1",
+  "version": "0.39.2",
   "description": "Unified CLI for UluOps — runs, findings, issues and the definition registry from a single command",
   "type": "module",
   "bin": {
@@ -41,9 +41,9 @@
   "license": "MIT",
   "dependencies": {
     "@openrouter/ai-sdk-provider": "2.10.0",
-    "@uluops/core": "0.51.0",
+    "@uluops/core": "0.51.1",
     "@uluops/ops-sdk": "6.17.0",
-    "@uluops/registry-sdk": "0.61.0",
+    "@uluops/registry-sdk": "0.62.0",
     "@uluops/sdk-core": "0.18.1",
     "@uluops/taxonomy": "^1.0.3",
     "commander": "13.1.0",
