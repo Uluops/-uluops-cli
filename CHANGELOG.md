@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.39.3] - 2026-10-19
+
+### Changed
+
+- **`@uluops/core` 0.51.1 → 0.51.2** (exact pin). Core 0.51.2 pins `@uluops/ops-sdk` 6.17.0, the same version as this CLI, so the tree now installs **one** ops-sdk instead of two (0.39.2 had 6.17.0 at the root and 6.14.0 nested under core). No visible CLI change.
+
+### Fixed
+
+- **Correction to the 0.39.2 entry below, which is left as written.** It said that with two ops-sdk copies "`handleOpsError`'s `instanceof OpsApiError` matches errors from the CLI's own copy only". **That was wrong.** ops-sdk's `OpsApiError` is a re-export of sdk-core's `SdkApiError` (`@uluops/ops-sdk/dist/errors/errors.js:6`), and sdk-core was a single copy (0.18.1) throughout, so both ops-sdk copies exported the same class. Checked 2026-10-19 by importing `OpsApiError` from both copies in the published 0.39.2 global install: different directories (6.17.0 and 6.14.0), and `a.OpsApiError === b.OpsApiError` is `true`. This CLI checks `instanceof` on no class that ops-sdk defines itself (`AnalysisEchoMismatchError`, `MfaRequiredError`, `UnsupportedContractError`, `InputValidationError`; search `/usr/bin/grep -rn instanceof src`, 2026-10-19), so the duplicate changed no CLI behaviour. The alignment above is still worth having: one copy, and no split the first time this CLI checks one of those ops-sdk-defined classes.
+
 ## [0.39.2] - 2026-10-16
 
 ### Changed
