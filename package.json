@@ -43,8 +43,8 @@
   "license": "MIT",
   "dependencies": {
     "@openrouter/ai-sdk-provider": "2.10.0",
-    "@uluops/core": "0.53.0",
-    "@uluops/ops-sdk": "7.0.1",
+    "@uluops/core": "0.53.1",
+    "@uluops/ops-sdk": "7.1.0",
     "@uluops/registry-sdk": "0.64.1",
     "@uluops/sdk-core": "0.19.0",
     "@uluops/taxonomy": "^1.0.3",
