@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.40.0] - 2026-10-25
+
+### Changed
+
+- **zod 4.3.6 → `^4.6.7`, `@uluops/core` 0.51.2 → 0.52.0, `@uluops/ops-sdk` 6.17.0 → 7.0.0, `@uluops/registry-sdk` 0.62.0 → 0.63.0, `@uluops/sdk-core` 0.18.1 → 0.19.0** (exact; zod-4 release train spec v0.2.1, T6). Clears GHSA-mrhx-c7xc-m3w5 (zod < 4.6.6). The libraries now peer-depend on zod, so the installed CLI holds one zod (4.6.7) and one copy each of core, ops-sdk, registry-sdk and sdk-core; `npm audit --omit=dev` reports 0. What changes for a CLI user: validation messages follow zod 4's wording; tool schemas sent to AI providers are unchanged (core 0.52.0 keeps them byte-identical); the hash utilities are byte-identical. See each library's 0.x changelog for the full account.
+
 ## [0.39.3] - 2026-10-19
 
 ### Changed
