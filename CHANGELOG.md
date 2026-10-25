@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Fixed
+
+- **The build clears `dist/` first, so files from removed sources stop shipping.** `build` was
+  plain `tsc`, which writes outputs but never deletes them, and `files` publishes all of `dist/`.
+  The `ulu config` command was removed in `a0503ea` (2026-05-27), yet its May build output
+  (`dist/commands/config.{js,d.ts}` and their maps) stayed in every local `dist/` and shipped in
+  every tarball since, up to 0.40.0. Nothing imported it, so it was dead weight, not a live
+  command. `prebuild` now runs `clean` (`rm -rf dist`), the convention four sibling packages use.
+  The next tarball loses exactly those four files (diffed against 0.40.0's file list) and nothing
+  else. A file planted in `dist/` survived `npm run build` before this change and is removed by it.
+
 ## [0.40.0] - 2026-10-25
 
 ### Changed
