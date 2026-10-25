@@ -78,6 +78,23 @@ function getMergedOptions(cmd: Command): ExecOptions {
  *
  * @internal Exported for unit testing only.
  */
+/**
+ * ✓ when the result passed, ✗ otherwise. The category decides when core supplies one: since core
+ * 0.53.0 `--threshold-*` caps `decisionCategory` and keeps the agent's own decision text, so a
+ * "PASS" under the threshold is category 'conditional' and must not show ✓. The decision text is
+ * the fallback only for a result with no category.
+ */
+export function passMarker(result: {
+  decision: string;
+  decisionCategory?: string;
+}): string {
+  const passed =
+    result.decisionCategory !== undefined
+      ? result.decisionCategory === 'positive'
+      : result.decision === 'PASS';
+  return passed ? '\u2713' : '\u2717';
+}
+
 export function assertTargetIsDirectoryOrExit(target: string): void {
   const resolved = resolve(target);
   let stat: Stats;
@@ -601,7 +618,7 @@ export function registerExecCommands(program: Command): void {
     )
     .option(
       '--extended-thinking',
-      'Turn extended thinking ON for this run (billed as output; OpenAI, Google, OpenRouter — direct Anthropic from core 0.52.0)',
+      'Turn extended thinking ON for this run (billed as output; OpenAI, Google, OpenRouter — not direct Anthropic yet)',
     )
     .option(
       '--no-extended-thinking',
@@ -991,11 +1008,7 @@ Examples:
               .runAgent(name, { target, prompt }, execOpts)
               .then((result) => {
                 if (!ctx.json) {
-                  const marker =
-                    result.decision === 'PASS' ||
-                    result.decisionCategory === 'positive'
-                      ? '\u2713'
-                      : '\u2717';
+                  const marker = passMarker(result);
                   const score = result.score != null ? ` ${result.score}` : '';
                   console.log(
                     `  ${marker} ${name}: ${result.decision}${score}`,

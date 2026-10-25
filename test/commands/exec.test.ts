@@ -22,6 +22,7 @@ import {
   assertTargetIsDirectoryOrExit,
   confirmInferredProjectOrExit,
   guardShadowedVersionFlag,
+  passMarker,
   REPORT_MODE_DIRECTIVE,
   registerExecCommands,
   reorderInheritedExecOptions,
@@ -1570,5 +1571,30 @@ describe('exec --extended-thinking / --no-extended-thinking', () => {
     ]);
     await parse(...argv.slice(2)).catch(() => {});
     expect(sentThinking()).toBe(true);
+  });
+});
+
+// Core 0.53.0 gates decisionCategory with --threshold-* and keeps the agent's own decision text.
+// The marker must follow the category: the old expression (decision === 'PASS' || category ===
+// 'positive') showed ✓ for a "PASS" capped to 'conditional'. Control: the first case fails on it.
+describe('passMarker', () => {
+  it('a PASS capped to conditional by a threshold shows ✗', () => {
+    expect(
+      passMarker({ decision: 'PASS', decisionCategory: 'conditional' }),
+    ).toBe('\u2717');
+  });
+  it('a PASS capped to negative shows ✗', () => {
+    expect(passMarker({ decision: 'PASS', decisionCategory: 'negative' })).toBe(
+      '\u2717',
+    );
+  });
+  it('a custom positive verdict shows ✓', () => {
+    expect(
+      passMarker({ decision: 'POLISHED', decisionCategory: 'positive' }),
+    ).toBe('\u2713');
+  });
+  it('falls back to the decision text only when there is no category', () => {
+    expect(passMarker({ decision: 'PASS' })).toBe('\u2713');
+    expect(passMarker({ decision: 'FAIL' })).toBe('\u2717');
   });
 });

@@ -6,7 +6,26 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.41.0] - 2026-10-25
+
+### Changed
+
+- **`--threshold-pass` / `--threshold-warn` now gate.** Core 0.53.0 makes `runAgent`'s
+  `thresholds` cap the result's `decisionCategory`: below warn → `'negative'`, a positive below pass
+  → `'conditional'`. Until now the flags were forwarded and echoed into `threshold`, and nothing
+  compared them to the score. A batch run with the flags and a below-threshold score now shows ✗
+  where it showed ✓, and `--json` output carries the capped `decisionCategory`. The batch marker
+  now follows `decisionCategory` when core supplies one (`passMarker`); it used
+  `decision === 'PASS' || category === 'positive'`, which would have kept ✓ on a capped "PASS"
+  (tests fail on that expression). The agent's own `decision` string is unchanged. A single-agent saved command
+  with `execution.thresholds` changes the same way. Without the flags nothing changes. This is
+  why the release is a minor.
+
 ### Fixed
+
+- **`@uluops/core` 0.52.0 → 0.53.0, `@uluops/ops-sdk` 7.0.0 → 7.0.1, `@uluops/registry-sdk` 0.63.0 → 0.64.1 (exact).** Both SDKs validated ids with zod 4's RFC-strict `.uuid()`, which refuses ids production stores (the `system` org, two users, issue and run authors, definition lineages); the patches use `z.guid()`. For this CLI that means `ulu exec` no longer risks a save that writes the run and then throws on the server's echo, and registry reads of such ids parse. The three move together: core pins both SDKs exactly, so bumping only the SDKs would install a second copy of each under core. The tree holds one copy of each.
+- **`--extended-thinking` no longer claims direct-Anthropic support "from core 0.52.0".** The help text and README said so; core 0.52.x and 0.53.0 have no direct-Anthropic mapping (the planned release number went to the zod-4 migration), so an opt-in there still records `no-mapping`. Both now say "not direct Anthropic yet". No behaviour changes.
+
 
 - **The build clears `dist/` first, so files from removed sources stop shipping.** `build` was
   plain `tsc`, which writes outputs but never deletes them, and `files` publishes all of `dist/`.

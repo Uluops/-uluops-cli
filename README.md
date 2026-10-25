@@ -825,7 +825,7 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `--no-tracking` | Disable validation service submission |
 | `--no-safety-warnings` | Suppress risk warnings and runtime advisories |
 | `--registry-url <url>` | Override the registry URL definitions are resolved from |
-| `--extended-thinking` / `--no-extended-thinking` | Turn extended thinking on or off for this run (every subcommand). Off by default; overrides `ULUOPS_EXTENDED_THINKING`. Thinking tokens are billed as output. Works on OpenAI, Google and OpenRouter models; on direct Anthropic models (the default `sonnet`) it prints "requested but not applied: no-mapping" until `@uluops/core` 0.52.0 — use an `openrouter:anthropic/…` model for Claude thinking today. What each run actually did is recorded on the result (`runConditions`). |
+| `--extended-thinking` / `--no-extended-thinking` | Turn extended thinking on or off for this run (every subcommand). Off by default; overrides `ULUOPS_EXTENDED_THINKING`. Thinking tokens are billed as output. Works on OpenAI, Google and OpenRouter models; on direct Anthropic models (the default `sonnet`) it prints "requested but not applied: no-mapping", because that mapping is not built yet — use an `openrouter:anthropic/…` model for Claude thinking. What each run actually did is recorded on the result (`runConditions`). |
 
 > **Parent options work before OR after the subcommand** (since 0.21.2). They
 > belong to `ulu exec`, not the subcommand, but the CLI relocates them
@@ -869,8 +869,8 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `--temperature <n>` | Generation temperature 0-1 (default: 0) |
 | `--exec-timeout <ms>` | Execution timeout in milliseconds |
 | `-c, --concurrency <n>` | Max concurrent agents for parallel execution (default: 5) |
-| `--threshold-pass <n>` | Pass threshold score (agents) |
-| `--threshold-warn <n>` | Warning threshold score (agents) |
+| `--threshold-pass <n>` | Pass threshold (agents): a score below it caps a positive verdict to conditional. The agent's own decision text is kept; the category gates |
+| `--threshold-warn <n>` | Warn threshold (agents): a score below it caps the verdict to negative |
 | `--report [path]` | Write a human-readable, publication-quality report to file (single agent only). With no path, defaults to `./<agent>-report-<YYYYMMDDTHHmmss>.md` in cwd. Injects a report-mode directive into the agent's prompt and disables structured-output enforcement so the model can emit prose. **Disables tracker submission** (implies `--no-tracking`): the schema-validated path the tracker depends on is no longer guaranteed under report mode, so `--report` silently wins over `--project` rather than erroring. With `--project` (or `ULUOPS_PROJECT`) set, a "tracking disabled" notice prints even under `-q`. Run without `--report` for tracker submission. |
 | `-o, --output <path>` | Explicit output path for `--report` (overrides the `--report` argument and the default) |
 | `--features-list <path>` | Write structured features/recommendations to file (single agent only) |
