@@ -101,6 +101,9 @@ export interface CoreExecOptions {
   tracking?: boolean;
   /** `--extended-thinking` (true) / `--no-extended-thinking` (false); undefined when neither was given. */
   extendedThinking?: boolean;
+  /** `--allow-steps`: run pipeline stage steps (host shell) for this invocation. Absent leaves core's
+   *  own resolution (`ULUOPS_ALLOW_STAGE_STEPS`, default off). */
+  allowSteps?: boolean;
 }
 
 /**
@@ -454,6 +457,20 @@ export function createCoreContext(
 
   if (modelOverride) {
     config.ai = { ...config.ai, modelOverride } as typeof config.ai;
+  }
+
+  // --allow-steps sets the CLIENT's allowStageSteps. The CLI builds one client per invocation, so
+  // this is per-run in effect, which core's own per-run option is not reachable for: runPipeline()
+  // takes no ExecutionOptions. It is the trust boundary core documents (no command allowlist), so
+  // say so on stderr every time it is on.
+  if (options.allowSteps === true) {
+    config.allowStageSteps = true;
+    if (!options.quiet) {
+      console.error(
+        "Stage steps enabled (--allow-steps): this pipeline's steps run as shell commands on this host, " +
+          'with your permissions, as its definition author wrote them.',
+      );
+    }
   }
 
   if (options.registryUrl) {
@@ -956,6 +973,19 @@ export function handleCoreError(
 
   if (error instanceof PipelineError) {
     console.error(`Error: ${error.message}`);
+    // The two steps-disabled refusals (STEP_OUTPUT_STEPS_DISABLED, and G5 for a steps stage behind a
+    // blocking gate) name core's switches; on the CLI the per-run one is --allow-steps.
+    const refusal = (error as { context?: { refusal?: { code?: string } } })
+      .context?.refusal;
+    if (
+      refusal?.code === 'STEP_OUTPUT_STEPS_DISABLED' ||
+      /steps are disabled/.test(error.message)
+    ) {
+      console.error(
+        "\nHint: re-run with --allow-steps to run this pipeline's steps on this host for this run " +
+          '(they are shell commands from the definition).',
+      );
+    }
     process.exit(1);
   }
 

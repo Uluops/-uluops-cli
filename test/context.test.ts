@@ -556,6 +556,36 @@ describe('createCoreContext — extended thinking (thinking-capability-restore �
   });
 });
 
+describe('createCoreContext — --allow-steps', () => {
+  const okConfig = () =>
+    mockedLoadOpsConfig.mockReturnValue({
+      baseUrl: 'http://localhost:3100',
+      debug: false,
+      credentials: { apiKey: 'ulr_test-key' },
+    } as ReturnType<typeof loadOpsConfig>);
+  const lastConfig = () =>
+    mockedUluOpsClient.mock.calls.at(-1)![0] as { allowStageSteps?: boolean };
+
+  it('sets the client allowStageSteps only when given, and says so on stderr unless quiet', () => {
+    okConfig();
+    const output = captureOutput();
+    createCoreContext({ allowSteps: true });
+    expect(lastConfig().allowStageSteps).toBe(true);
+    expect(output.stderr()).toContain('Stage steps enabled (--allow-steps)');
+    output.restore();
+
+    const quiet = captureOutput();
+    createCoreContext({ allowSteps: true, quiet: true });
+    expect(lastConfig().allowStageSteps).toBe(true);
+    expect(quiet.stderr()).not.toContain('Stage steps enabled');
+    quiet.restore();
+
+    // Absent leaves core's own resolution (ULUOPS_ALLOW_STAGE_STEPS, default off) in charge.
+    createCoreContext({});
+    expect(lastConfig().allowStageSteps).toBeUndefined();
+  });
+});
+
 describe('createCoreContext', () => {
   it('should pass timeout to client when provided', () => {
     mockedLoadOpsConfig.mockReturnValue({
@@ -1016,6 +1046,30 @@ describe('handleCoreError', () => {
     );
     expect(output.stderr()).toContain('openrouter.ai/settings/credits');
     output.restore();
+  });
+
+  it('a steps-disabled refusal names --allow-steps; another pipeline error does not', () => {
+    const refused = captureOutput();
+    expect(() =>
+      handleCoreError(
+        new PipelineError(
+          'Run refused (STEP_OUTPUT_STEPS_DISABLED): the condition of "security" reads step output, and steps are disabled, so that output cannot exist.',
+        ),
+        { json: false, debug: false },
+      ),
+    ).toThrow('process.exit(1)');
+    expect(refused.stderr()).toContain('re-run with --allow-steps');
+    refused.restore();
+
+    const other = captureOutput();
+    expect(() =>
+      handleCoreError(new PipelineError('Pipeline pipeline_1 failed: boom'), {
+        json: false,
+        debug: false,
+      }),
+    ).toThrow('process.exit(1)');
+    expect(other.stderr()).not.toContain('--allow-steps');
+    other.restore();
   });
 
   it('a pipeline stopped by a provider 402 exits non-zero with the provider text', () => {

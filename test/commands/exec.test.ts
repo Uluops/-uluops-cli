@@ -1667,3 +1667,19 @@ describe('passMarker', () => {
     expect(passMarker({ decision: 'FAIL' })).toBe('\u2717');
   });
 });
+
+describe('exec --allow-steps', () => {
+  const sentAllowSteps = () =>
+    (mockedCreateCoreContext.mock.calls.at(-1)![0] as { allowSteps?: boolean })
+      .allowSteps;
+
+  it.each([
+    ['pipeline', ['pipeline', 'foundations', '/tmp/t']],
+    ['run', ['run', 'foundations', '/tmp/t']],
+  ])('reaches %s when given, and is unset otherwise', async (_sub, args) => {
+    await parse('exec', ...(args as string[]), '--allow-steps').catch(() => {});
+    expect(sentAllowSteps()).toBe(true);
+    await parse('exec', ...(args as string[])).catch(() => {});
+    expect(sentAllowSteps()).toBeUndefined();
+  });
+});

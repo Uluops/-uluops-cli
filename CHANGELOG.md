@@ -22,14 +22,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
     step, a stage in flight at a stop), with `STAGE_ERRORED` warnings in `--json`;
   - **a pipeline whose conditions read step output is refused** unless steps are enabled (nine corpus
     pipelines, `pre-implementation` and `ship` among them), and conditions are validated before the
-    run starts. **The CLI has no per-run option for steps**: the only switch is core's
-    `ULUOPS_ALLOW_STAGE_STEPS=true`, which enables host-shell steps for every pipeline;
+    run starts. Enable steps for one run with `--allow-steps` (below);
   - **tracked runs**: aborted pipeline runs are now saved (the abort's throw used to skip tracking);
     the saved `allGatesPassed` is computed by the new rule (the cutover for saved verdicts); the raw
     markdown carries a `params:` line; an agent summary over 2,000 characters is cut to fit instead
     of failing the whole save;
   - **agents** get a 100-step budget (was 50) with a wrap-up at 80%, and decisions are read from
     `result.decision` / `decision` / a `Decision:` line by one token rule.
+- **`--allow-steps` on `exec pipeline` and `exec run`** runs the pipeline's stage steps (shell commands
+  from its definition) for that invocation; it sets the client's `allowStageSteps`, and prints a notice
+  on stderr each time (suppressed by `--quiet`). Without it, steps stay off unless
+  `ULUOPS_ALLOW_STAGE_STEPS=true` is set. Core 0.54.0 refuses a pipeline whose conditions read step
+  output while steps are off, and that refusal (and G5's) now ends with a hint naming the flag. Until
+  now the only switch was the environment variable, which enables steps for every run. Same trust
+  boundary as before: no command allowlist; pin registry pipelines with `--hash` in CI.
 - **`exec pipeline` exits 3 when the run completes with decision `FAIL`** (Alex 2026-10-27; also
   `exec run` when it routes to a pipeline). Core 0.54.0 no longer throws on a gate abort, so without
   this an aborted pipeline would have exited 0 and `ulu exec pipeline ship . && deploy` would have

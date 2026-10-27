@@ -959,6 +959,16 @@ The CLI carries `@openrouter/ai-sdk-provider` at the exact version its `@uluops/
 
 **Shell access.** Agents that declare `Bash` get a shell only when you allow it: `ULUOPS_ALLOWED_TOOLS=bash` (any case; a comma-separated list), including from a `./.env` or `~/.uluops/.env` the CLI loads. When a shell is active, core prints a warning once per run. Commands run via `sh -c`, start in the target directory but are not confined to it, run without a sandbox, and do not see your API keys or tokens. Allowing bash allows it for every agent that declares it. Providers with a shell: Anthropic, OpenAI and OpenRouter; on others the agent runs without one and core warns. Before `@uluops/core` 0.46.0 (CLI 0.33.0) this setting had no effect at all; if you set it long ago, check it is still what you want.
 
+**Pipeline steps (`--allow-steps`).** A pipeline's `steps:` are shell commands from its definition, and
+core runs them only when told to. `ulu exec pipeline <name> <target> --allow-steps` (also on `exec run`)
+runs them for that invocation and prints a notice on stderr; without it they do not run. Since core
+0.54.0 a pipeline whose conditions read step output is **refused** without steps (`STEP_OUTPUT_STEPS_DISABLED`),
+as is a steps stage behind a blocking gate; the refusal names `--allow-steps`. Nine corpus pipelines read
+step output, `pre-implementation`, `ship`, `post-implementation` and `consumer-validate` among them.
+There is no command allowlist: the flag trusts the pipeline's author with your shell, registry-resolved
+pipelines included, so pin what you run in CI (`--hash`). `ULUOPS_ALLOW_STAGE_STEPS=true` turns steps on
+for every run instead.
+
 ### Executions
 
 Execution tracking for definitions.

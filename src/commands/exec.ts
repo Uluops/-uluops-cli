@@ -61,6 +61,8 @@ function getMergedOptions(cmd: Command): ExecOptions {
       typeof merged.extendedThinking === 'boolean'
         ? merged.extendedThinking
         : undefined,
+    allowSteps:
+      typeof merged.allowSteps === 'boolean' ? merged.allowSteps : undefined,
     safetyWarnings:
       typeof merged.safetyWarnings === 'boolean'
         ? merged.safetyWarnings
@@ -690,6 +692,11 @@ Examples:
         'resolves to an agent/command — workflows/pipelines have no rendered prompt, so ' +
         'supplying it for one is refused as "unavailable" (exit 4).',
     )
+    .option(
+      '--allow-steps',
+      "Run the pipeline's stage steps (shell commands from its definition) on this host for this run. " +
+        'Off by default; pipelines whose conditions read step output are refused without it.',
+    )
     .action(
       async (
         name: string,
@@ -1267,6 +1274,11 @@ Examples:
         'resolved definition before executing and refuses on mismatch (exit 4). ' +
         'For a pipeline the YAML pin alone fully covers execution — stage refs are ' +
         'resolved downstream and are not individually pinned.',
+    )
+    .option(
+      '--allow-steps',
+      "Run the pipeline's stage steps (shell commands from its definition) on this host for this run. " +
+        'Off by default; pipelines whose conditions read step output are refused without it.',
     )
     .action(
       async (
