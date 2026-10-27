@@ -95,6 +95,27 @@ export function passMarker(result: {
   return passed ? '\u2713' : '\u2717';
 }
 
+/**
+ * Exit code 3: a pipeline that ran to completion and whose decision is FAIL.
+ *
+ * A pipeline's gates are its product, and CI chains (`ulu exec pipeline ship . && deploy`) gate on
+ * them. Until core 0.54.0 a gate `abort` threw, and the throw exited 1 through `handleCoreError`;
+ * PDL 1.6.0 makes an abort a verdict (its dependents are skipped, the run completes), so without
+ * this an aborted ship would exit 0 (Alex 2026-10-27, P4c). 3 keeps the codes apart: 1 usage or
+ * execution error, 2 API/runtime, 3 a failed pipeline verdict, 4 a refused execution.
+ *
+ * Pipelines only. Agents, commands and workflows keep the rule that a verdict is not an exit code
+ * (see the multi-agent batch below). WARN and PASS exit 0.
+ */
+export function exitOnFailedPipeline(result: {
+  type: string;
+  decision: string;
+}): void {
+  if (result.type !== 'pipeline' || result.decision !== 'FAIL') return;
+  console.error('Pipeline decision: FAIL (exit 3)');
+  process.exit(3);
+}
+
 export function assertTargetIsDirectoryOrExit(target: string): void {
   const resolved = resolve(target);
   let stat: Stats;
@@ -687,8 +708,9 @@ Examples:
         const prompt = optString(cmdOpts, 'prompt');
         const ctx = createCoreContext(options, modelOverride);
 
+        let result: Awaited<ReturnType<typeof ctx.client.run>> | undefined;
         try {
-          const result = await withSpinner(
+          result = await withSpinner(
             ctx,
             {
               start: `Executing ${name} against ${target}...`,
@@ -709,6 +731,8 @@ Examples:
         } catch (error) {
           handleCoreError(error, ctx);
         }
+        // After the try: handleCoreError never returns, and an exit inside the try would be caught.
+        if (result) exitOnFailedPipeline(result);
       },
     );
 
@@ -1262,8 +1286,11 @@ Examples:
         const prompt = optString(cmdOpts, 'prompt');
         const ctx = createCoreContext(options, modelOverride);
 
+        let result:
+          | Awaited<ReturnType<typeof ctx.client.runPipeline>>
+          | undefined;
         try {
-          const result = await withSpinner(
+          result = await withSpinner(
             ctx,
             {
               start: `Running pipeline ${name} against ${target}...`,
@@ -1286,6 +1313,7 @@ Examples:
         } catch (error) {
           handleCoreError(error, ctx);
         }
+        if (result) exitOnFailedPipeline(result);
       },
     );
 

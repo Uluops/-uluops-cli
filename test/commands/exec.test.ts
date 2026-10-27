@@ -540,6 +540,75 @@ describe('exec pipeline', () => {
       parse('exec', 'pipeline', 'foundations', './src'),
     ).rejects.toThrow('Pipeline failed');
   });
+  // P4c (Alex 2026-10-27): core 0.54.0 no longer throws on a gate abort, so the run completes with
+  // decision FAIL. Negative control: before this change the FAIL case resolved (exit 0).
+  it('exits 3 when the pipeline completes with decision FAIL, after printing the result', async () => {
+    mockClient.runPipeline.mockResolvedValue(
+      createExecutionResult({
+        type: 'pipeline',
+        name: 'ship',
+        decision: 'FAIL',
+      }),
+    );
+    await expect(parse('exec', 'pipeline', 'ship', './src')).rejects.toThrow(
+      'process.exit(3)',
+    );
+    expect(output.stdout()).toContain('ship');
+  });
+
+  it('emits the JSON before exiting 3 in json mode', async () => {
+    mockedCreateCoreContext.mockReturnValue({
+      client: mockClient as unknown as CoreCliContext['client'],
+      json: true,
+      debug: false,
+      quiet: true,
+    });
+    mockClient.runPipeline.mockResolvedValue(
+      createExecutionResult({
+        type: 'pipeline',
+        name: 'ship',
+        decision: 'FAIL',
+      }),
+    );
+    await expect(parse('exec', 'pipeline', 'ship', './src')).rejects.toThrow(
+      'process.exit(3)',
+    );
+    expect(output.stdout()).toContain('"decision": "FAIL"');
+  });
+
+  it.each([
+    'PASS',
+    'WARN',
+  ])('does not exit when the decision is %s', async (decision) => {
+    mockClient.runPipeline.mockResolvedValue(
+      createExecutionResult({ type: 'pipeline', name: 'ship', decision }),
+    );
+    await expect(
+      parse('exec', 'pipeline', 'ship', './src'),
+    ).resolves.not.toThrow();
+  });
+});
+
+describe('exec run: the FAIL-pipeline exit code', () => {
+  it('exits 3 when run routes to a pipeline that FAILs', async () => {
+    mockClient.run.mockResolvedValue(
+      createExecutionResult({
+        type: 'pipeline',
+        name: 'ship',
+        decision: 'FAIL',
+      }),
+    );
+    await expect(parse('exec', 'run', 'ship', './src')).rejects.toThrow(
+      'process.exit(3)',
+    );
+  });
+
+  it('a FAIL verdict from a workflow is not an exit code (the rule for everything but pipelines)', async () => {
+    mockClient.run.mockResolvedValue(
+      createExecutionResult({ type: 'workflow', name: 'w', decision: 'FAIL' }),
+    );
+    await expect(parse('exec', 'run', 'w', './src')).resolves.not.toThrow();
+  });
 });
 
 // ── project-inference confirmation (PRA-FRA/H #2) ─────────────────────────

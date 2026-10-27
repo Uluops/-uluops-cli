@@ -1120,6 +1120,18 @@ The CLI provides contextual error messages with actionable hints:
 
 All errors include the HTTP status code and server error code when available. Use `--debug` for full request/response details.
 
+### Exit codes
+
+| code | meaning |
+|---|---|
+| `0` | success; also any completed `exec agent`, `command` or `workflow` run, whatever its decision (a verdict is not an exit code), and a pipeline whose decision is `PASS` or `WARN` |
+| `1` | usage, configuration or execution error (including a pipeline stopped by a deadline or a provider credit limit) |
+| `2` | API or runtime error |
+| `3` | `exec pipeline` (or `exec run` on a pipeline) completed and its decision is `FAIL`: a stage failed behind `abort` or `fail`, an ERRORED stage behind a blocking gate, an accepted CONDITIONAL, or a cancel. Since 0.42.0; before it, only an `abort` gate made a pipeline exit non-zero (`1`, through core's throw) |
+| `4` | execution refused by an integrity pin |
+
+`ulu exec pipeline ship . && deploy` therefore still blocks on a failed gate. A stage with no gate never fails a pipeline (it WARNs, exit `0`).
+
 ## Troubleshooting
 
 ### "Authentication required" on every command

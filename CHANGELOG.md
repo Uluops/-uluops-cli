@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.42.0] - 2026-10-27
+
+### Changed
+
+- **`@uluops/core` 0.53.1 → 0.54.0 (exact): PDL 1.6.0 pipeline execution.** What `ulu exec pipeline`
+  users see change (core's CHANGELOG has the full list):
+  - **an `abort` gate skips only its stage's dependents**; independent stages still run and the run
+    completes. `fail` is a new blocking mode that continues; `skip` reads as `fail`; a stage with no
+    gate never fails the run (it WARNs);
+  - **the decision follows the run's `allGatesPassed`**: a negative behind a `warn` gate no longer
+    fails the run, an accepted CONDITIONAL does, and a cancelled run reads `FAIL` (it read
+    `CANCELLED`);
+  - **stage statuses** gain ERRORED (an unjudgeable or crashed agent, a condition that read a failed
+    step, a stage in flight at a stop), with `STAGE_ERRORED` warnings in `--json`;
+  - **a pipeline whose conditions read step output is refused** unless steps are enabled (nine corpus
+    pipelines, `pre-implementation` and `ship` among them), and conditions are validated before the
+    run starts. **The CLI has no per-run option for steps**: the only switch is core's
+    `ULUOPS_ALLOW_STAGE_STEPS=true`, which enables host-shell steps for every pipeline;
+  - **tracked runs**: aborted pipeline runs are now saved (the abort's throw used to skip tracking);
+    the saved `allGatesPassed` is computed by the new rule (the cutover for saved verdicts); the raw
+    markdown carries a `params:` line; an agent summary over 2,000 characters is cut to fit instead
+    of failing the whole save;
+  - **agents** get a 100-step budget (was 50) with a wrap-up at 80%, and decisions are read from
+    `result.decision` / `decision` / a `Decision:` line by one token rule.
+- **`exec pipeline` exits 3 when the run completes with decision `FAIL`** (Alex 2026-10-27; also
+  `exec run` when it routes to a pipeline). Core 0.54.0 no longer throws on a gate abort, so without
+  this an aborted pipeline would have exited 0 and `ulu exec pipeline ship . && deploy` would have
+  gone green. 3 is new: 1 stays usage and execution errors, 2 API/runtime, 4 a refused execution, and
+  a stop by deadline or credit still exits 1. **Scripts that test `$? -eq 1` for an aborted pipeline
+  see 3.** Agents, commands and workflows keep the rule that a verdict is not an exit code. README
+  "Exit codes" is new.
+
 ## [0.41.0] - 2026-10-25
 
 ### Changed
