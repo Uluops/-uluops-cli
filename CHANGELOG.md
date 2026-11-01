@@ -6,6 +6,38 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.43.0] - 2026-10-31
+
+### Changed
+
+- **`@uluops/core` 0.54.0 → 0.55.0 (exact): an absent decision at a blocking gate is ERRORED** (PDL
+  1.6.0 R-D12; core's CHANGELOG has the full entry). What `ulu exec pipeline` users see change:
+  - an agent whose decision core could not read, in a stage gated `abort` or `fail`, makes the stage
+    ERRORED whatever its score. Before, the score decided. The run then FAILs, so `exec pipeline`
+    exits 3 where it may have exited 0. Behind `warn`, or in a stage with no gate, the score still
+    decides;
+  - a truncated report is read from its `Decision:` and `Score:` lines, not from a JSON fragment found
+    in the cut-off block (D47);
+  - **tracked runs:** the saved `allGatesPassed` follows the new rule, a second saved-verdict cutover
+    after 0.42.0's;
+  - the `agent_unjudgeable` reason names each agent's cause;
+  - **an inline-agents stage's `result.decision` (in `--json`) reports the stage's outcome**: `PASS`,
+    `WARN`, `FAIL` or `ERROR` for PASSED, WARNED, FAILED or ERRORED. Before, it read `FAIL` whenever any
+    agent was negative, even behind a `warn` gate that passed. A script that read it as "did any agent
+    object" should read the stage's `agentResults[].decisionCategory`. The run's decision and exit code
+    are unchanged by this.
+
+### Fixed
+
+- **`ulu exec command` with a relative target** (core 0.55.0). A command whose preflight checks
+  `path: $ARGUMENTS`, such as the registry's `validate`, failed every relative target:
+  `ulu exec command validate ./src` reported "Target directory does not exist" for a directory that
+  exists, because core checked `<cwd>/src/src`. Absolute targets were unaffected. The error now names
+  the path it checked.
+- **`ulu exec command` on a command with no `execution` block, or no `model` in it** (core 0.55.0). The
+  CDL schema allows both, and core threw `Cannot read properties of undefined (reading 'default')`
+  before running the agent. It now runs, on `--model` when given, else the agent's own model.
+
 ## [0.42.0] - 2026-10-27
 
 ### Changed
