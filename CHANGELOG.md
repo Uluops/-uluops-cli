@@ -6,6 +6,34 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-11-02
+
+### Changed
+
+- **`@uluops/core` 0.55.0 → 0.57.0 (exact): tracked runs save every agent's analysis, and one
+  agent's analysis can no longer lose the whole save.** This spans core 0.56.0, 0.56.1 and 0.57.0;
+  core's CHANGELOG has the full entries. No flag or output format changes. **What a tracked `ulu exec`
+  run saves does change, with no change to any field's type**, so this entry is the only notice a
+  dashboard or query reading those runs gets:
+  - **commands, command-ref pipeline stages and workflow steps** save one `agents[]` row per agent the
+    command ran, under that agent's own name, version and summary. Before, they saved one row under
+    the command's name with no summary and no analysis (core 0.56.0);
+  - **every agent in a composite run gets its own analysis summary.** A pipeline or workflow run used
+    to save one summary (the first agent's), and agents inside workflow stages were not read at all.
+    Each summary carries that agent's own decision vocabulary and category weights, where child
+    agents used to save `null` and equal shares (core 0.57.0);
+  - **analysis that breaks the tracker's limits is repaired or dropped one entry at a time.** That
+    covers non-integer category scores, too many map sections, oversized blobs, snake_case record
+    fields and an invented `failureCode`. Before, the API refused the whole save: the run, every agent and every recommendation
+    (core 0.56.1, 0.57.0). A repeated record id is saved with a `~2`, `~3`… suffix, and each repair
+    prints one warning;
+  - a structured answer that fails the output schema gets one repair turn, so such a run can cost one
+    more request (core 0.56.0).
+
+  Checked live on 2026-11-02 against the tracker with core 0.57.0: a two-agent pipeline, one agent
+  inside a workflow stage, saved two summaries with their own vocabularies and records under both
+  agent names (core spec `submission-analysis-fidelity`, V10, tracker `-uluops-core` run #128).
+
 ## [0.43.0] - 2026-10-31
 
 ### Changed
