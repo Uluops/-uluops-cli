@@ -1,4 +1,10 @@
-import type { SaveRunInput, UpdateRunByNumberInput } from '@uluops/ops-sdk';
+import {
+  AnalysisEchoMismatchError,
+  type RunUpdatePreview,
+  type SaveRunInput,
+  type UpdateRunByNumberInput,
+  type UpdateRunPreviewByNumberInput,
+} from '@uluops/ops-sdk';
 import type { Command } from 'commander';
 import { z } from 'zod';
 import {
@@ -18,6 +24,8 @@ import {
   parseIntOption,
   readJsonInput,
   resolveProject,
+  stripAnsi,
+  toCamelCase,
   withSpinner,
 } from '../utils.js';
 
@@ -42,9 +50,65 @@ const RunsUpdateAgentInputSchema = z
   })
   .passthrough();
 
+/**
+ * Analysis entries are checked here only as objects in arrays within the server's count caps
+ * (100 records, 20 summaries): ops-sdk's update path validates each entry strictly before
+ * sending, and the server judges the rest. An update is refused WHOLE if any entry is invalid,
+ * unlike a save (spec analysis-never-loses-the-run §3.7).
+ */
+const AnalysisEntryInputSchema = z.record(z.string(), z.unknown());
+
 const RunsUpdateJsonInputSchema = z.object({
   agents: z.array(RunsUpdateAgentInputSchema).optional(),
+  analysisRecords: z.array(AnalysisEntryInputSchema).max(100).optional(),
+  analysisSummary: z
+    .union([
+      AnalysisEntryInputSchema,
+      z.array(AnalysisEntryInputSchema).max(20),
+    ])
+    .optional(),
+  recordWriteMode: z.enum(['replace', 'merge']).optional(),
 });
+
+/**
+ * The file's top-level keys in camelCase, so a `runs save` input (`analysis_records`,
+ * `analysis_summary`, `record_write_mode`) can be reused as it is. The analysis entries are
+ * camelCased all the way down, as `runs save` does and the server does again on receipt;
+ * `agents` keeps its keys exactly as before 0.45.0 (the update path's token fields differ from
+ * the save path's, and this change is not the place to alter them).
+ */
+function normalizeUpdateInput(raw: unknown): unknown {
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return raw;
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    const k = toCamelCase(key);
+    out[k] =
+      k === 'analysisRecords' || k === 'analysisSummary'
+        ? normalizeKeys(value)
+        : value;
+  }
+  return out;
+}
+
+/** Print the server's per-agent plan for an analysis update (POST /runs/update-preview). */
+function printUpdatePreview(plan: RunUpdatePreview): void {
+  console.log(
+    `Update preview (record mode: ${plan.recordMode}) — nothing written`,
+  );
+  const agents = Object.entries(plan.byAgent);
+  if (agents.length === 0) {
+    console.log('  (no agents named in the analysis)');
+    return;
+  }
+  for (const [agent, a] of agents) {
+    console.log(
+      `  ${stripAnsi(agent)}: create ${a.wouldCreateRecords} records, ${a.wouldCreateSummaries} summaries; supersede ${a.wouldSupersedeRecords} records, ${a.wouldSupersedeSummaries} summaries; retire ${a.wouldRetireRecordIds.length} records`,
+    );
+    for (const id of a.wouldRetireRecordIds) {
+      console.log(`    retire: ${stripAnsi(id)}`);
+    }
+  }
+}
 
 /**
  * Register run commands
@@ -300,6 +364,9 @@ Examples:
           // (ops-api R2). Say so here, or the line above reads as a clean save.
           for (const line of formatAnalysisRejections(
             result.analysisWrite?.rejected,
+            {
+              run: { project: input.project, runNumber: result.run.runNumber },
+            },
           )) {
             console.log(line);
           }
@@ -382,6 +449,12 @@ Examples:
             'Missing required field: workflowType (or snake_case: workflow_type)',
           );
         }
+        // Same default as the save path: a run with no findings is valid. Without it, validate
+        // refused ("recommendations: expected array, received undefined") the input that
+        // `runs save` accepts, so the dry run disagreed with the save it previews.
+        if (input.recommendations === undefined) {
+          input.recommendations = [];
+        }
 
         const result = await withSpinner(
           ctx,
@@ -444,6 +517,16 @@ Examples:
             console.log(`  New issues: ${newIssues.length}`);
             console.log(`  Recurring: ${recurringIssues.length}`);
             console.log(`  Regressions: ${regressions.length}`);
+          }
+
+          // The analysis a save of this input would reject (ops-api R2): the save keeps the run
+          // and drops these agents' analysis, so this is the moment to fix them.
+          const wouldReject = formatAnalysisRejections(result.wouldReject, {
+            mode: 'would',
+          });
+          if (wouldReject.length > 0) {
+            console.log('\nAnalysis:');
+            for (const line of wouldReject) console.log(`  ${line}`);
           }
         }
       } catch (error) {
@@ -568,13 +651,45 @@ Examples:
   runs
     .command('update <project>')
     .description(
-      'Update run metadata (scores, tokens) by project and run number',
+      'Update run metadata (scores, tokens) or repair its analysis, by project and run number',
     )
     .requiredOption('-n, --number <number>', 'Run number')
     .option('--score <number>', 'New average score')
     .option('--passed <boolean>', 'All gates passed (true/false)')
-    .option('-f, --file <path>', 'JSON file with agent updates')
-    .option('--stdin', 'Read agent updates from stdin')
+    .option(
+      '-f, --file <path>',
+      'JSON file with agent updates and/or analysis (analysis_records, analysis_summary)',
+    )
+    .option('--stdin', 'Read the JSON from stdin')
+    .option(
+      '--record-mode <mode>',
+      'How analysis records are written: replace (default) or merge',
+    )
+    .option(
+      '--preview',
+      'Show what the analysis update would create, supersede and retire; write nothing',
+    )
+    .option(
+      '-y, --yes',
+      'Write a replace-mode update even when it would retire existing records',
+    )
+    .addHelpText(
+      'after',
+      `
+Analysis repair (a save that printed "Analysis rejected for <agent>"):
+  Put each rejected agent's COMPLETE records and summary in a file, in the same
+  shape as \`runs save\` input (analysis_records, analysis_summary), then:
+
+  $ ulu runs update ops-sdk -n 42 --file fix.json --preview   # nothing written
+  $ ulu runs update ops-sdk -n 42 --file fix.json
+
+  Records are written per agent. replace (the default) supersedes the named
+  agents' records and RETIRES any record of theirs the file leaves out; the
+  write is refused when it would retire one, unless --yes. merge supersedes
+  only the record ids sent and retires nothing. Summaries always replace.
+  Unlike a save, an update is refused whole if any entry is invalid.
+`,
+    )
     .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
       const project = resolveProject(projectArg);
@@ -591,12 +706,12 @@ Examples:
         if (options.passed !== undefined)
           input.allGatesPassed = options.passed === 'true';
 
-        // Read agent updates from file/stdin if provided.
-        // The schema is a lightweight surface guard; the API performs strict
-        // validation. We fail fast on obvious type errors so users see "wrong
-        // shape" before a network round-trip.
+        // Read agent updates / analysis from file or stdin if provided.
+        // The schema is a lightweight surface guard; the SDK validates analysis
+        // entries strictly and the API performs the rest. We fail fast on
+        // obvious type errors so users see "wrong shape" before a round-trip.
         if (options.file || options.stdin) {
-          const raw = await readJsonInput(options);
+          const raw = normalizeUpdateInput(await readJsonInput(options));
           const parsed = RunsUpdateJsonInputSchema.safeParse(raw);
           if (!parsed.success) {
             exitWithError(
@@ -607,24 +722,153 @@ Examples:
             input.agents = parsed.data
               .agents as UpdateRunByNumberInput['agents'];
           }
+          if (parsed.data.analysisRecords) {
+            input.analysisRecords = parsed.data
+              .analysisRecords as unknown as UpdateRunByNumberInput['analysisRecords'];
+          }
+          if (parsed.data.analysisSummary) {
+            input.analysisSummary = parsed.data
+              .analysisSummary as unknown as UpdateRunByNumberInput['analysisSummary'];
+          }
+          if (parsed.data.recordWriteMode) {
+            input.recordWriteMode = parsed.data.recordWriteMode;
+          }
         }
 
-        const run = await withSpinner(
+        if (options.recordMode !== undefined) {
+          if (
+            options.recordMode !== 'replace' &&
+            options.recordMode !== 'merge'
+          ) {
+            exitWithError('--record-mode must be replace or merge');
+          }
+          input.recordWriteMode = options.recordMode;
+        }
+
+        const hasAnalysis =
+          input.analysisRecords !== undefined ||
+          input.analysisSummary !== undefined;
+        // The server answers a mode without records with a named 400; say it here instead.
+        if (input.recordWriteMode !== undefined && !input.analysisRecords) {
+          exitWithError(
+            'A record write mode needs analysis_records in the input (summaries have no mode).',
+          );
+        }
+
+        const previewInput = (): UpdateRunPreviewByNumberInput => ({
+          project: input.project,
+          runNumber: input.runNumber,
+          ...(input.analysisRecords && {
+            analysisRecords: input.analysisRecords,
+          }),
+          ...(input.analysisSummary && {
+            analysisSummary: input.analysisSummary,
+          }),
+          ...(input.recordWriteMode && {
+            recordWriteMode: input.recordWriteMode,
+          }),
+        });
+
+        if (options.preview) {
+          if (!hasAnalysis) {
+            exitWithError(
+              '--preview needs analysis_records or analysis_summary in the input.',
+            );
+          }
+          if (
+            input.agents ||
+            input.averageScore !== undefined ||
+            input.allGatesPassed !== undefined
+          ) {
+            exitWithError(
+              '--preview covers analysis only: drop --score, --passed and agents.',
+            );
+          }
+          const plan = await withSpinner(
+            ctx,
+            {
+              start: 'Previewing update...',
+              success: 'Preview ready',
+              failure: 'Preview failed',
+            },
+            () => ctx.client.runs.previewUpdate(previewInput()),
+          );
+          if (ctx.json) emitJson(ctx, plan, 'run.updatePreview');
+          else printUpdatePreview(plan);
+          return;
+        }
+
+        if (!hasAnalysis) {
+          const run = await withSpinner(
+            ctx,
+            {
+              start: 'Updating run...',
+              success: 'Run updated',
+              failure: 'Failed to update run',
+            },
+            () => ctx.client.runs.update(input),
+          );
+          if (ctx.json) emitJson(ctx, run, 'run.update');
+          else console.log(formatRun(run));
+          return;
+        }
+
+        // A replace-mode records write retires every record of a named agent that the file
+        // leaves out. Repairing a rejected agent retires nothing (none of its rows were stored),
+        // but the same command on an agent that has rows can delete analysis by omission. So
+        // look before writing: the preview is read-only and names the ids.
+        if (
+          input.analysisRecords &&
+          (input.recordWriteMode ?? 'replace') === 'replace' &&
+          !options.yes
+        ) {
+          const plan = await ctx.client.runs.previewUpdate(previewInput());
+          const retiring = Object.entries(plan.byAgent).filter(
+            ([, a]) => a.wouldRetireRecordIds.length > 0,
+          );
+          if (retiring.length > 0) {
+            const list = retiring
+              .map(
+                ([agent, a]) =>
+                  `  ${stripAnsi(agent)}: ${a.wouldRetireRecordIds.map((id) => stripAnsi(id)).join(', ')}`,
+              )
+              .join('\n');
+            exitWithError(
+              `This replace-mode update would retire records the file leaves out:\n${list}\nSend them too, use --record-mode merge, or pass --yes to retire them. Nothing was written.`,
+            );
+          }
+        }
+
+        const result = await withSpinner(
           ctx,
           {
             start: 'Updating run...',
             success: 'Run updated',
             failure: 'Failed to update run',
           },
-          () => ctx.client.runs.update(input),
+          () => ctx.client.runs.updateWithEcho(input),
         );
 
         if (ctx.json) {
-          emitJson(ctx, run, 'run.update');
+          emitJson(ctx, result, 'run.updateAnalysis');
         } else {
-          console.log(formatRun(run));
+          console.log(formatRun(result.run));
+          const w = result.analysisWrite;
+          if (w) {
+            console.log('');
+            console.log(
+              `Analysis (${w.recordMode}): created ${w.createdRecords} records, ${w.createdSummaries} summaries; superseded ${w.supersededRecords} records, ${w.supersededSummaries} summaries`,
+            );
+          }
         }
       } catch (error) {
+        // Thrown AFTER the write landed: the server's echo did not match what was sent. A retry
+        // would apply the write again (workspace rule; ops-sdk 5.18.0).
+        if (error instanceof AnalysisEchoMismatchError) {
+          exitWithError(
+            `The update was applied, but the server's analysis echo did not match the request (${error.reason}; sent ${error.expectedRecordMode}, echoed ${error.actualRecordMode ?? 'nothing'}). Do not run it again: check the run with \`ulu runs details ${project} -n ${options.number}\`.`,
+          );
+        }
         handleOpsError(error, ctx);
       }
     });

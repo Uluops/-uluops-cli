@@ -406,10 +406,10 @@ ulu runs get <runId>              # Get run by UUID
 ulu runs latest <project>         # Get latest run (--workflow)
 ulu runs details <project>        # Detailed run with agents/recommendations (-n for a specific run number)
 ulu runs save                     # Save run from JSON (--file or --stdin; -p/-w override input fields)
-ulu runs validate                 # Dry run — preview against the live tracker (requires auth; -p/-w override)
+ulu runs validate                 # Dry run — preview against the live tracker, incl. analysis a save would reject (requires auth; -p/-w override)
 ulu runs diff <project>           # Compare two runs (--base, --compare)
 ulu runs archive <project>        # Archive old runs (--before-run, --before-date, --keep-last, --reason)
-ulu runs update <project>         # Update run metadata (--number, --score, --passed, --file)
+ulu runs update <project>         # Update run metadata or repair its analysis (--number, --score, --passed, --file, --preview, --record-mode, --yes)
 ulu runs delete <runId>           # Delete a run
 ```
 
@@ -442,9 +442,35 @@ ulu runs update my-project --number 5 --file token-update.json
 
 # Set the gates-passed flag on a run after the fact
 ulu runs update my-project --number 5 --passed true
+
+# Repair analysis the tracker rejected on save (see "Repairing rejected analysis" below)
+ulu runs update my-project --number 5 --file fix.json --preview   # nothing written
+ulu runs update my-project --number 5 --file fix.json
 ```
 
 > **Note:** `runs update --score` is rejected on finalized runs ("Cannot rewrite averageScore"). Use the `--file` form to patch per-agent fields. Each agent entry in the file must include `name` and `decision` (any other fields like `tokens` are merged into the existing record).
+
+#### Repairing rejected analysis
+
+A save keeps the run when one agent's analysis is invalid and rejects that agent's analysis as a unit; `ulu runs save` and `ulu exec` then print `Analysis rejected for <agent>: …` with the server's issues. `ulu runs validate` prints the same verdict before you save (`Would reject analysis for <agent>: …`). Do not save the run again — that creates a second run. Put each rejected agent's **complete** records and summary in a file, in the same shape as `runs save` input:
+
+```json
+{
+  "analysis_records": [
+    { "agent_name": "agent-h", "record_type": "finding", "record_id": "h-1", "title": "…", "data": { "note": "…" } }
+  ],
+  "analysis_summary": [{ "agent_name": "agent-h", "decision": "PASS" }]
+}
+```
+
+and send it with `ulu runs update <project> -n <run> --file fix.json`. Records are written per agent, under one of two modes:
+
+| `--record-mode` | records of the named agents | summaries |
+|---|---|---|
+| `replace` (default) | superseded; any record **left out of the file is retired** | replaced |
+| `merge` | only the `record_id`s sent are superseded; nothing is retired | replaced |
+
+A rejected agent has no stored analysis, so either mode repairs it. On an agent that does have records, a replace write can delete analysis by omission, so the cli previews first and **refuses a replace write that would retire records** (it names them) unless you pass `--yes`. `--preview` shows the full plan — what each agent's write would create, supersede and retire — and writes nothing. Unlike a save, an update is refused **whole** if any entry is invalid, so a bad entry costs nothing. If the cli reports that the update was applied but the server's echo did not match, do not re-run it: check the run with `ulu runs details`.
 
 ### Run Input Format
 
@@ -816,7 +842,7 @@ ulu exec describe --type pipeline                       # No name + --type → f
 
 > **Tracking notice.** When a run executes successfully but recording it to the tracker fails (e.g. a free-tier `402 PROJECT_LIMIT` or `SUBSCRIPTION_REQUIRED`), the result prints a non-fatal `Run not recorded: <message>` line — with ` — upgrade: <url>` appended for cap/tier failures — in place of the dashboard link. The run itself still succeeds.
 >
-> **Analysis notice.** A run can be saved while the tracker rejects one agent's analysis (an invalid record or summary): the run, its agents and its recommendations are kept, and that agent's analysis is not. The result then prints `Analysis rejected for <agent>: <reason> (<n> records, <m> summaries)` per rejected agent, and a line saying the run is saved. Do not run it again to fix this, which creates a second run; repair the analysis on the same run with ops-mcp `update_run` or ops-sdk `runs.update`. `ulu runs save` prints the same lines.
+> **Analysis notice.** A run can be saved while the tracker rejects one agent's analysis (an invalid record or summary): the run, its agents and its recommendations are kept, and that agent's analysis is not. The result then prints `Analysis rejected for <agent>: <reason> (<n> records, <m> summaries)` per rejected agent, and a line saying the run is saved. Do not run it again to fix this, which creates a second run; repair the analysis on the same run with `ulu runs update <project> -n <run> --file <analysis.json>` (see [Repairing rejected analysis](#repairing-rejected-analysis)). `ulu runs save` prints the same lines.
 
 **Parent options** (apply to all subcommands):
 

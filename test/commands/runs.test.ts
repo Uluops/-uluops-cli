@@ -242,6 +242,8 @@ describe('runs save: analysis rejections (analysis-never-loses-the-run R3)', () 
       'Analysis rejected for agent-h: entry_invalid (1 record, 1 summary)',
     );
     expect(out).toContain('The run is saved; submitting it again creates a second run.');
+    // The repair command names this run: project from the input, number from the echo.
+    expect(out).toContain('`ulu runs update test-proj -n 9 --file <analysis.json>`');
   });
 
   it('prints no rejection line for a clean save or one without analysisWrite', async () => {
@@ -396,6 +398,266 @@ describe('runs update --file (Zod-validated JSON input)', () => {
     const call = mockClient.runs.update.mock.calls[0]?.[0];
     expect(call).not.toHaveProperty('agents');
     output.restore();
+  });
+});
+
+// ── runs validate / runs update: analysis (0.45.0) ───────────────────────
+
+const AGENT_H_REJECTION = {
+  agentName: 'agent-h',
+  reason: 'entry_invalid',
+  recordsRejected: 1,
+  summariesRejected: 1,
+  detail: {
+    issues: [
+      {
+        array: 'records',
+        index: 1,
+        path: ['data'],
+        code: 'custom',
+        message: 'analysis blob exceeds 8 levels of nesting',
+      },
+    ],
+    issuesTotal: 1,
+  },
+};
+
+describe('runs validate: same input defaults as save', () => {
+  it('sends recommendations: [] when the input has none, as runs save does', async () => {
+    mockClient.runs.validate.mockResolvedValue({
+      wouldCreate: true,
+      wouldUpdate: false,
+      wouldRegress: false,
+      validationErrors: [],
+    });
+    const output = captureOutput();
+    await parse('runs', 'validate', '--file', '/tmp/run.json');
+    output.restore();
+    expect(mockClient.runs.validate.mock.calls[0]?.[0]).toMatchObject({
+      recommendations: [],
+    });
+  });
+});
+
+describe('runs validate: analysis a save would reject', () => {
+  it('prints each wouldReject entry with its issues, and says nothing was saved', async () => {
+    mockClient.runs.validate.mockResolvedValue({
+      wouldCreate: true,
+      wouldUpdate: false,
+      wouldRegress: false,
+      validationErrors: [],
+      wouldReject: [AGENT_H_REJECTION],
+    });
+    const output = captureOutput();
+    await parse('runs', 'validate', '--file', '/tmp/run.json');
+    const out = output.stdout();
+    output.restore();
+    expect(out).toContain(
+      'Would reject analysis for agent-h: entry_invalid (1 record, 1 summary)',
+    );
+    expect(out).toContain('records[1].data: analysis blob exceeds 8 levels of nesting');
+    expect(out).toContain('Nothing has been saved.');
+  });
+
+  it('prints no analysis section when nothing would be rejected', async () => {
+    for (const wouldReject of [undefined, []]) {
+      mockClient.runs.validate.mockResolvedValue({
+        wouldCreate: true,
+        wouldUpdate: false,
+        wouldRegress: false,
+        validationErrors: [],
+        ...(wouldReject && { wouldReject }),
+      });
+      const output = captureOutput();
+      await parse('runs', 'validate', '--file', '/tmp/run.json');
+      const out = output.stdout();
+      output.restore();
+      expect(out).toContain('Validation Preview:');
+      expect(out).not.toContain('Would reject');
+    }
+  });
+});
+
+describe('runs update: analysis repair', () => {
+  const FIX = {
+    analysis_records: [
+      {
+        agent_name: 'agent-h',
+        record_type: 'probe',
+        record_id: 'h-1',
+        title: 'fixed',
+        data: { note: 'flat now' },
+      },
+    ],
+    analysis_summary: [{ agent_name: 'agent-h', decision: 'PASS' }],
+  };
+  const EMPTY_PLAN = {
+    preview: true,
+    recordMode: 'replace',
+    byAgent: {
+      'agent-h': {
+        wouldSupersedeRecords: 0,
+        wouldSupersedeSummaries: 0,
+        wouldCreateRecords: 1,
+        wouldCreateSummaries: 1,
+        wouldRetireRecordIds: [],
+      },
+    },
+  };
+  const ECHO = {
+    run: createRun({ runNumber: 9 }),
+    analysisWrite: {
+      recordMode: 'replace',
+      createdRecords: 1,
+      createdSummaries: 1,
+      supersededRecords: 0,
+      supersededSummaries: 0,
+    },
+  };
+  function updateWith(json: unknown, ...flags: string[]) {
+    vi.mocked(readFileSync).mockReturnValueOnce(JSON.stringify(json));
+    return parse('runs', 'update', 'my-proj', '-n', '9', '--file', '/tmp/fix.json', ...flags);
+  }
+
+  it('sends a runs-save-shaped file (snake_case) as camelCase analysis and prints the echo', async () => {
+    mockClient.runs.previewUpdate.mockResolvedValue(EMPTY_PLAN);
+    mockClient.runs.updateWithEcho.mockResolvedValue(ECHO);
+    const output = captureOutput();
+    await updateWith(FIX);
+    const out = output.stdout();
+    output.restore();
+    const sent = mockClient.runs.updateWithEcho.mock.calls[0]?.[0];
+    expect(sent).toMatchObject({
+      project: 'my-proj',
+      runNumber: 9,
+      analysisRecords: [
+        { agentName: 'agent-h', recordType: 'probe', recordId: 'h-1', data: { note: 'flat now' } },
+      ],
+      analysisSummary: [{ agentName: 'agent-h', decision: 'PASS' }],
+    });
+    expect(mockClient.runs.update).not.toHaveBeenCalled();
+    expect(out).toContain(
+      'Analysis (replace): created 1 records, 1 summaries; superseded 0 records, 0 summaries',
+    );
+  });
+
+  it('refuses a replace write that would retire records, and writes nothing', async () => {
+    mockClient.runs.previewUpdate.mockResolvedValue({
+      ...EMPTY_PLAN,
+      byAgent: {
+        'agent-h': { ...EMPTY_PLAN.byAgent['agent-h'], wouldRetireRecordIds: ['h-2', 'h-3'] },
+      },
+    });
+    const output = captureOutput();
+    await expect(updateWith(FIX)).rejects.toThrow('process.exit(1)');
+    const err = output.stderr();
+    output.restore();
+    expect(err).toContain('would retire records the file leaves out');
+    expect(err).toContain('agent-h: h-2, h-3');
+    expect(err).toContain('Nothing was written.');
+    expect(mockClient.runs.updateWithEcho).not.toHaveBeenCalled();
+  });
+
+  it('--yes writes a replace update that retires records', async () => {
+    mockClient.runs.updateWithEcho.mockResolvedValue(ECHO);
+    const output = captureOutput();
+    await updateWith(FIX, '--yes');
+    output.restore();
+    expect(mockClient.runs.previewUpdate).not.toHaveBeenCalled();
+    expect(mockClient.runs.updateWithEcho).toHaveBeenCalledTimes(1);
+  });
+
+  it('merge mode retires nothing, so it writes without the preview check', async () => {
+    mockClient.runs.updateWithEcho.mockResolvedValue({
+      ...ECHO,
+      analysisWrite: { ...ECHO.analysisWrite, recordMode: 'merge' },
+    });
+    const output = captureOutput();
+    await updateWith(FIX, '--record-mode', 'merge');
+    output.restore();
+    expect(mockClient.runs.previewUpdate).not.toHaveBeenCalled();
+    expect(mockClient.runs.updateWithEcho.mock.calls[0]?.[0]).toMatchObject({
+      recordWriteMode: 'merge',
+    });
+  });
+
+  it('--preview prints the plan, including record ids it would retire, and writes nothing', async () => {
+    mockClient.runs.previewUpdate.mockResolvedValue({
+      ...EMPTY_PLAN,
+      byAgent: {
+        'agent-h': { ...EMPTY_PLAN.byAgent['agent-h'], wouldRetireRecordIds: ['h-2'] },
+      },
+    });
+    const output = captureOutput();
+    await updateWith(FIX, '--preview');
+    const out = output.stdout();
+    output.restore();
+    expect(out).toContain('Update preview (record mode: replace) — nothing written');
+    expect(out).toContain('agent-h: create 1 records, 1 summaries; supersede 0 records, 0 summaries; retire 1 records');
+    expect(out).toContain('retire: h-2');
+    expect(mockClient.runs.updateWithEcho).not.toHaveBeenCalled();
+    expect(mockClient.runs.update).not.toHaveBeenCalled();
+  });
+
+  it('--preview refuses non-analysis fields and an input without analysis', async () => {
+    let output = captureOutput();
+    await expect(updateWith(FIX, '--preview', '--score', '80')).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('--preview covers analysis only');
+    output.restore();
+    output = captureOutput();
+    await expect(updateWith({}, '--preview')).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('--preview needs analysis_records or analysis_summary');
+    output.restore();
+    expect(mockClient.runs.previewUpdate).not.toHaveBeenCalled();
+  });
+
+  it('refuses a record mode without records (the server would 400)', async () => {
+    const output = captureOutput();
+    await expect(
+      updateWith({ analysis_summary: FIX.analysis_summary }, '--record-mode', 'merge'),
+    ).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('needs analysis_records');
+    output.restore();
+    await expect(updateWith(FIX, '--record-mode', 'upsert')).rejects.toThrow('process.exit(1)');
+  });
+
+  it('refuses more than 100 records before sending', async () => {
+    const many = Array.from({ length: 101 }, (_, i) => ({ ...FIX.analysis_records[0], record_id: `r-${i}` }));
+    const output = captureOutput();
+    await expect(updateWith({ analysis_records: many })).rejects.toThrow('process.exit(1)');
+    expect(output.stderr()).toContain('Invalid JSON input for runs update');
+    output.restore();
+  });
+
+  it('on AnalysisEchoMismatchError says the write landed and not to retry', async () => {
+    const { AnalysisEchoMismatchError } = await import('@uluops/ops-sdk');
+    mockClient.runs.previewUpdate.mockResolvedValue(EMPTY_PLAN);
+    mockClient.runs.updateWithEcho.mockRejectedValue(
+      new AnalysisEchoMismatchError('mismatch', {
+        reason: 'mode-mismatch',
+        expectedRecordMode: 'replace',
+        actualRecordMode: 'merge',
+        run: null,
+        analysisWrite: null,
+      }),
+    );
+    const output = captureOutput();
+    await expect(updateWith(FIX)).rejects.toThrow('process.exit(1)');
+    const err = output.stderr();
+    output.restore();
+    expect(err).toContain('The update was applied');
+    expect(err).toContain('Do not run it again');
+    expect(err).toContain('ulu runs details my-proj -n 9');
+  });
+
+  it('a metadata-only update keeps the 0.44.0 path (runs.update, no preview)', async () => {
+    mockClient.runs.update.mockResolvedValue(createRun({ runNumber: 9 }));
+    const output = captureOutput();
+    await parse('runs', 'update', 'my-proj', '-n', '9', '--score', '80');
+    output.restore();
+    expect(mockClient.runs.update).toHaveBeenCalledTimes(1);
+    expect(mockClient.runs.updateWithEcho).not.toHaveBeenCalled();
+    expect(mockClient.runs.previewUpdate).not.toHaveBeenCalled();
   });
 });
 

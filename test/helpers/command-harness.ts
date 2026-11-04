@@ -45,6 +45,8 @@ export function createMockOpsClient() {
       archive: vi.fn(),
       update: vi.fn(),
       updateById: vi.fn(),
+      updateWithEcho: vi.fn(),
+      previewUpdate: vi.fn(),
       delete: vi.fn(),
     },
     issues: {

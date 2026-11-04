@@ -32,7 +32,52 @@ describe('formatAnalysisRejections', () => {
       'Analysis rejected for agent-k: entry_invalid (3 records, 0 summaries)',
     );
     expect(lines[2]).toMatch(/^The run is saved; submitting it again creates a second run\./);
-    expect(lines[2]).toContain('update_run');
+    expect(lines[2]).toContain(
+      '`ulu runs update <project> -n <run number> --file <analysis.json>`',
+    );
+  });
+
+  it('names the run in the repair command when it is known', () => {
+    const lines = formatAnalysisRejections([rejection()], {
+      run: { project: 'ops-sdk', runNumber: 42 },
+    });
+    expect(lines.at(-1)).toContain('`ulu runs update ops-sdk -n 42 --file <analysis.json>`');
+  });
+
+  it('lists the entry_invalid issues under their rejection, capped at 5', () => {
+    const issues = Array.from({ length: 7 }, (_, i) => ({
+      array: 'records',
+      index: i,
+      path: ['data', 'x'],
+      code: 'custom',
+      message: `bad ${i}`,
+    }));
+    const lines = formatAnalysisRejections([
+      rejection({ detail: { issues, issuesTotal: 12 } }),
+    ]);
+    expect(lines[1]).toBe('  records[0].data.x: bad 0');
+    expect(lines[5]).toBe('  records[4].data.x: bad 4');
+    expect(lines[6]).toBe('  … 7 more (--json shows the issues the server sent)');
+    expect(lines).toHaveLength(8);
+  });
+
+  it('prints no issue lines for a detail shape it does not know (a new reason)', () => {
+    for (const detail of [
+      { unitsOmitted: 3 },
+      { issues: 'not-an-array' },
+      { issues: [null, 7, { message: 42 }] },
+    ]) {
+      expect(formatAnalysisRejections([rejection({ detail })])).toHaveLength(2);
+    }
+  });
+
+  it('would mode (runs validate) words it as a prediction and says nothing was saved', () => {
+    const lines = formatAnalysisRejections([rejection()], { mode: 'would' });
+    expect(lines[0]).toBe(
+      'Would reject analysis for agent-h: entry_invalid (1 record, 1 summary)',
+    );
+    expect(lines.at(-1)).toMatch(/^Nothing has been saved\./);
+    expect(lines.join('\n')).not.toContain('second run');
   });
 
   it('names a null agent (own-unit entry, units_omitted row) as unattributed entries', () => {

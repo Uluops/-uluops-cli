@@ -18,7 +18,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
   ```
   Analysis rejected for agent-h: entry_invalid (1 record, 1 summary)
-  The run is saved; submitting it again creates a second run. Repair the analysis on this run with update_run (ops-mcp) or runs.update (ops-sdk), sending each rejected agent's complete records and summary.
+    records[1].data: analysis blob exceeds 8 levels of nesting
+  The run is saved; submitting it again creates a second run. Repair it on the same run with `ulu runs update my-proj -n 1 --file <analysis.json>`, sending each rejected agent's complete records and summary (add --preview to see the change first).
   ```
 
   Before this, both printed a plain success (`Run #N saved successfully`, or the dashboard link),
@@ -26,9 +27,33 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   still means only that the run was not saved, and the exit code does not change. `--json` output
   gains the field (`analysisWrite.rejected` on `runs save`, `analysisRejected` on exec) through
   the bumps below: on 0.44.0 ops-sdk 7.1.0 stripped it and core 0.57.0 did not map it. Agent names and reasons are server text: escape sequences are stripped and
-  newlines collapse to a space, so a name cannot forge a second line. `ulu runs update` cannot
-  repair analysis (it takes agent metadata only), so the line names the two writers that can.
-  Spec: `analysis-never-loses-the-run` §3.5, R3.
+  newlines collapse to a space, so a name cannot forge a second line. Under each rejection the cli
+  lists the server's issues (at most 5; `--json` has all the server sent), and on `runs save` the
+  closing line names the repair command for that run. Spec: `analysis-never-loses-the-run` §3.5, R3.
+- **`ulu runs update` repairs analysis.** The `--file` / `--stdin` JSON now takes
+  `analysis_records`, `analysis_summary` and `record_write_mode` beside `agents`, in the same shape
+  as `runs save` input (snake_case or camelCase), so a rejected agent's analysis can be added to the
+  run it belongs to. Before, the file took `agents` only, and the only repair writers were ops-mcp
+  `update_run` and ops-sdk `runs.update`. New flags:
+  - `--record-mode replace|merge` (default `replace`, as in the SDK and the API). `replace`
+    supersedes the named agents' records and retires any of theirs the file leaves out; `merge`
+    supersedes only the record ids sent.
+  - `--preview`: the server's write plan per agent (create / supersede / retire, with the record ids
+    it would retire). Writes nothing. Analysis only: `--score`, `--passed` and `agents` are refused.
+  - `-y, --yes`: see below.
+
+  **A replace-mode records write is previewed first and refused if it would retire any record**,
+  naming the ids, unless `--yes`. A rejected agent has no stored rows, so its repair retires nothing
+  and passes; the same command against an agent that has rows would otherwise delete its analysis
+  by omission. This costs one extra read-only request per replace-mode write; merge-mode writes
+  and metadata-only updates skip it. An update that carries analysis prints the write's echo
+  (`Analysis (replace): created … superseded …`) and its `--json` is a new kind,
+  `run.updateAnalysis` (`{ run, analysisWrite }`); `--preview --json` is `run.updatePreview`. A
+  metadata-only update is unchanged, including its `run.update` JSON. If ops-sdk reports
+  `AnalysisEchoMismatchError` (the write landed but the echo did not match), the cli says the
+  update was applied and not to re-run it.
+- **`ulu runs validate` prints the analysis a save would reject** (`wouldReject[]`), with the
+  issues, as `Would reject analysis for <agent>: …` under an `Analysis:` heading.
 
 ### Changed
 
@@ -44,6 +69,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   dropped only the summary and kept the records. The loss is now visible (the line above) and
   repairable, where before it was silent. Core's repairs (rounding scores, truncating text,
   suffixing repeated record ids) are unchanged.
+
+### Fixed
+
+- **`ulu runs validate` refused input that `ulu runs save` accepts.** Save defaults a missing
+  `recommendations` to `[]` (a run with no findings is valid); validate did not, so the dry run
+  failed with `recommendations: Invalid input: expected array, received undefined` on an input the
+  save it previews would take. Validate now applies the same default. Found live while testing the
+  `wouldReject` output.
 
 ## [0.44.0] - 2026-11-02
 
