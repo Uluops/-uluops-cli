@@ -13,47 +13,80 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - **A save that kept the run but rejected some analysis now says so.** Since ops-api R2
   (2026-11-03) the tracker keeps a run whose analysis is partly invalid and rejects the offending
   agent's analysis as a unit, instead of refusing the whole save. After `ulu runs save` and every
-  `ulu exec` (agent, command, workflow, pipeline), the cli prints one line per rejection, then one
-  line saying the run is saved:
+  `ulu exec` (agent, command, workflow, pipeline), the cli prints one line per rejection with the
+  server's issues under it (at most 5; `--json` has all the server sent), then a closing line:
 
   ```
   Analysis rejected for agent-h: entry_invalid (1 record, 1 summary)
     records[1].data: analysis blob exceeds 8 levels of nesting
-  The run is saved; submitting it again creates a second run. Repair it on the same run with `ulu runs update my-proj -n 1 --file <analysis.json>`, sending each rejected agent's complete records and summary (add --preview to see the change first).
+  The run is saved, but not the analysis above: each rejected agent's analysis was dropped whole, including entries the issues do not name. Submitting again creates a second run. Repair it on the same run with `ulu runs update my-proj -n 1 --file <analysis.json>`, sending each rejected agent's complete records and summary and nothing for the other agents (add --preview to see the change first).
   ```
 
   Before this, both printed a plain success (`Run #N saved successfully`, or the dashboard link),
-  so the missing analysis went unnoticed. **This is not a tracking failure:** `Run not recorded:`
-  still means only that the run was not saved, and the exit code does not change. `--json` output
-  gains the field (`analysisWrite.rejected` on `runs save`, `analysisRejected` on exec) through
-  the bumps below: on 0.44.0 ops-sdk 7.1.0 stripped it and core 0.57.0 did not map it. Agent names and reasons are server text: escape sequences are stripped and
-  newlines collapse to a space, so a name cannot forge a second line. Under each rejection the cli
-  lists the server's issues (at most 5; `--json` has all the server sent), and on `runs save` the
-  closing line names the repair command for that run. Spec: `analysis-never-loses-the-run` §3.5, R3.
+  so the missing analysis went unnoticed.
+  - **Not a tracking failure, and the exit code stays `0`** (Alex, 2026-11-03, after the F1
+    ruling that `trackingFailed` means "the run was not saved"). `Run not recorded:` still means
+    only that.
+  - **Under `--json`, stdout is unchanged (the JSON) and the same lines go to stderr**, so a caller
+    reading only `.run` or the decision still sees them. The JSON gains the field
+    (`analysisWrite.rejected` on `runs save`, `analysisRejected` on exec) through the bumps below:
+    on 0.44.0 ops-sdk 7.1.0 stripped it and core 0.57.0 did not map it.
+  - The repair command names the run: on `runs save` from the save's echo; on exec from core
+    0.58.1's `trackedRun`, with a pointer to the Dashboard link when the result carries none.
+    `ulu runs latest` is not a substitute: on a busy project it can name another run, and an
+    analysis update there succeeds and repairs nothing.
+  - **A dedup replay** (an identical resubmission) returns the original save's rejections; the
+    closing line then says so, and that this input was not applied, instead of reading as a verdict
+    on the new input.
+  - The `units_omitted` row (the server lists at most 20 rejected units) prints as the count of
+    units it stands for, not as "unattributed entries".
+  - Agent names, reasons and issues are server text: escape sequences are stripped and newlines
+    collapse to a space, so a name cannot forge a second line.
+
+  Spec: `analysis-never-loses-the-run` §3.5, R3.
 - **`ulu runs update` repairs analysis.** The `--file` / `--stdin` JSON now takes
-  `analysis_records`, `analysis_summary` and `record_write_mode` beside `agents`, in the same shape
-  as `runs save` input (snake_case or camelCase), so a rejected agent's analysis can be added to the
-  run it belongs to. Before, the file took `agents` only, and the only repair writers were ops-mcp
-  `update_run` and ops-sdk `runs.update`. New flags:
+  `analysis_records`, `analysis_summary` and `record_write_mode` beside `agents`, with the
+  `runs save` field names (snake_case or camelCase), so a rejected agent's analysis can be added to
+  the run it belongs to. Before, the file took `agents` only, and the only repair writers were
+  ops-mcp `update_run` and ops-sdk `runs.update`. New flags:
   - `--record-mode replace|merge` (default `replace`, as in the SDK and the API). `replace`
     supersedes the named agents' records and retires any of theirs the file leaves out; `merge`
     supersedes only the record ids sent.
   - `--preview`: the server's write plan per agent (create / supersede / retire, with the record ids
     it would retire). Writes nothing. Analysis only: `--score`, `--passed` and `agents` are refused.
-  - `-y, --yes`: see below.
+  - `--allow-retire`: write a replace update that retires records. Deliberately not `-y/--yes`,
+    which elsewhere in this cli means "skip confirmation" and would be appended by reflex (Alex,
+    2026-11-03).
 
-  **A replace-mode records write is previewed first and refused if it would retire any record**,
-  naming the ids, unless `--yes`. A rejected agent has no stored rows, so its repair retires nothing
-  and passes; the same command against an agent that has rows would otherwise delete its analysis
-  by omission. This costs one extra read-only request per replace-mode write; merge-mode writes
-  and metadata-only updates skip it. An update that carries analysis prints the write's echo
-  (`Analysis (replace): created … superseded …`) and its `--json` is a new kind,
-  `run.updateAnalysis` (`{ run, analysisWrite }`); `--preview --json` is `run.updatePreview`. A
-  metadata-only update is unchanged, including its `run.update` JSON. If ops-sdk reports
-  `AnalysisEchoMismatchError` (the write landed but the echo did not match), the cli says the
-  update was applied and not to re-run it.
+  **Every analysis write is previewed first** (one extra read-only request), for two reasons:
+  - **A replace write that would retire records is refused**, naming the ids and the cost of each
+    way forward, unless `--allow-retire`. With it, the retired ids are printed after the write
+    (`Retired (--allow-retire): …`; `retiredRecordIds` in `--json`). A rejected agent has no stored
+    rows, so its repair retires nothing and passes. The same command against an agent that has rows
+    would otherwise retire its analysis by omission, with nothing on screen saying which.
+  - **ops-sdk checks the preview's echoed mode**, so a tracker that ignores `--record-mode` is
+    caught before anything is written ("Nothing was written", exit 1). Without the preview, a merge
+    on such a server would run as a replace and retire records first.
+
+  Output and errors:
+  - An update that carries analysis prints the write's echo (`Analysis (replace): created …
+    superseded …`). Its `--json` is a new kind, `run.updateAnalysis` (`{ run, analysisWrite,
+    retiredRecordIds }`); `--preview --json` is `run.updatePreview`. A metadata-only update is
+    unchanged, including its `run.update` JSON.
+  - **The write landed but its echo did not match (`AnalysisEchoMismatchError` from the write):
+    exit 5**, a new code. The cli says the update was applied and must not be re-run, and prints the
+    SDK's own message beneath (on a merge the server ran as replace, it says records may have been
+    retired). A refusal, which wrote nothing, exits 1, so a script that retries on failure can tell
+    the two apart.
+  - Under `--json`, the refusal and the mismatch are JSON on stderr: `code`
+    (`WOULD_RETIRE_RECORDS`, `ANALYSIS_ECHO_MISMATCH`), `applied`, `message`, and the ids or the
+    landed run and echo.
+  - The analysis caps (100 records, 20 summaries per update) are checked before sending, with a
+    sentence naming the limit and the way out (send the rest with `--record-mode merge`) rather than
+    a raw validation dump.
 - **`ulu runs validate` prints the analysis a save would reject** (`wouldReject[]`), with the
-  issues, as `Would reject analysis for <agent>: …` under an `Analysis:` heading.
+  issues, as `Would reject analysis for <agent>: …` under an `Analysis:` heading (also on stderr
+  under `--json`).
 
 ### Changed
 

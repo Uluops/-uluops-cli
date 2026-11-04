@@ -192,6 +192,33 @@ describe('exec run', () => {
     expect(output.stdout()).toContain('"name": "code-validator"');
   });
 
+  it('--json: the analysis-rejection lines go to stderr, stdout stays the JSON', async () => {
+    mockedCreateCoreContext.mockReturnValue({
+      client: mockClient as unknown as CoreCliContext['client'],
+      json: true,
+      debug: false,
+      quiet: true,
+    });
+    mockClient.run.mockResolvedValue(
+      createAgentResult({
+        analysisRejected: [
+          {
+            agentName: 'code-validator',
+            reason: 'entry_invalid',
+            recordsRejected: 2,
+            summariesRejected: 1,
+            detail: { issues: [], issuesTotal: 1 },
+          },
+        ],
+      } as Partial<ReturnType<typeof createAgentResult>>),
+    );
+    await parse('exec', 'run', 'code-validator', './src');
+    expect(JSON.parse(output.stdout()).analysisRejected[0].agentName).toBe('code-validator');
+    expect(output.stderr()).toContain(
+      'Analysis rejected for code-validator: entry_invalid (2 records, 1 summary)',
+    );
+  });
+
   it('formats execution results for non-agent types', async () => {
     mockClient.run.mockResolvedValue(
       createExecutionResult({ type: 'workflow' }),

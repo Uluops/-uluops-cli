@@ -30,6 +30,13 @@ import {
 } from '../utils.js';
 
 /**
+ * Exit code for "the analysis update was applied but could not be confirmed; do not retry".
+ * Distinct from 1 (refused, nothing written) so a script that retries on failure can tell the
+ * two apart (code-auditor review, 2026-11-03). Pending Alex's ruling on the exit-code contract.
+ */
+const APPLIED_UNCONFIRMED_EXIT = 5;
+
+/**
  * Minimal runtime schema for the JSON input accepted by `ulu runs update`.
  *
  * Mirrors the shape of `AgentInput` from @uluops/ops-sdk but stays
@@ -60,11 +67,19 @@ const AnalysisEntryInputSchema = z.record(z.string(), z.unknown());
 
 const RunsUpdateJsonInputSchema = z.object({
   agents: z.array(RunsUpdateAgentInputSchema).optional(),
-  analysisRecords: z.array(AnalysisEntryInputSchema).max(100).optional(),
+  analysisRecords: z
+    .array(AnalysisEntryInputSchema)
+    .max(
+      100,
+      'at most 100 analysis_records per update: split the file and send the later parts with --record-mode merge (replace would retire the earlier parts)',
+    )
+    .optional(),
   analysisSummary: z
     .union([
       AnalysisEntryInputSchema,
-      z.array(AnalysisEntryInputSchema).max(20),
+      z
+        .array(AnalysisEntryInputSchema)
+        .max(20, 'at most 20 analysis_summary entries per update'),
     ])
     .optional(),
   recordWriteMode: z.enum(['replace', 'merge']).optional(),
@@ -358,6 +373,17 @@ Examples:
 
         if (ctx.json) {
           emitJson(ctx, result, 'run.save');
+          // stdout stays the JSON contract; the rejection also goes to stderr, so a caller that
+          // reads only `.run` still sees it (perverse-outcome review P2).
+          for (const line of formatAnalysisRejections(
+            result.analysisWrite?.rejected,
+            {
+              run: { project: input.project, runNumber: result.run.runNumber },
+              replay: result.deduplicated === true,
+            },
+          )) {
+            console.error(line);
+          }
         } else {
           console.log(`Run #${result.run.runNumber} saved successfully`);
           // The server keeps the run and rejects an invalid agent's analysis as a unit
@@ -366,6 +392,7 @@ Examples:
             result.analysisWrite?.rejected,
             {
               run: { project: input.project, runNumber: result.run.runNumber },
+              replay: result.deduplicated === true,
             },
           )) {
             console.log(line);
@@ -468,6 +495,11 @@ Examples:
 
         if (ctx.json) {
           emitJson(ctx, result, 'run.validate');
+          for (const line of formatAnalysisRejections(result.wouldReject, {
+            mode: 'would',
+          })) {
+            console.error(line);
+          }
         } else {
           const wouldCreate = getFlexibleProperty(result, 'wouldCreate', false);
           const wouldUpdate = getFlexibleProperty(result, 'wouldUpdate', false);
@@ -669,25 +701,34 @@ Examples:
       '--preview',
       'Show what the analysis update would create, supersede and retire; write nothing',
     )
+    // Not `-y/--yes`: elsewhere in this cli that means "skip confirmation", and a caller that
+    // appends it by reflex would retire records it never looked at (perverse-outcome review P3;
+    // Alex 2026-11-03: named for what it permits, no short alias).
     .option(
-      '-y, --yes',
-      'Write a replace-mode update even when it would retire existing records',
+      '--allow-retire',
+      'Write a replace-mode update even when it retires records the file leaves out (they are listed after the write)',
     )
     .addHelpText(
       'after',
       `
 Analysis repair (a save that printed "Analysis rejected for <agent>"):
-  Put each rejected agent's COMPLETE records and summary in a file, in the same
-  shape as \`runs save\` input (analysis_records, analysis_summary), then:
+  Put each rejected agent's COMPLETE records and summary in a file, using the
+  \`runs save\` field names (analysis_records, analysis_summary). Include only
+  the rejected agents: no agents[], nothing for agents whose analysis was stored.
+  Use the run the save printed (after exec: the Dashboard link), not runs latest.
 
   $ ulu runs update ops-sdk -n 42 --file fix.json --preview   # nothing written
   $ ulu runs update ops-sdk -n 42 --file fix.json
 
   Records are written per agent. replace (the default) supersedes the named
-  agents' records and RETIRES any record of theirs the file leaves out; the
-  write is refused when it would retire one, unless --yes. merge supersedes
-  only the record ids sent and retires nothing. Summaries always replace.
-  Unlike a save, an update is refused whole if any entry is invalid.
+  agents' records and RETIRES any record of theirs the file leaves out; every
+  analysis write is previewed first, and one that would retire records is
+  refused unless --allow-retire (the ids are listed either way). merge
+  supersedes only the record ids sent and retires nothing. Summaries always
+  replace. Unlike a save, an update is refused whole if any entry is invalid.
+  At most 100 records and 20 summaries per update; send a larger set in parts
+  with --record-mode merge. Exit 5: the write was applied but not confirmed;
+  do not retry. Field reference: README, "Repairing rejected analysis".
 `,
     )
     .action(async (projectArg: string | undefined, options, cmd) => {
@@ -715,7 +756,7 @@ Analysis repair (a save that printed "Analysis rejected for <agent>"):
           const parsed = RunsUpdateJsonInputSchema.safeParse(raw);
           if (!parsed.success) {
             exitWithError(
-              `Invalid JSON input for runs update: ${parsed.error.message}`,
+              `Invalid JSON input for runs update:\n${z.prettifyError(parsed.error)}`,
             );
           }
           if (parsed.data.agents) {
@@ -770,18 +811,18 @@ Analysis repair (a save that printed "Analysis rejected for <agent>"):
         });
 
         if (options.preview) {
-          if (!hasAnalysis) {
-            exitWithError(
-              '--preview needs analysis_records or analysis_summary in the input.',
-            );
-          }
           if (
             input.agents ||
             input.averageScore !== undefined ||
             input.allGatesPassed !== undefined
           ) {
             exitWithError(
-              '--preview covers analysis only: drop --score, --passed and agents.',
+              '--preview shows analysis writes only: drop --score, --passed and agents, and run the metadata update without --preview. See `ulu runs update --help`.',
+            );
+          }
+          if (!hasAnalysis) {
+            exitWithError(
+              '--preview needs analysis_records or analysis_summary in --file/--stdin (it previews analysis writes only). See `ulu runs update --help`.',
             );
           }
           const plan = await withSpinner(
@@ -813,30 +854,49 @@ Analysis repair (a save that printed "Analysis rejected for <agent>"):
           return;
         }
 
-        // A replace-mode records write retires every record of a named agent that the file
-        // leaves out. Repairing a rejected agent retires nothing (none of its rows were stored),
-        // but the same command on an agent that has rows can delete analysis by omission. So
-        // look before writing: the preview is read-only and names the ids.
-        if (
-          input.analysisRecords &&
-          (input.recordWriteMode ?? 'replace') === 'replace' &&
-          !options.yes
-        ) {
-          const plan = await ctx.client.runs.previewUpdate(previewInput());
-          const retiring = Object.entries(plan.byAgent).filter(
-            ([, a]) => a.wouldRetireRecordIds.length > 0,
-          );
-          if (retiring.length > 0) {
-            const list = retiring
-              .map(
-                ([agent, a]) =>
-                  `  ${stripAnsi(agent)}: ${a.wouldRetireRecordIds.map((id) => stripAnsi(id)).join(', ')}`,
-              )
-              .join('\n');
-            exitWithError(
-              `This replace-mode update would retire records the file leaves out:\n${list}\nSend them too, use --record-mode merge, or pass --yes to retire them. Nothing was written.`,
+        // Every analysis write is previewed first (read-only). Two reasons:
+        // 1. A replace-mode records write retires every record of a named agent that the file
+        //    leaves out. Repairing a rejected agent retires nothing (none of its rows were
+        //    stored), but the same command on an agent that has rows retires analysis by
+        //    omission, so the preview names the ids, and the write is refused unless
+        //    --allow-retire. With it, the ids are printed after the write: never silent.
+        // 2. ops-sdk checks the preview's echoed mode (`preview-mode-mismatch`). A server that
+        //    ignored --record-mode would run a merge as a replace; caught here, nothing has been
+        //    written yet (code-auditor review, 2026-11-03: merge used to skip this).
+        const plan = await ctx.client.runs.previewUpdate(previewInput());
+        const retiring = Object.entries(plan.byAgent)
+          .filter(([, a]) => a.wouldRetireRecordIds.length > 0)
+          .map(([agent, a]) => [agent, a.wouldRetireRecordIds] as const);
+        const retireList = retiring
+          .map(
+            ([agent, ids]) =>
+              `  ${stripAnsi(agent)}: ${ids.map((id) => stripAnsi(id)).join(', ')}`,
+          )
+          .join('\n');
+        if (retiring.length > 0 && !options.allowRetire) {
+          const message =
+            'This replace-mode update would retire records of these agents that the file leaves out. Nothing was written.';
+          if (ctx.json) {
+            console.error(
+              JSON.stringify(
+                {
+                  code: 'WOULD_RETIRE_RECORDS',
+                  applied: false,
+                  message,
+                  wouldRetireRecordIds: Object.fromEntries(retiring),
+                },
+                null,
+                2,
+              ),
             );
+            process.exit(1);
           }
+          exitWithError(
+            `${message}\n${retireList}\nChoose one:\n` +
+              "  - add those records to the file, so it carries each named agent's complete set;\n" +
+              '  - --record-mode merge: supersedes only the record_ids sent and keeps the rest live (a record whose id you changed stays live beside its new version);\n' +
+              '  - --allow-retire: retire them (they stop being live analysis; only superseded-history reads still show them).',
+          );
         }
 
         const result = await withSpinner(
@@ -850,7 +910,11 @@ Analysis repair (a save that printed "Analysis rejected for <agent>"):
         );
 
         if (ctx.json) {
-          emitJson(ctx, result, 'run.updateAnalysis');
+          emitJson(
+            ctx,
+            { ...result, retiredRecordIds: Object.fromEntries(retiring) },
+            'run.updateAnalysis',
+          );
         } else {
           console.log(formatRun(result.run));
           const w = result.analysisWrite;
@@ -860,14 +924,58 @@ Analysis repair (a save that printed "Analysis rejected for <agent>"):
               `Analysis (${w.recordMode}): created ${w.createdRecords} records, ${w.createdSummaries} summaries; superseded ${w.supersededRecords} records, ${w.supersededSummaries} summaries`,
             );
           }
+          if (retiring.length > 0) {
+            console.log(`Retired (--allow-retire):\n${retireList}`);
+          }
         }
       } catch (error) {
-        // Thrown AFTER the write landed: the server's echo did not match what was sent. A retry
-        // would apply the write again (workspace rule; ops-sdk 5.18.0).
         if (error instanceof AnalysisEchoMismatchError) {
-          exitWithError(
-            `The update was applied, but the server's analysis echo did not match the request (${error.reason}; sent ${error.expectedRecordMode}, echoed ${error.actualRecordMode ?? 'nothing'}). Do not run it again: check the run with \`ulu runs details ${project} -n ${options.number}\`.`,
-          );
+          // From a PREVIEW (ours runs before every analysis write): read-only, nothing written.
+          if (error.reason === 'preview-mode-mismatch') {
+            const message = `Nothing was written: the server answered a ${error.expectedRecordMode} preview as ${error.actualRecordMode ?? 'no mode'}, so it would not run this update as requested. The tracker this cli talks to may predate record write modes.`;
+            if (ctx.json) {
+              console.error(
+                JSON.stringify(
+                  {
+                    code: 'ANALYSIS_ECHO_MISMATCH',
+                    applied: false,
+                    reason: error.reason,
+                    message,
+                  },
+                  null,
+                  2,
+                ),
+              );
+              process.exit(1);
+            }
+            exitWithError(message);
+          }
+          // From the WRITE: it landed, but its echo did not match what was sent. A retry would
+          // apply it again (workspace rule; ops-sdk 5.18.0). The SDK's own message says what may
+          // have happened to the records (e.g. "RECORDS MAY HAVE BEEN RETIRED" on a merge the
+          // server ran as replace), so it is printed, not paraphrased.
+          const message = `The update was applied, but the server's analysis echo did not match the request (${error.reason}). Do not run it again; check the run with \`ulu runs details ${project} -n ${options.number}\`.`;
+          if (ctx.json) {
+            console.error(
+              JSON.stringify(
+                {
+                  code: 'ANALYSIS_ECHO_MISMATCH',
+                  applied: true,
+                  reason: error.reason,
+                  message,
+                  sdkMessage: error.message,
+                  run: error.run,
+                  analysisWrite: error.analysisWrite,
+                },
+                null,
+                2,
+              ),
+            );
+            process.exit(APPLIED_UNCONFIRMED_EXIT);
+          }
+          console.error(`Error: ${message}`);
+          console.error(stripAnsi(error.message));
+          process.exit(APPLIED_UNCONFIRMED_EXIT);
         }
         handleOpsError(error, ctx);
       }

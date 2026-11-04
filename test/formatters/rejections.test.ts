@@ -31,7 +31,9 @@ describe('formatAnalysisRejections', () => {
     expect(lines[1]).toBe(
       'Analysis rejected for agent-k: entry_invalid (3 records, 0 summaries)',
     );
-    expect(lines[2]).toMatch(/^The run is saved; submitting it again creates a second run\./);
+    expect(lines[2]).toMatch(/^The run is saved, but not the analysis above: each rejected agent's analysis was dropped whole/);
+    expect(lines[2]).toContain('Submitting again creates a second run.');
+    expect(lines[2]).toContain('`ulu runs latest` can return a different run');
     expect(lines[2]).toContain(
       '`ulu runs update <project> -n <run number> --file <analysis.json>`',
     );
@@ -103,5 +105,49 @@ describe('formatAnalysisRejections', () => {
       'Analysis rejected for evil Analysis rejected for forged: entry_ invalid (1 record, 1 summary)',
     );
     expect(lines.join('\n')).not.toContain('\x1b');
+  });
+
+  it('names the run and drops the Dashboard-link note when the run is known', () => {
+    const line = formatAnalysisRejections([rejection()], {
+      run: { project: 'ops-sdk', runNumber: 42 },
+    }).at(-1);
+    expect(line).not.toContain('Dashboard link');
+  });
+
+  it('on a dedup replay says these are the earlier save\'s rejections and this input was not applied', () => {
+    const line = formatAnalysisRejections([rejection()], {
+      run: { project: 'p', runNumber: 3 },
+      replay: true,
+    }).at(-1);
+    expect(line).toMatch(/^This save was a replay of an earlier one/);
+    expect(line).toContain('this input was not applied');
+    expect(line).not.toContain('creates a second run');
+  });
+
+  it('labels the units_omitted row by the count it stands for', () => {
+    const [line] = formatAnalysisRejections([
+      rejection({
+        agentName: null,
+        reason: 'units_omitted',
+        recordsRejected: 9,
+        summariesRejected: 2,
+        detail: { unitsOmitted: 3, recordsRejected: 9, summariesRejected: 2 },
+      }),
+    ]);
+    expect(line).toBe(
+      'Analysis rejected for 3 more units, not listed (the server lists at most 20) (9 records, 2 summaries)',
+    );
+  });
+
+  it('counts "more" from the issues not examined, not the malformed ones skipped', () => {
+    const issues = [
+      { array: 'records', index: 0, message: 'a' },
+      { message: 42 },
+      { array: 'records', index: 2, message: 'c' },
+    ];
+    const lines = formatAnalysisRejections([
+      rejection({ detail: { issues, issuesTotal: 4 } }),
+    ]);
+    expect(lines).toContain('  … 1 more (--json shows the issues the server sent)');
   });
 });

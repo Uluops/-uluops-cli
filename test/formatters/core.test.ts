@@ -640,7 +640,7 @@ describe('exec output: analysis rejections', () => {
     expect(out).toContain(
       'Analysis rejected for security-analyst: entry_invalid (2 records, 1 summary)',
     );
-    expect(out).toContain('The run is saved; submitting it again creates a second run.');
+    expect(out).toContain('The run is saved, but not the analysis above');
     expect(out.indexOf('Dashboard:')).toBeLessThan(out.indexOf('Analysis rejected'));
     expect(out).not.toContain('Run not recorded');
   });

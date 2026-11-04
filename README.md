@@ -409,7 +409,7 @@ ulu runs save                     # Save run from JSON (--file or --stdin; -p/-w
 ulu runs validate                 # Dry run — preview against the live tracker, incl. analysis a save would reject (requires auth; -p/-w override)
 ulu runs diff <project>           # Compare two runs (--base, --compare)
 ulu runs archive <project>        # Archive old runs (--before-run, --before-date, --keep-last, --reason)
-ulu runs update <project>         # Update run metadata or repair its analysis (--number, --score, --passed, --file, --preview, --record-mode, --yes)
+ulu runs update <project>         # Update run metadata or repair its analysis (--number, --score, --passed, --file, --preview, --record-mode, --allow-retire)
 ulu runs delete <runId>           # Delete a run
 ```
 
@@ -452,7 +452,7 @@ ulu runs update my-project --number 5 --file fix.json
 
 #### Repairing rejected analysis
 
-A save keeps the run when one agent's analysis is invalid and rejects that agent's analysis as a unit; `ulu runs save` and `ulu exec` then print `Analysis rejected for <agent>: …` with the server's issues. `ulu runs validate` prints the same verdict before you save (`Would reject analysis for <agent>: …`). Do not save the run again — that creates a second run. Put each rejected agent's **complete** records and summary in a file, in the same shape as `runs save` input:
+A save keeps the run when one agent's analysis is invalid and rejects that agent's analysis as a unit; `ulu runs save` and `ulu exec` then print `Analysis rejected for <agent>: …` with the server's issues. `ulu runs validate` prints the same verdict before you save (`Would reject analysis for <agent>: …`). Under `--json` the lines go to stderr and stdout stays the JSON. The exit code stays `0`: the run was saved. Do not save the run again, which creates a second run (an identical resubmission is deduplicated instead, and then the printed rejections are the earlier save's, not a verdict on the new input). The whole unit was dropped, including entries the printed issues do not name, so put each rejected agent's **complete** records and summary in a file. Use the `runs save` field names, and include **only the rejected agents' analysis**: no `agents`, and nothing for agents whose analysis was stored (naming them would replace their analysis too):
 
 ```json
 {
@@ -463,18 +463,38 @@ A save keeps the run when one agent's analysis is invalid and rejects that agent
 }
 ```
 
-and send it with `ulu runs update <project> -n <run> --file fix.json`. Records are written per agent, under one of two modes:
+The same fields work in `runs save` input. snake_case or camelCase both work.
+
+| entry | field | required | notes |
+|---|---|---|---|
+| record | `record_type` | yes | your category (`finding`, `fear`, `assumption`, …); up to 50 chars |
+| record | `record_id` | yes | short stable slug per agent, up to 100 chars; the key `merge` and `replace` match on |
+| record | `title` | yes | up to 500 chars |
+| record | `data` | yes | object; nested at most 8 levels |
+| record | `agent_name` | on multi-agent runs | names the agent the record belongs to |
+| record | `classification` | no | up to 50 chars |
+| record | `severity` | no | `critical`, `high`, `medium`, `low` or `info` |
+| summary | `decision` | yes | the agent's decision (`PASS`, `VITAL`, …); up to 50 chars |
+| summary | `agent_name` | on multi-agent runs | |
+| summary | `score` | no | 0–100 |
+| summary | `decision_vocabulary`, `system_metrics`, `category_scores`, `epistemic_assessment`, `audit_implications`, `exploration_maps` | no | as the agent reports them; `category_scores` entries are `{ name, weight, score }` with integer `weight` ≥ 1 and integer `score` |
+
+One update carries at most 100 records and 20 summaries; send a larger set in parts with `--record-mode merge`. When a save rejects an entry, the issue printed under `Analysis rejected for …` names the field (`records[1].data: …`).
+
+Send the file with `ulu runs update <project> -n <run> --file fix.json`. `runs save` prints that command with the run filled in. After `ulu exec`, the run is the one in the Dashboard link. `ulu runs latest` can return a different run on a busy project. Records are written per agent, under one of two modes:
 
 | `--record-mode` | records of the named agents | summaries |
 |---|---|---|
 | `replace` (default) | superseded; any record **left out of the file is retired** | replaced |
 | `merge` | only the `record_id`s sent are superseded; nothing is retired | replaced |
 
-A rejected agent has no stored analysis, so either mode repairs it. On an agent that does have records, a replace write can delete analysis by omission, so the cli previews first and **refuses a replace write that would retire records** (it names them) unless you pass `--yes`. `--preview` shows the full plan — what each agent's write would create, supersede and retire — and writes nothing. Unlike a save, an update is refused **whole** if any entry is invalid, so a bad entry costs nothing. If the cli reports that the update was applied but the server's echo did not match, do not re-run it: check the run with `ulu runs details`.
+A rejected agent has no stored analysis, so either mode repairs it. On an agent that does have records, a replace write retires (stops counting as live analysis; only superseded-history reads still show them) every record the file leaves out. So the cli previews every analysis write first, and **refuses a replace write that would retire records**, naming them, unless you pass `--allow-retire`. With it, the retired ids are printed after the write. The refusal names the alternatives and what each costs: send the missing records too; or `--record-mode merge`, which keeps them live, so a record whose `record_id` you changed stays beside its new version. `--preview` shows the full plan (what each agent's write would create, supersede and retire) and writes nothing. Unlike a save, an update is refused **whole** if any entry is invalid, so a bad entry costs nothing.
+
+The preview also catches a tracker that ignores `--record-mode`: the write is then not attempted ("Nothing was written"). If the cli instead reports that **the update was applied** but the server's echo did not match, it exits **5**: do not re-run it (that applies it again); check the run with `ulu runs details`. The SDK's own explanation is printed beneath. Under `--json`, both the refusal and the mismatch are JSON on stderr, with `code` (`WOULD_RETIRE_RECORDS`, `ANALYSIS_ECHO_MISMATCH`) and `applied`. A successful analysis update's JSON is `{ run, analysisWrite, retiredRecordIds }` (kind `run.updateAnalysis`); `--preview --json` is the server's plan (`run.updatePreview`).
 
 ### Run Input Format
 
-The JSON file for `ulu runs save` follows this structure:
+The JSON file for `ulu runs save` follows this structure (`analysis_records` and `analysis_summary` are optional; their fields are under [Repairing rejected analysis](#repairing-rejected-analysis)):
 
 ```json
 {
@@ -1167,6 +1187,7 @@ All errors include the HTTP status code and server error code when available. Us
 | `2` | API or runtime error |
 | `3` | `exec pipeline` (or `exec run` on a pipeline) completed and its decision is `FAIL`: a stage failed behind `abort` or `fail`, an ERRORED stage behind a blocking gate, an accepted CONDITIONAL, or a cancel. Since 0.42.0; before it, only an `abort` gate made a pipeline exit non-zero (`1`, through core's throw) |
 | `4` | execution refused by an integrity pin |
+| `5` | `runs update` with analysis: the write **was applied** but its echo did not match the request. Do not retry (a retry applies it again); check the run. A refused update, which wrote nothing, exits `1`. Since 0.45.0 |
 
 `ulu exec pipeline ship . && deploy` therefore still blocks on a failed gate. A stage with no gate never fails a pipeline (it WARNs, exit `0`).
 

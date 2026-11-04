@@ -241,9 +241,46 @@ describe('runs save: analysis rejections (analysis-never-loses-the-run R3)', () 
     expect(out).toContain(
       'Analysis rejected for agent-h: entry_invalid (1 record, 1 summary)',
     );
-    expect(out).toContain('The run is saved; submitting it again creates a second run.');
+    expect(out).toContain('The run is saved, but not the analysis above');
     // The repair command names this run: project from the input, number from the echo.
     expect(out).toContain('`ulu runs update test-proj -n 9 --file <analysis.json>`');
+  });
+
+  it('--json keeps stdout the JSON payload and puts the rejection lines on stderr', async () => {
+    mockedCreateOpsContext.mockReturnValue(
+      createMockOpsContext({
+        client: mockClient as unknown as OpsCliContext['client'],
+        json: true,
+      }),
+    );
+    mockClient.runs.save.mockResolvedValue({
+      run: createRun({ runNumber: 9 }),
+      correlation: { newIssues: 0, recurringIssues: 0, regressions: 0 },
+      deduplicated: false,
+      analysisWrite: {
+        recordMode: 'initial',
+        supersededRecords: 0,
+        supersededSummaries: 0,
+        createdRecords: 0,
+        createdSummaries: 0,
+        rejected: [
+          {
+            agentName: 'agent-h',
+            reason: 'entry_invalid',
+            recordsRejected: 1,
+            summariesRejected: 1,
+            detail: { issues: [], issuesTotal: 1 },
+          },
+        ],
+      },
+    });
+    const output = captureOutput();
+    await parse('runs', 'save', '--file', '/tmp/run.json');
+    const out = output.stdout();
+    const err = output.stderr();
+    output.restore();
+    expect(JSON.parse(out).analysisWrite.rejected[0].agentName).toBe('agent-h');
+    expect(err).toContain('Analysis rejected for agent-h');
   });
 
   it('prints no rejection line for a clean save or one without analysisWrite', async () => {
@@ -552,22 +589,44 @@ describe('runs update: analysis repair', () => {
     await expect(updateWith(FIX)).rejects.toThrow('process.exit(1)');
     const err = output.stderr();
     output.restore();
-    expect(err).toContain('would retire records the file leaves out');
+    expect(err).toContain('would retire records of these agents that the file leaves out');
     expect(err).toContain('agent-h: h-2, h-3');
+    expect(err).toContain('--record-mode merge: supersedes only the record_ids sent');
     expect(err).toContain('Nothing was written.');
     expect(mockClient.runs.updateWithEcho).not.toHaveBeenCalled();
   });
 
-  it('--yes writes a replace update that retires records', async () => {
+  it('--allow-retire writes a replace update that retires records, and names what it retired', async () => {
+    mockClient.runs.previewUpdate.mockResolvedValue({
+      ...EMPTY_PLAN,
+      byAgent: {
+        'agent-h': { ...EMPTY_PLAN.byAgent['agent-h'], wouldRetireRecordIds: ['h-2'] },
+      },
+    });
     mockClient.runs.updateWithEcho.mockResolvedValue(ECHO);
     const output = captureOutput();
-    await updateWith(FIX, '--yes');
+    await updateWith(FIX, '--allow-retire');
+    const out = output.stdout();
     output.restore();
-    expect(mockClient.runs.previewUpdate).not.toHaveBeenCalled();
+    expect(mockClient.runs.previewUpdate).toHaveBeenCalledTimes(1);
     expect(mockClient.runs.updateWithEcho).toHaveBeenCalledTimes(1);
+    expect(out).toContain('Retired (--allow-retire):');
+    expect(out).toContain('agent-h: h-2');
   });
 
-  it('merge mode retires nothing, so it writes without the preview check', async () => {
+  it('-y and --yes are not accepted on runs update (no reflexive bypass of the retire check)', async () => {
+    for (const flag of ['-y', '--yes']) {
+      const output = captureOutput();
+      // No --file: commander refuses the unknown flag before any read, so a queued file mock
+      // would leak into the next test.
+      await expect(parse('runs', 'update', 'my-proj', '-n', '9', flag)).rejects.toThrow();
+      output.restore();
+    }
+    expect(mockClient.runs.updateWithEcho).not.toHaveBeenCalled();
+  });
+
+  it('merge mode is previewed too (the SDK checks the echoed mode before writing), then writes', async () => {
+    mockClient.runs.previewUpdate.mockResolvedValue({ ...EMPTY_PLAN, recordMode: 'merge' });
     mockClient.runs.updateWithEcho.mockResolvedValue({
       ...ECHO,
       analysisWrite: { ...ECHO.analysisWrite, recordMode: 'merge' },
@@ -575,7 +634,9 @@ describe('runs update: analysis repair', () => {
     const output = captureOutput();
     await updateWith(FIX, '--record-mode', 'merge');
     output.restore();
-    expect(mockClient.runs.previewUpdate).not.toHaveBeenCalled();
+    expect(mockClient.runs.previewUpdate.mock.calls[0]?.[0]).toMatchObject({
+      recordWriteMode: 'merge',
+    });
     expect(mockClient.runs.updateWithEcho.mock.calls[0]?.[0]).toMatchObject({
       recordWriteMode: 'merge',
     });
@@ -602,11 +663,11 @@ describe('runs update: analysis repair', () => {
   it('--preview refuses non-analysis fields and an input without analysis', async () => {
     let output = captureOutput();
     await expect(updateWith(FIX, '--preview', '--score', '80')).rejects.toThrow('process.exit(1)');
-    expect(output.stderr()).toContain('--preview covers analysis only');
+    expect(output.stderr()).toContain('--preview shows analysis writes only');
     output.restore();
     output = captureOutput();
     await expect(updateWith({}, '--preview')).rejects.toThrow('process.exit(1)');
-    expect(output.stderr()).toContain('--preview needs analysis_records or analysis_summary');
+    expect(output.stderr()).toContain('--preview needs analysis_records or analysis_summary in --file');
     output.restore();
     expect(mockClient.runs.previewUpdate).not.toHaveBeenCalled();
   });
@@ -625,7 +686,10 @@ describe('runs update: analysis repair', () => {
     const many = Array.from({ length: 101 }, (_, i) => ({ ...FIX.analysis_records[0], record_id: `r-${i}` }));
     const output = captureOutput();
     await expect(updateWith({ analysis_records: many })).rejects.toThrow('process.exit(1)');
-    expect(output.stderr()).toContain('Invalid JSON input for runs update');
+    const err = output.stderr();
+    expect(err).toContain('Invalid JSON input for runs update');
+    expect(err).toContain('at most 100 analysis_records per update');
+    expect(err).not.toContain('"code"'); // a sentence, not a raw Zod issue dump
     output.restore();
   });
 
@@ -642,12 +706,61 @@ describe('runs update: analysis repair', () => {
       }),
     );
     const output = captureOutput();
-    await expect(updateWith(FIX)).rejects.toThrow('process.exit(1)');
+    // Exit 5, not 1: "applied, do not retry" must be tellable from "refused" by a script.
+    await expect(updateWith(FIX)).rejects.toThrow('process.exit(5)');
     const err = output.stderr();
     output.restore();
     expect(err).toContain('The update was applied');
     expect(err).toContain('Do not run it again');
     expect(err).toContain('ulu runs details my-proj -n 9');
+    expect(err).toContain('mismatch'); // the SDK's own message is printed, not paraphrased
+  });
+
+  it('a preview-mode-mismatch from the pre-write preview says nothing was written, and does not write', async () => {
+    const { AnalysisEchoMismatchError } = await import('@uluops/ops-sdk');
+    mockClient.runs.previewUpdate.mockRejectedValue(
+      new AnalysisEchoMismatchError('preview mismatch', {
+        reason: 'preview-mode-mismatch',
+        expectedRecordMode: 'merge',
+        actualRecordMode: 'replace',
+        run: null,
+        analysisWrite: null,
+      }),
+    );
+    for (const flags of [['--record-mode', 'merge'], ['--record-mode', 'merge', '--preview']]) {
+      const output = captureOutput();
+      await expect(updateWith(FIX, ...flags)).rejects.toThrow('process.exit(1)');
+      const err = output.stderr();
+      output.restore();
+      expect(err).toContain('Nothing was written');
+      expect(err).not.toContain('was applied');
+    }
+    expect(mockClient.runs.updateWithEcho).not.toHaveBeenCalled();
+  });
+
+  it('--json: a refusal is a JSON error on stderr with the ids', async () => {
+    mockedCreateOpsContext.mockReturnValue(
+      createMockOpsContext({
+        client: mockClient as unknown as OpsCliContext['client'],
+        json: true,
+      }),
+    );
+    mockClient.runs.previewUpdate.mockResolvedValue({
+      ...EMPTY_PLAN,
+      byAgent: {
+        'agent-h': { ...EMPTY_PLAN.byAgent['agent-h'], wouldRetireRecordIds: ['h-2'] },
+      },
+    });
+    const output = captureOutput();
+    await expect(updateWith(FIX)).rejects.toThrow('process.exit(1)');
+    const err = JSON.parse(output.stderr());
+    output.restore();
+    expect(err).toMatchObject({
+      code: 'WOULD_RETIRE_RECORDS',
+      applied: false,
+      wouldRetireRecordIds: { 'agent-h': ['h-2'] },
+    });
+    expect(mockClient.runs.updateWithEcho).not.toHaveBeenCalled();
   });
 
   it('a metadata-only update keeps the 0.44.0 path (runs.update, no preview)', async () => {

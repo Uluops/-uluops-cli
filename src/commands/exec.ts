@@ -20,12 +20,25 @@ import {
   formatExecutionResult,
 } from '../formatters/core.js';
 import { emitJson } from '../formatters/json.js';
+import { formatAnalysisRejections } from '../formatters/rejections.js';
 import {
   parseFloatOption,
   parseIntOption,
   promptInput,
   withSpinner,
 } from '../utils.js';
+
+/**
+ * Under --json, stdout is the JSON contract, so the analysis-rejection lines also go to stderr:
+ * a caller that reads only the decision still sees that the tracker kept the run but not some
+ * agents' analysis (perverse-outcome review P2, 2026-11-03). Without --json the formatters print
+ * the same lines on stdout.
+ */
+function rejectionsToStderr(
+  rejections: Parameters<typeof formatAnalysisRejections>[0],
+): void {
+  for (const line of formatAnalysisRejections(rejections)) console.error(line);
+}
 
 type ExecOptions = GlobalOptions &
   CoreExecOptions & { safetyWarnings?: boolean };
@@ -730,6 +743,7 @@ Examples:
 
           if (ctx.json) {
             emitJson(ctx, result, 'exec.run');
+            rejectionsToStderr(result.analysisRejected);
           } else if (result.type === 'agent') {
             console.log(formatAgentResult(result, { verbose: ctx.debug }));
           } else {
@@ -1004,6 +1018,7 @@ Examples:
 
             if (ctx.json) {
               emitJson(ctx, result, 'exec.agent');
+              rejectionsToStderr(result.analysisRejected);
             } else {
               console.log(formatAgentResult(result, { verbose: ctx.debug }));
             }
@@ -1076,6 +1091,7 @@ Examples:
 
         if (ctx.json) {
           emitJson(ctx, { succeeded, failed }, 'exec.agentBatch');
+          for (const r of succeeded) rejectionsToStderr(r.analysisRejected);
         } else {
           for (const result of succeeded) {
             console.log('─'.repeat(60));
@@ -1179,6 +1195,7 @@ Examples:
 
           if (ctx.json) {
             emitJson(ctx, result, 'exec.command');
+            rejectionsToStderr(result.analysisRejected);
           } else {
             console.log(formatExecutionResult(result));
           }
@@ -1245,6 +1262,7 @@ Examples:
 
           if (ctx.json) {
             emitJson(ctx, result, 'exec.workflow');
+            rejectionsToStderr(result.analysisRejected);
           } else {
             console.log(formatExecutionResult(result));
           }
@@ -1319,6 +1337,7 @@ Examples:
 
           if (ctx.json) {
             emitJson(ctx, result, 'exec.pipeline');
+            rejectionsToStderr(result.analysisRejected);
           } else {
             console.log(formatExecutionResult(result));
           }
