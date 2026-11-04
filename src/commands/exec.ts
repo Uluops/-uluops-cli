@@ -18,6 +18,7 @@ import {
   formatDefinitionDetails,
   formatDefinitionList,
   formatExecutionResult,
+  repairTarget,
 } from '../formatters/core.js';
 import { emitJson } from '../formatters/json.js';
 import { formatAnalysisRejections } from '../formatters/rejections.js';
@@ -34,10 +35,15 @@ import {
  * agents' analysis (perverse-outcome review P2, 2026-11-03). Without --json the formatters print
  * the same lines on stdout.
  */
-function rejectionsToStderr(
-  rejections: Parameters<typeof formatAnalysisRejections>[0],
-): void {
-  for (const line of formatAnalysisRejections(rejections)) console.error(line);
+function rejectionsToStderr(result: {
+  analysisRejected?: Parameters<typeof formatAnalysisRejections>[0];
+  trackedRun?: Parameters<typeof repairTarget>[0];
+}): void {
+  for (const line of formatAnalysisRejections(result.analysisRejected, {
+    run: repairTarget(result.trackedRun),
+  })) {
+    console.error(line);
+  }
 }
 
 type ExecOptions = GlobalOptions &
@@ -743,7 +749,7 @@ Examples:
 
           if (ctx.json) {
             emitJson(ctx, result, 'exec.run');
-            rejectionsToStderr(result.analysisRejected);
+            rejectionsToStderr(result);
           } else if (result.type === 'agent') {
             console.log(formatAgentResult(result, { verbose: ctx.debug }));
           } else {
@@ -1018,7 +1024,7 @@ Examples:
 
             if (ctx.json) {
               emitJson(ctx, result, 'exec.agent');
-              rejectionsToStderr(result.analysisRejected);
+              rejectionsToStderr(result);
             } else {
               console.log(formatAgentResult(result, { verbose: ctx.debug }));
             }
@@ -1091,7 +1097,7 @@ Examples:
 
         if (ctx.json) {
           emitJson(ctx, { succeeded, failed }, 'exec.agentBatch');
-          for (const r of succeeded) rejectionsToStderr(r.analysisRejected);
+          for (const r of succeeded) rejectionsToStderr(r);
         } else {
           for (const result of succeeded) {
             console.log('─'.repeat(60));
@@ -1195,7 +1201,7 @@ Examples:
 
           if (ctx.json) {
             emitJson(ctx, result, 'exec.command');
-            rejectionsToStderr(result.analysisRejected);
+            rejectionsToStderr(result);
           } else {
             console.log(formatExecutionResult(result));
           }
@@ -1262,7 +1268,7 @@ Examples:
 
           if (ctx.json) {
             emitJson(ctx, result, 'exec.workflow');
-            rejectionsToStderr(result.analysisRejected);
+            rejectionsToStderr(result);
           } else {
             console.log(formatExecutionResult(result));
           }
@@ -1337,7 +1343,7 @@ Examples:
 
           if (ctx.json) {
             emitJson(ctx, result, 'exec.pipeline');
-            rejectionsToStderr(result.analysisRejected);
+            rejectionsToStderr(result);
           } else {
             console.log(formatExecutionResult(result));
           }

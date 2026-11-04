@@ -438,7 +438,7 @@ describe('runs update --file (Zod-validated JSON input)', () => {
   });
 });
 
-// ── runs validate / runs update: analysis (0.45.0) ───────────────────────
+// ── runs validate / runs update: analysis (0.46.0) ───────────────────────
 
 const AGENT_H_REJECTION = {
   agentName: 'agent-h',

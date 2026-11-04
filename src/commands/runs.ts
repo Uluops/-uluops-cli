@@ -89,7 +89,7 @@ const RunsUpdateJsonInputSchema = z.object({
  * The file's top-level keys in camelCase, so a `runs save` input (`analysis_records`,
  * `analysis_summary`, `record_write_mode`) can be reused as it is. The analysis entries are
  * camelCased all the way down, as `runs save` does and the server does again on receipt;
- * `agents` keeps its keys exactly as before 0.45.0 (the update path's token fields differ from
+ * `agents` keeps its keys exactly as before 0.46.0 (the update path's token fields differ from
  * the save path's, and this change is not the place to alter them).
  */
 function normalizeUpdateInput(raw: unknown): unknown {

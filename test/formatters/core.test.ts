@@ -654,6 +654,24 @@ describe('exec output: analysis rejections', () => {
     );
   });
 
+  it('names the exact run to repair from trackedRun (core >= 0.58.1), not a placeholder', () => {
+    const trackedRun = { runId: 'run-uuid', runNumber: 42, project: 'ops-sdk' };
+    for (const out of [
+      formatAgentResult(createValidatorResult({ analysisRejected: REJECTED, trackedRun })),
+      formatExecutionResult(createExecResult({ type: 'pipeline', analysisRejected: REJECTED, trackedRun })),
+    ]) {
+      expect(out).toContain('`ulu runs update ops-sdk -n 42 --file <analysis.json>`');
+      expect(out).not.toContain('<run number>');
+      expect(out).not.toContain('Dashboard link above');
+    }
+  });
+
+  it('without trackedRun falls back to placeholders and the Dashboard-link pointer', () => {
+    const out = formatAgentResult(createValidatorResult({ analysisRejected: REJECTED }));
+    expect(out).toContain('ulu runs update <project> -n <run number>');
+    expect(out).toContain('The run is the one in the Dashboard link above');
+  });
+
   it('prints nothing for an empty or absent analysisRejected', () => {
     for (const analysisRejected of [undefined, []]) {
       expect(formatAgentResult(createValidatorResult({ analysisRejected }))).not.toContain(

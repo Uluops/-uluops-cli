@@ -12,7 +12,7 @@
  * The one-per-rejection line is the spec's (§3.5). Under it go the server's issues for that unit,
  * because they are what the repair needs. The closing line exists because the obvious reaction to
  * "analysis rejected" is to save again, and a second save creates a second run (P2); it names the
- * repair, `ulu runs update … --file`, which since 0.45.0 carries analysis.
+ * repair, `ulu runs update … --file`, which since 0.46.0 carries analysis.
  */
 import type { AnalysisRejection } from '@uluops/ops-sdk';
 import { stripAnsi } from '../utils.js';

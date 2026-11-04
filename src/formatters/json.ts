@@ -151,9 +151,9 @@ export const SCHEMA_VERSIONS = {
   'run.diff': 1,
   'run.archive': 1,
   'run.update': 1,
-  // `runs update` with analysis (0.45.0): `{ run, analysisWrite }`, the SDK's updateWithEcho result.
+  // `runs update` with analysis (0.46.0): `{ run, analysisWrite, retiredRecordIds }`, the SDK's updateWithEcho result.
   'run.updateAnalysis': 1,
-  // `runs update --preview` (0.45.0): the server's `{ preview, recordMode, byAgent }` plan.
+  // `runs update --preview` (0.46.0): the server's `{ preview, recordMode, byAgent }` plan.
   'run.updatePreview': 1,
   'run.delete': 1,
   // taxonomy

@@ -219,6 +219,31 @@ describe('exec run', () => {
     );
   });
 
+  it('--json: the stderr repair line names the run from trackedRun', async () => {
+    mockedCreateCoreContext.mockReturnValue({
+      client: mockClient as unknown as CoreCliContext['client'],
+      json: true,
+      debug: false,
+      quiet: true,
+    });
+    mockClient.run.mockResolvedValue(
+      createAgentResult({
+        analysisRejected: [
+          {
+            agentName: 'code-validator',
+            reason: 'entry_invalid',
+            recordsRejected: 1,
+            summariesRejected: 1,
+            detail: {},
+          },
+        ],
+        trackedRun: { runId: 'run-uuid', runNumber: 7, project: 'my-repo' },
+      }),
+    );
+    await parse('exec', 'run', 'code-validator', './src');
+    expect(output.stderr()).toContain('`ulu runs update my-repo -n 7 --file <analysis.json>`');
+  });
+
   it('formats execution results for non-agent types', async () => {
     mockClient.run.mockResolvedValue(
       createExecutionResult({ type: 'workflow' }),

@@ -6,7 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
-## [0.45.0] - 2026-11-03
+## [0.46.0] - 2026-11-03
+
+> **There is no 0.45.0.** It was published on 2026-11-03 by mistake from `8d60e8e`, an
+> intermediate commit with the rejection lines and the ops-sdk/core bumps but none of
+> `runs update` repair, `runs validate`'s report or the review fixes below. It was unpublished
+> within minutes. npm never reuses a version number, so this release is 0.46.0, and this entry
+> covers everything since 0.44.0.
+
 
 ### Added
 
@@ -96,7 +103,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
   objects, the 100-record and 20-summary caps) and lets the tracker judge each agent, which keeps the
   run and reports the rejection above. An input that used to exit with a validation error now saves.
   (7.2.0 had added the `rejected` field to the response; 7.1.0 stripped it.)
-- **`@uluops/core` 0.57.0 → 0.58.0 (exact).** Core's CHANGELOG has the full entry. What changes for
+- **`@uluops/core` 0.57.0 → 0.58.1 (exact).** Core's CHANGELOG has the full entries. 0.58.1 adds
+  `trackedRun` (`{ runId, runNumber, project }`) on exec results, which is where the exec repair line
+  above gets its run. What changes for
   a tracked `ulu exec`: core no longer drops an analysis summary it judges invalid before sending.
   It sends it, and the tracker rejects that agent's analysis, **records included**, where 0.57.0
   dropped only the summary and kept the records. The loss is now visible (the line above) and

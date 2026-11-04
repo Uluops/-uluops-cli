@@ -7,11 +7,25 @@ import type {
   DefinitionType,
   ExecutionResult,
   Recommendation,
+  TrackedRun,
   TrackingError,
 } from '@uluops/core';
 import { truncate } from '../utils.js';
 import { formatAnalysisRejections } from './rejections.js';
 import { type Column, formatKeyValue, formatTable } from './table.js';
+
+/**
+ * The run a repair addresses, from core >= 0.58.1's `trackedRun`. Absent (an untracked or failed
+ * submission): the rejection line falls back to placeholders and points at the Dashboard link.
+ * Exported for exec's --json stderr path, which prints the same lines.
+ */
+export function repairTarget(
+  trackedRun: TrackedRun | undefined,
+): { project: string; runNumber: number } | undefined {
+  return trackedRun
+    ? { project: trackedRun.project, runNumber: trackedRun.runNumber }
+    : undefined;
+}
 
 /**
  * Render a single-line tracking-failure notice. The run itself succeeded — only
@@ -70,7 +84,11 @@ export function formatAgentResult(
   }
   // The run was saved but the tracker rejected some analysis (core >= 0.58.0). Not a
   // tracking failure: `trackingError` stays unset (F1 ruling, 2026-11-03).
-  lines.push(...formatAnalysisRejections(result.analysisRejected));
+  lines.push(
+    ...formatAnalysisRejections(result.analysisRejected, {
+      run: repairTarget(result.trackedRun),
+    }),
+  );
 
   // Categories (validators only)
   if (result.categories && result.categories.length > 0) {
@@ -177,7 +195,11 @@ export function formatExecutionResult(result: ExecutionResult): string {
   }
   // The run was saved but the tracker rejected some analysis (core >= 0.58.0). Not a
   // tracking failure: `trackingError` stays unset (F1 ruling, 2026-11-03).
-  lines.push(...formatAnalysisRejections(result.analysisRejected));
+  lines.push(
+    ...formatAnalysisRejections(result.analysisRejected, {
+      run: repairTarget(result.trackedRun),
+    }),
+  );
 
   if (result.recommendations.length > 0) {
     lines.push('');
