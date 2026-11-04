@@ -210,6 +210,68 @@ describe('runs save', () => {
   });
 });
 
+describe('runs save: analysis rejections (analysis-never-loses-the-run R3)', () => {
+  it('prints the rejection line when the server rejected an agent analysis', async () => {
+    mockClient.runs.save.mockResolvedValue({
+      run: createRun({ runNumber: 9 }),
+      correlation: { newIssues: 0, recurringIssues: 0, regressions: 0 },
+      deduplicated: false,
+      analysisWrite: {
+        recordMode: 'initial',
+        supersededRecords: 0,
+        supersededSummaries: 0,
+        createdRecords: 1,
+        createdSummaries: 1,
+        rejected: [
+          {
+            agentName: 'agent-h',
+            reason: 'entry_invalid',
+            recordsRejected: 1,
+            summariesRejected: 1,
+            detail: { issues: [], issuesTotal: 1 },
+          },
+        ],
+      },
+    });
+    const output = captureOutput();
+    await parse('runs', 'save', '--file', '/tmp/run.json');
+    const out = output.stdout();
+    output.restore();
+    expect(out).toContain('Run #9 saved successfully');
+    expect(out).toContain(
+      'Analysis rejected for agent-h: entry_invalid (1 record, 1 summary)',
+    );
+    expect(out).toContain('The run is saved; submitting it again creates a second run.');
+  });
+
+  it('prints no rejection line for a clean save or one without analysisWrite', async () => {
+    for (const analysisWrite of [
+      undefined,
+      {
+        recordMode: 'initial',
+        supersededRecords: 0,
+        supersededSummaries: 0,
+        createdRecords: 2,
+        createdSummaries: 1,
+        rejected: [],
+      },
+    ]) {
+      mockClient.runs.save.mockResolvedValue({
+        run: createRun({ runNumber: 10 }),
+        correlation: { newIssues: 0, recurringIssues: 0, regressions: 0 },
+        deduplicated: false,
+        ...(analysisWrite && { analysisWrite }),
+      });
+      const output = captureOutput();
+      await parse('runs', 'save', '--file', '/tmp/run.json');
+      const out = output.stdout();
+      output.restore();
+      expect(out).toContain('Run #10 saved successfully');
+      expect(out).not.toContain('Analysis rejected');
+    }
+  });
+});
+
 describe('runs archive', () => {
   it('should archive runs with --keep-last', async () => {
     mockClient.runs.archive.mockResolvedValue({ archived: 5 });

@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-11-03
+
+### Added
+
+- **A save that kept the run but rejected some analysis now says so.** Since ops-api R2
+  (2026-11-03) the tracker keeps a run whose analysis is partly invalid and rejects the offending
+  agent's analysis as a unit, instead of refusing the whole save. After `ulu runs save` and every
+  `ulu exec` (agent, command, workflow, pipeline), the cli prints one line per rejection, then one
+  line saying the run is saved:
+
+  ```
+  Analysis rejected for agent-h: entry_invalid (1 record, 1 summary)
+  The run is saved; submitting it again creates a second run. Repair the analysis on this run with update_run (ops-mcp) or runs.update (ops-sdk), sending each rejected agent's complete records and summary.
+  ```
+
+  Before this, both printed a plain success (`Run #N saved successfully`, or the dashboard link),
+  so the missing analysis went unnoticed. **This is not a tracking failure:** `Run not recorded:`
+  still means only that the run was not saved, and the exit code does not change. `--json` output
+  gains the field (`analysisWrite.rejected` on `runs save`, `analysisRejected` on exec) through
+  the bumps below: on 0.44.0 ops-sdk 7.1.0 stripped it and core 0.57.0 did not map it. Agent names and reasons are server text: escape sequences are stripped and
+  newlines collapse to a space, so a name cannot forge a second line. `ulu runs update` cannot
+  repair analysis (it takes agent metadata only), so the line names the two writers that can.
+  Spec: `analysis-never-loses-the-run` §3.5, R3.
+
+### Changed
+
+- **`@uluops/ops-sdk` 7.1.0 → 7.3.0 (exact). `ulu runs save` no longer refuses an input whose
+  analysis entries are invalid.** 7.1.0 validated every analysis record and summary client-side and
+  threw before sending, so one bad entry cost the whole save. 7.3.0 checks only the envelope (arrays,
+  objects, the 100-record and 20-summary caps) and lets the tracker judge each agent, which keeps the
+  run and reports the rejection above. An input that used to exit with a validation error now saves.
+  (7.2.0 had added the `rejected` field to the response; 7.1.0 stripped it.)
+- **`@uluops/core` 0.57.0 → 0.58.0 (exact).** Core's CHANGELOG has the full entry. What changes for
+  a tracked `ulu exec`: core no longer drops an analysis summary it judges invalid before sending.
+  It sends it, and the tracker rejects that agent's analysis, **records included**, where 0.57.0
+  dropped only the summary and kept the records. The loss is now visible (the line above) and
+  repairable, where before it was silent. Core's repairs (rounding scores, truncating text,
+  suffixing repeated record ids) are unchanged.
+
 ## [0.44.0] - 2026-11-02
 
 ### Changed

@@ -8,6 +8,7 @@ import {
 } from '../context.js';
 import { emitJson } from '../formatters/json.js';
 import { formatRun, formatRuns } from '../formatters/ops.js';
+import { formatAnalysisRejections } from '../formatters/rejections.js';
 import {
   confirmOrExit,
   exitWithError,
@@ -295,6 +296,13 @@ Examples:
           emitJson(ctx, result, 'run.save');
         } else {
           console.log(`Run #${result.run.runNumber} saved successfully`);
+          // The server keeps the run and rejects an invalid agent's analysis as a unit
+          // (ops-api R2). Say so here, or the line above reads as a clean save.
+          for (const line of formatAnalysisRejections(
+            result.analysisWrite?.rejected,
+          )) {
+            console.log(line);
+          }
           // Where it landed — the API's answer (the echo's orgSlug), not the flag;
           // beside the base URL because a slug is server-relative (spec 2.4, F-6).
           console.log(

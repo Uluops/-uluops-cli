@@ -10,6 +10,7 @@ import type {
   TrackingError,
 } from '@uluops/core';
 import { truncate } from '../utils.js';
+import { formatAnalysisRejections } from './rejections.js';
 import { type Column, formatKeyValue, formatTable } from './table.js';
 
 /**
@@ -67,6 +68,9 @@ export function formatAgentResult(
   if (result.trackingError) {
     lines.push(formatTrackingError(result.trackingError));
   }
+  // The run was saved but the tracker rejected some analysis (core >= 0.58.0). Not a
+  // tracking failure: `trackingError` stays unset (F1 ruling, 2026-11-03).
+  lines.push(...formatAnalysisRejections(result.analysisRejected));
 
   // Categories (validators only)
   if (result.categories && result.categories.length > 0) {
@@ -171,6 +175,9 @@ export function formatExecutionResult(result: ExecutionResult): string {
   if (result.trackingError) {
     lines.push(formatTrackingError(result.trackingError));
   }
+  // The run was saved but the tracker rejected some analysis (core >= 0.58.0). Not a
+  // tracking failure: `trackingError` stays unset (F1 ruling, 2026-11-03).
+  lines.push(...formatAnalysisRejections(result.analysisRejected));
 
   if (result.recommendations.length > 0) {
     lines.push('');

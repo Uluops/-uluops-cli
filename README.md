@@ -87,7 +87,7 @@ ulu exec --project my-project agent code-validator -t ./src --model sonnet
 - **Shell completion**: Tab completion for bash, zsh, and fish
 - **Contextual error hints**: Actionable suggestions on auth failures, 404s, rate limits, and network errors — usage and examples shown on every error
 - **Security-event warnings**: Surfaces `⚠ Security:` notices on stderr for a blocked upstream redirect (possible MITM), a rejected credential, or a failed token refresh — even on best-effort paths where the command itself does not error (suppress with `-q`)
-- **Honest tracking signals**: When a run succeeds but recording it to the tracker fails (e.g. a free-tier project-limit cap), the result surfaces `Run not recorded: …` with an upgrade link instead of silently dropping the dashboard link
+- **Honest tracking signals**: When a run succeeds but recording it to the tracker fails (e.g. a free-tier project-limit cap), the result surfaces `Run not recorded: …` with an upgrade link instead of silently dropping the dashboard link. When the run is saved but the tracker rejects some agent's analysis, `Analysis rejected for <agent>: …` says which
 - **Spinner feedback**: Progress indicators for long operations (suppress with `-q`)
 
 ## Installation
@@ -815,6 +815,8 @@ ulu exec describe --type pipeline                       # No name + --type → f
 ```
 
 > **Tracking notice.** When a run executes successfully but recording it to the tracker fails (e.g. a free-tier `402 PROJECT_LIMIT` or `SUBSCRIPTION_REQUIRED`), the result prints a non-fatal `Run not recorded: <message>` line — with ` — upgrade: <url>` appended for cap/tier failures — in place of the dashboard link. The run itself still succeeds.
+>
+> **Analysis notice.** A run can be saved while the tracker rejects one agent's analysis (an invalid record or summary): the run, its agents and its recommendations are kept, and that agent's analysis is not. The result then prints `Analysis rejected for <agent>: <reason> (<n> records, <m> summaries)` per rejected agent, and a line saying the run is saved. Do not run it again to fix this, which creates a second run; repair the analysis on the same run with ops-mcp `update_run` or ops-sdk `runs.update`. `ulu runs save` prints the same lines.
 
 **Parent options** (apply to all subcommands):
 

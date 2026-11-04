@@ -613,3 +613,55 @@ describe('formatCostLines (core 0.47.0 cost contract)', () => {
     expect(out).toContain('Cost: $0.021715 (billed)');
   });
 });
+
+// ── analysis rejections (analysis-never-loses-the-run R3) ────────────────
+// core >= 0.58.0 sets `analysisRejected` when the tracker kept the run but rejected an
+// agent's analysis. trackingError stays unset (the run was saved), so before this the exec
+// output was indistinguishable from a clean save.
+
+const REJECTED = [
+  {
+    agentName: 'security-analyst',
+    reason: 'entry_invalid',
+    recordsRejected: 2,
+    summariesRejected: 1,
+    detail: { issues: [], issuesTotal: 1 },
+  },
+];
+
+describe('exec output: analysis rejections', () => {
+  it('formatAgentResult prints the rejection line after the dashboard link', () => {
+    const out = formatAgentResult(
+      createValidatorResult({
+        dashboardUrl: 'https://app.uluops.ai/runs/1',
+        analysisRejected: REJECTED,
+      }),
+    );
+    expect(out).toContain(
+      'Analysis rejected for security-analyst: entry_invalid (2 records, 1 summary)',
+    );
+    expect(out).toContain('The run is saved; submitting it again creates a second run.');
+    expect(out.indexOf('Dashboard:')).toBeLessThan(out.indexOf('Analysis rejected'));
+    expect(out).not.toContain('Run not recorded');
+  });
+
+  it('formatExecutionResult prints the rejection line', () => {
+    const out = formatExecutionResult(
+      createExecResult({ type: 'pipeline', analysisRejected: REJECTED }),
+    );
+    expect(out).toContain(
+      'Analysis rejected for security-analyst: entry_invalid (2 records, 1 summary)',
+    );
+  });
+
+  it('prints nothing for an empty or absent analysisRejected', () => {
+    for (const analysisRejected of [undefined, []]) {
+      expect(formatAgentResult(createValidatorResult({ analysisRejected }))).not.toContain(
+        'Analysis rejected',
+      );
+      expect(formatExecutionResult(createExecResult({ analysisRejected }))).not.toContain(
+        'Analysis rejected',
+      );
+    }
+  });
+});
