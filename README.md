@@ -1185,7 +1185,7 @@ All errors include the HTTP status code and server error code when available. Us
 | `0` | success; also any completed `exec agent`, `command` or `workflow` run, whatever its decision (a verdict is not an exit code), and a pipeline whose decision is `PASS` or `WARN` |
 | `1` | usage, configuration or execution error (including a pipeline stopped by a deadline or a provider credit limit) |
 | `2` | API or runtime error |
-| `3` | `exec pipeline` (or `exec run` on a pipeline) completed and its decision is `FAIL`: a stage failed behind `abort` or `fail`, an ERRORED stage behind a blocking gate, an accepted CONDITIONAL, or a cancel. Since 0.42.0; before it, only an `abort` gate made a pipeline exit non-zero (`1`, through core's throw) |
+| `3` | `exec pipeline` (or `exec run` on a pipeline) completed and its decision is `FAIL`: a stage failed behind `abort` or `fail`, an ERRORED stage behind a blocking gate, an accepted CONDITIONAL, a gate whose member reported `INVALID` (the run could not judge; since 0.47.0, core 0.59.0), or a cancel. Since 0.42.0; before it, only an `abort` gate made a pipeline exit non-zero (`1`, through core's throw) |
 | `4` | execution refused by an integrity pin |
 | `5` | `runs update` with analysis: the write **was applied** but its echo did not match the request. Do not retry (a retry applies it again); check the run. A refused update, which wrote nothing, exits `1`. Since 0.46.0 |
 

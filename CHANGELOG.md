@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-11-08
+
+### Changed
+
+- **`@uluops/core` 0.58.1 → 0.59.0: a run that could not judge is reported as `INVALID`** (ADL S2b spec v0.3.16, OQ-47a–c). An agent whose own `run` auto-fail fired decides `INVALID` with category `invalid` and a `null` score; a command or workflow with an INVALID child decides `INVALID` (INVALID dominates at every container, ruled 2026-11-08). What `ulu exec` shows for it, with no CLI code change (census 2026-11-08 of every `decisionCategory` and `score` read in `src/`):
+  - the pass marker is **✗**: `passMarker` passes only category `positive`;
+  - no `Score:` line, and the batch average leaves the agent out: every score display already guards `!= null`;
+  - **`--features-list` writes `"score": null`** for an INVALID validator. That field was always a number for validators before; a consumer of the features file that does arithmetic on it must handle `null`. This is the one semantics-without-signature change in this release;
+  - **exit codes:** the rule is unchanged, since a verdict is still not an exit code for agents, commands and workflows, and pipeline exit 3 still keys on `FAIL`. But **a pipeline can now reach `FAIL` and exit 3 through an INVALID member**: core's `judgeGate` counts an invalid member as a gate cause at every decision key, `ignore` included. This is how core 0.59.0 behaves. The PDL spec and rules side (tokens, `pdl-rules.ts`, the rendered pipeline commands) is deferred past S2b-5 (spec OQ-49), and that does not change this behaviour.
+- **`@uluops/ops-sdk` 7.3.0 → 7.3.1, `@uluops/registry-sdk` 0.64.1 → 0.64.2, `@uluops/sdk-core` 0.19.0 → 0.20.0** (exact). All four now agree on sdk-core 0.20.0, so the install holds one copy (`npm ls @uluops/sdk-core`: `deduped`).
+
 ## [0.46.0] - 2026-11-03
 
 > **There is no 0.45.0.** It was published on 2026-11-03 by mistake from `8d60e8e`, an

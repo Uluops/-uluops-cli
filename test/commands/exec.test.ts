@@ -1714,6 +1714,13 @@ describe('passMarker', () => {
       passMarker({ decision: 'POLISHED', decisionCategory: 'positive' }),
     ).toBe('\u2713');
   });
+  // core 0.59.0: a run that could not judge decides INVALID, category 'invalid' (CHANGELOG 0.47.0).
+  // Control: a marker that passed every category except 'negative' shows \u2713 here.
+  it('an INVALID result (category invalid) shows \u2717', () => {
+    expect(
+      passMarker({ decision: 'INVALID', decisionCategory: 'invalid' }),
+    ).toBe('\u2717');
+  });
   it('falls back to the decision text only when there is no category', () => {
     expect(passMarker({ decision: 'PASS' })).toBe('\u2713');
     expect(passMarker({ decision: 'FAIL' })).toBe('\u2717');
