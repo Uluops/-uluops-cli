@@ -438,11 +438,9 @@ ulu runs update my-project --number 5 --file fix.json --preview   # nothing writ
 ulu runs update my-project --number 5 --file fix.json
 ```
 
-> **Note:** `runs update --score` is rejected on finalized runs ("Cannot rewrite averageScore"). Use the `--file` form to patch per-agent fields. Each agent entry in the file must include `name` and `decision` (any other fields like `tokens` are merged into the existing record).
-
 #### Repairing rejected analysis
 
-A save keeps the run when one agent's analysis is invalid and rejects that agent's analysis as a unit; `ulu runs save` and `ulu exec` then print `Analysis rejected for <agent>: …` with the server's issues. `ulu runs validate` prints the same verdict before you save (`Would reject analysis for <agent>: …`). Under `--json` the lines go to stderr and stdout stays the JSON. The exit code stays `0`: the run was saved. Do not save the run again, which creates a second run (an identical resubmission is deduplicated instead, and then the printed rejections are the earlier save's, not a verdict on the new input). The whole unit was dropped, including entries the printed issues do not name, so put each rejected agent's **complete** records and summary in a file. Use the `runs save` field names, and include **only the rejected agents' analysis**: no `agents`, and nothing for agents whose analysis was stored (naming them would replace their analysis too):
+When a save rejects one agent's analysis, the run is still saved (exit `0`) and `Analysis rejected for <agent>: …` lists the issues (`ulu runs validate` predicts it as `Would reject analysis for <agent>: …`; under `--json` both go to stderr). Do not save again, which creates a second run: put only the rejected agents' **complete** records and summary in a file, with no `agents` and nothing for agents whose analysis was stored (that would replace theirs too), and send it with `ulu runs update`:
 
 ```json
 {
