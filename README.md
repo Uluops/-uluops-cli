@@ -826,10 +826,6 @@ ulu exec describe                                       # No name → list all d
 ulu exec describe --type pipeline                       # No name + --type → filter the list
 ```
 
-> **Tracking notice.** When a run executes successfully but recording it to the tracker fails (e.g. a free-tier `402 PROJECT_LIMIT` or `SUBSCRIPTION_REQUIRED`), the result prints a non-fatal `Run not recorded: <message>` line — with ` — upgrade: <url>` appended for cap/tier failures — in place of the dashboard link. The run itself still succeeds.
->
-> **Analysis notice.** A run can be saved while the tracker rejects one agent's analysis (an invalid record or summary): the run, its agents and its recommendations are kept, and that agent's analysis is not. The result then prints `Analysis rejected for <agent>: <reason> (<n> records, <m> summaries)` per rejected agent, and a line saying the run is saved. Do not run it again to fix this, which creates a second run; repair the analysis on the same run with `ulu runs update <project> -n <run> --file <analysis.json>` (see [Repairing rejected analysis](#repairing-rejected-analysis)). `ulu runs save` prints the same lines.
-
 **Parent options** (apply to all subcommands):
 
 | Option | Description |
