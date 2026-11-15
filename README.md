@@ -903,15 +903,6 @@ ulu exec pipeline api-server-validate ./src --hash sha256:…
 ulu exec command validate ./src --hash sha256:… --prompt-hash sha256:…
 ```
 
-> **Integrity pins are optional.** `--hash` verifies the YAML (source + config);
-> `--prompt-hash` verifies the rendered prompt (agents/commands). Use both for
-> full agent/command integrity. On mismatch — or if `--prompt-hash` is given for
-> a definition with no rendered prompt — execution is **refused with exit code 4**
-> (distinct from `1` usage/config and `2` API/runtime). `exec workflow`/`pipeline`
-> have no rendered prompt; pin their YAML with `--hash` only — for WDL/PDL the
-> YAML *is* the runtime, so that pin alone fully covers execution (stage/phase
-> refs resolve downstream and are not individually pinned).
-
 ---
 
 ### Providers and shell access
