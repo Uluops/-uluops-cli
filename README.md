@@ -837,29 +837,6 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `--registry-url <url>` | Override the registry URL definitions are resolved from |
 | `--extended-thinking` / `--no-extended-thinking` | Turn extended thinking on or off for this run (every subcommand). Off by default; overrides `ULUOPS_EXTENDED_THINKING`. Thinking tokens are billed as output. Works on OpenAI, Google and OpenRouter models; on direct Anthropic models (the default `sonnet`) it prints "requested but not applied: no-mapping", because that mapping is not built yet — use an `openrouter:anthropic/…` model for Claude thinking. What each run actually did is recorded on the result (`runConditions`). |
 
-> **Parent options work before OR after the subcommand** (since 0.21.2). They
-> belong to `ulu exec`, not the subcommand, but the CLI relocates them
-> automatically — both `ulu exec --project foo agent code-validator ./src` and
-> `ulu exec agent code-validator ./src --project foo` work. (Placed after the
-> subcommand they were once silently ignored, then loudly rejected; now they
-> just work, like `--model`.)
->
-> **Tracking requires a named project.** When tracking is on and no project is
-> resolved (`--project` or `ULUOPS_PROJECT`), the CLI shows the project name the
-> run would be tracked under and asks you to confirm it — rather than silently
-> inventing one from the target directory. In a non-interactive context (CI,
-> piped stdin) it **fails closed** (exit 1) instead of prompting; pass
-> `--project <name>`, set `ULUOPS_PROJECT`, or `--no-tracking`.
->
-> **Safety advisories.** Registry definitions carry a publish-time safety scan;
-> `ulu def get` renders it, and `exec agent` prints a pre-run advisory when the
-> definition has risk signals or when the scan **cannot be trusted as clean**:
-> "Safety scan incomplete — could not determine" (sync scan aborted, 0.22.3) and
-> "Deep safety analysis failed — verdict is sync-only" (background deep audit
-> errored, 0.23.0). Absence of signals is not a clean verdict in either state;
-> an actual sync risk signal outranks both advisories. `--no-safety-warnings`
-> suppresses them.
-
 **Shared options** (all `exec` subcommands):
 
 | Option | Description |
@@ -884,19 +861,6 @@ ulu exec describe --type pipeline                       # No name + --type → f
 | `--report [path]` | Write a human-readable, publication-quality report to file (single agent only). With no path, defaults to `./<agent>-report-<YYYYMMDDTHHmmss>.md` in cwd. Injects a report-mode directive into the agent's prompt and disables structured-output enforcement so the model can emit prose. **Disables tracker submission** (implies `--no-tracking`): the schema-validated path the tracker depends on is no longer guaranteed under report mode, so `--report` silently wins over `--project` rather than erroring. With `--project` (or `ULUOPS_PROJECT`) set, a "tracking disabled" notice prints even under `-q`. Run without `--report` for tracker submission. |
 | `-o, --output <path>` | Explicit output path for `--report` (overrides the `--report` argument and the default) |
 | `--features-list <path>` | Write structured features/recommendations to file (single agent only) |
-
-> **Run completeness.** Agent output shows a `Completeness:` badge next to the
-> decision when a run did not fully finish its work — `PARTIAL` or `FAILED`
-> (clean runs stay uncluttered). This is **separate from the decision**: a
-> `PASS · PARTIAL` means a positive verdict reached on incomplete coverage.
-> Run with `--debug` to list the underlying degradation markers (e.g.
-> `budget.forced-wrap-up`, `steps.near-exhaustion`, `extraction.low-confidence`)
-> and why each fired. Requires `@uluops/core@0.22.0`.
->
-> **Concurrency.** `-c/--concurrency` caps how many agent *definitions* run in
-> parallel. A separate, engine-wide ceiling on concurrent in-flight LLM calls
-> (across workflow phases, parallel steps, and inline agents) is set by the
-> `ULUOPS_MAX_CONCURRENCY` env var (default 8).
 
 **Examples:**
 
