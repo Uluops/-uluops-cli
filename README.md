@@ -986,13 +986,6 @@ ulu runs save --file results.json -q
 ulu projects get my-project --debug
 ```
 
-> **Destructive commands in scripts and CI.** `projects delete`, `projects rehome`, `runs delete`,
-> and `definitions delete` prompt for confirmation at an interactive terminal.
-> In a non-interactive context (CI, piped stdin, automated agent harness) there
-> is no prompt to answer, so they **fail closed**: without `--yes`/`-y` they
-> print an error to stderr and **exit non-zero** rather than silently skipping
-> the deletion with a success code. Always pass `-y` when scripting a delete.
-
 ## JSON Output Stability Contract
 
 `--json` output shapes are part of this CLI's **public API**. Automated and CI
@@ -1024,24 +1017,6 @@ ULU_JSON_SCHEMA=1 ulu deps get workflow ship 1.0.0 --json
   "data": { /* the exact payload the default --json mode emits */ }
 }
 ```
-
-Pin `kind` + `schemaVersion` in your CI. The `data` field is byte-for-byte what
-the default `--json` mode emits, so you can opt in without changing how you read
-the payload — only how you guard it. (`kind` values such as `issue.history` and
-`deps.get` are already at `schemaVersion: 2`, recording the breaking change they
-shipped in v0.13.0.)
-
-### For maintainers — changing a `--json` shape
-
-The source of truth is the `SCHEMA_VERSIONS` registry in
-[`src/formatters/json.ts`](src/formatters/json.ts); all `--json` output flows
-through the single `emitJson()` chokepoint. To change an output shape you must:
-
-1. Bump that `kind`'s `schemaVersion` in `SCHEMA_VERSIONS`.
-2. Add a CHANGELOG entry marked **BREAKING** and ship it under a major bump.
-3. Update the contract-anchor test for that surface (e.g. `deps get` /
-   `issues list` / `issues history`) — these tests pin the shape and will fail
-   CI on an unacknowledged change, which is the point.
 
 ## Environment Variables
 
