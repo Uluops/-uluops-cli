@@ -474,8 +474,6 @@ Send it with `ulu runs update <project> -n <run> --file fix.json`, taking the ru
 | `replace` (default) | superseded; any record **left out of the file is retired** | replaced |
 | `merge` | only the `record_id`s sent are superseded; nothing is retired | replaced |
 
-The preview also catches a tracker that ignores `--record-mode`: the write is then not attempted ("Nothing was written"). If the cli instead reports that **the update was applied** but the server's echo did not match, it exits **5**: do not re-run it (that applies it again); check the run with `ulu runs details`. The SDK's own explanation is printed beneath. Under `--json`, both the refusal and the mismatch are JSON on stderr, with `code` (`WOULD_RETIRE_RECORDS`, `ANALYSIS_ECHO_MISMATCH`) and `applied`. A successful analysis update's JSON is `{ run, analysisWrite, retiredRecordIds }` (kind `run.updateAnalysis`); `--preview --json` is the server's plan (`run.updatePreview`).
-
 ### Run Input Format
 
 The JSON file for `ulu runs save` follows this structure (`analysis_records` and `analysis_summary` are optional; their fields are under [Repairing rejected analysis](#repairing-rejected-analysis)):
