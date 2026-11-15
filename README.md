@@ -941,7 +941,7 @@ ulu executions stats <type> <name> <version>     # Get statistics (--window)
 
 Definition translation and legacy upgrades.
 
-A successful legacy upgrade prints the requested type/name with the returned new version and previous version. With `--json`, it emits the upgrade response, including translation artifact metadata. Registry API 0.59.4 or newer provides these semantics. Current-format drafts and definitions with translation artifacts cannot use legacy upgrade; follow the API guidance to publish or retranslate. If response validation fails after a write, read the definition and its versions before retrying—the write may have committed.
+If a write's response fails validation, read the definition and its versions before retrying: the write may have committed.
 
 ```bash
 ulu translation version                          # Get translator version
