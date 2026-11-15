@@ -115,6 +115,37 @@ describe('auth login', () => {
     expect(output.stdout()).toContain('Credentials saved');
     output.restore();
   });
+
+  // consumer-validate (wittgenstein CGC-6): ops-sdk's MfaRequiredError message names a library
+  // method (loginWithTotp) no CLI command offers. The CLI has no two-factor step yet, so login
+  // says so and points to an API key and the web. Matched by name: ops-sdk does not export the class.
+  it('a two-factor account gets a CLI-level message, not the SDK method name', async () => {
+    const mfa = Object.assign(
+      new Error(
+        'Login requires a second factor (totp); complete it with loginWithTotp(mfaChallengeToken, code) before the challenge expires',
+      ),
+      { name: 'MfaRequiredError', mfaMethods: ['totp'] },
+    );
+    mockLogin.mockRejectedValue(mfa);
+    const output = captureOutput();
+    await expect(
+      parse(
+        'auth',
+        'login',
+        '--email',
+        'test@example.com',
+        '--password',
+        'secret',
+      ),
+    ).rejects.toThrow('process.exit(1)');
+    const text = output.stderr() + output.stdout();
+    output.restore();
+    expect(text).toMatch(/two-factor sign-in \(totp\)/);
+    expect(text).toMatch(/cannot complete it yet/);
+    expect(text).toMatch(/on the web/);
+    expect(text).not.toContain('loginWithTotp');
+    expect(text).not.toContain('Credentials saved');
+  });
 });
 
 describe('auth logout', () => {

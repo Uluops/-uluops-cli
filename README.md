@@ -155,7 +155,7 @@ The CLI uses the first of these that is set:
 2. Environment variables, in this order: `ULUOPS_API_KEY`; `ULUOPS_EMAIL` + `ULUOPS_PASSWORD`; `ULUOPS_SESSION_TOKEN`. A `.env` file in the current directory, then `~/.uluops/.env`, fills any of them the shell has not set (it never overrides the shell).
 3. The stored profile in `~/.uluops/credentials.json` (`--profile <name>`, default `default`): the API key or the session `ulu auth login` saved there.
 
-So after `ulu auth login`, a key in `--api-key` or `ULUOPS_API_KEY` is still the one sent.
+So after `ulu auth login`, a key in `--api-key` or `ULUOPS_API_KEY` is still the one sent, including a `ULUOPS_API_KEY` line in a `.env` file, which `env -u` does not remove.
 
 ### Commands that need a signed-in session
 
@@ -166,6 +166,8 @@ ulu auth login                       # prompts on a terminal
 env -u ULUOPS_API_KEY ulu auth change-password -c '…' -n '…'   # no --api-key; ULUOPS_API_KEY unset
 # PowerShell: Remove-Item Env:ULUOPS_API_KEY, then run the command
 ```
+
+If the key is in `./.env` or `~/.uluops/.env`, the CLI loads it back after `env -u`: comment that line out while you run the command.
 
 **Changing or resetting your password ends every session and deletes every API key**, the one in `ULUOPS_API_KEY` included: mint a new key afterwards. A two-factor account cannot log in from the CLI yet, so it does these on the web.
 

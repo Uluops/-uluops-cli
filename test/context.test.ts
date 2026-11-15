@@ -1705,9 +1705,18 @@ describe('handleOpsError — re-home refusals (review fold, 2026-09-15)', () => 
       const hint = text.slice(text.indexOf('Hint:'));
       const at = (s: string): number => hint.indexOf(s);
       expect(at('Two-factor accounts')).toBeGreaterThan(-1);
-      expect(at('Two-factor accounts')).toBeLessThan(at('Otherwise: run "ulu auth login"'));
-      expect(at('If you are changing your password')).toBeLessThan(at('Otherwise: run "ulu auth login"'));
-      expect(hint.split('\n').filter((l) => l.trim().length > 0).length).toBeGreaterThanOrEqual(4);
+      expect(at('Two-factor accounts')).toBeLessThan(
+        at('Otherwise: run "ulu auth login"'),
+      );
+      expect(at('If you are changing your password')).toBeLessThan(
+        at('Otherwise: run "ulu auth login"'),
+      );
+      // A .env file refills an unset ULUOPS_API_KEY (sdk-core loadEnvFiles, override:false), so the
+      // hint names it (consumer-validate: wittgenstein CGC-2; shown live 2026-11-15).
+      expect(hint).toMatch(/\.\/\.env or ~\/\.uluops\/\.env refills it/);
+      expect(
+        hint.split('\n').filter((l) => l.trim().length > 0).length,
+      ).toBeGreaterThanOrEqual(4);
       expect(text).not.toContain(secret);
 
       const json = captureOutput();

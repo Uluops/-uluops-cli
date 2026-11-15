@@ -687,6 +687,7 @@ function printApiErrorDetails(
           '  If you are changing your password: it ends every session and deletes every API key, the one in ULUOPS_API_KEY included.',
           '  Otherwise: run "ulu auth login" (it prompts on a terminal), then rerun without --api-key and with ULUOPS_API_KEY unset:',
           '    env -u ULUOPS_API_KEY ulu …        (PowerShell: Remove-Item Env:ULUOPS_API_KEY)',
+          '  A ULUOPS_API_KEY line in ./.env or ~/.uluops/.env refills it: remove it there too.',
         ].join('\n'),
       );
     } else if (error.code === 'INSUFFICIENT_ORG_ROLE') {

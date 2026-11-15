@@ -318,6 +318,23 @@ Examples:
           console.log('You can now use other ulu commands.');
         }
       } catch (error) {
+        // ops-sdk's MfaRequiredError (not exported from its entry point, so matched by name)
+        // tells the caller to use loginWithTotp(), a library method no CLI command offers.
+        if (error instanceof Error && error.name === 'MfaRequiredError') {
+          const methods = (error as Error & { mfaMethods?: unknown })
+            .mfaMethods;
+          const list =
+            Array.isArray(methods) && methods.length > 0
+              ? ` (${methods.join(', ')})`
+              : '';
+          console.error(
+            `Error: This account uses two-factor sign-in${list}, and "ulu auth login" cannot complete it yet.`,
+          );
+          console.error(
+            '\nHint: Use an API key for ordinary commands (ulu --api-key, or ULUOPS_API_KEY), and do session-only actions (password changes, minting keys) on the web.',
+          );
+          process.exit(1);
+        }
         const message = error instanceof Error ? error.message : String(error);
         if (
           message.includes('No credentials configured') ||
@@ -545,7 +562,9 @@ Examples:
   // ulu auth reset-password
   auth
     .command('reset-password')
-    .description('Reset password using the token from a forgot-password email')
+    .description(
+      'Reset password using the token from a forgot-password email. Ends every session and deletes every API key',
+    )
     .requiredOption(
       '-t, --token <token>',
       'Reset token, or the whole reset link, from the email',
@@ -567,7 +586,8 @@ Examples:
         console.error(
           '\nHint: `ulu auth set-password` (first password) and `ulu auth change-password`',
           'need a signed-in session, not an API key: run `ulu auth login`, then rerun',
-          'without --api-key and with ULUOPS_API_KEY unset (`env -u ULUOPS_API_KEY ulu …`).',
+          'without --api-key and with ULUOPS_API_KEY unset (`env -u ULUOPS_API_KEY ulu …`)',
+          'and absent from ./.env and ~/.uluops/.env, which refill it.',
         );
         process.exit(1);
       }
@@ -609,7 +629,7 @@ Examples:
   auth
     .command('change-password')
     .description(
-      'Change your current password (needs a signed-in session, not an API key)',
+      'Change your current password (needs a signed-in session, not an API key). Ends every session and deletes every API key',
     )
     .requiredOption('-c, --current <password>', 'Current password')
     .requiredOption('-n, --new-password <password>', 'New password')
