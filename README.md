@@ -345,29 +345,44 @@ ulu log --json                    # The API's page or rollup, byte-for-byte; nev
 
 > **Before adding `project` to a shared checkout,** make sure every tool that reads its `.uluops.json` is on `@uluops/ops-sdk` ≥ 6.5.0 (this CLI is): older ones refuse the file for every command, not only `ulu log`. Find the copies with `find <tree> -path '*/@uluops/ops-sdk/dist/config/workspace-org.js'` and check each one's `package.json` version.
 
-**Reading the stream.** `run #47 2026-09-13 14:02 security-audit security-analyst@1.4.0 +2 score 82, gates ok`
-then its counts (`new 3 . recurring 1 . regression 1`; `-` on runs saved before counts were
-recorded). `regressed` is a finding a **run** re-detected, with `via run #N` (`via run ?` when that
-run is archived). `decided` is a ledger row: `deferred <- open "reason"`; `no reason recorded` is
-the ledger's silence, not a person's; `by agent` prints only when the ledger says so — nothing
-printed means *unattributed*, never *human*; `open <- wontfix` without a run is *reopened by
-decision*. Same-second identical decisions collapse into one line with an issue count (a bulk
-status change); the footer says how many, and `--no-collapse` expands them. Collapse is per page:
-a group across a page boundary shows as two lines. Run times are as reported by the saving client;
-within a second, order is as recorded — for events recorded before millisecond timestamps
-(migration 080) it is not meaningful. Times are UTC. Long reasons are cut at 120 characters on the
-page; `--json` carries the full text.
+**Reading the stream.** Runs and decisions interleave newest first, in UTC; `ulu log --help` explains every line form (`regressed`, `no reason recorded`, collapsed bulk changes, `--no-collapse`).
 
-**Reading `--stat`.** Two frames on two clocks: *Decided* is the current status of findings first
-seen in the window (run times); *Activity* is what changed in the window (ledger times). With no
-window both say *all time*. `completed` prints as **fixed**. *Came back* counts distinct findings —
-*caught by re-running* (a run re-detected it; `any window` for the last date) and *reopened by
-decision*. Under *Activity*, *reopened* counts transitions into open.
+```text
+$ ulu log my-app -n 3
+run #24   2026-11-15 20:38   post-implementation   post-implementation@1.2.0 +5   score 90, gates ok
+          new 31 . recurring 0 . regression 0
+decided   2026-11-15 20:41   6494717db099  wontfix <- open      "Needs a non-null assertion the lint forbids."
+decided   2026-11-15 20:41   dd48c9f4528f  observation <- open  "Two sites, below the extraction bar."
 
-**`--orgs`** lists every org you belong to and prints each org's rollup with a per-project table
-(name, runs, findings, fixed, regressions; last run first, capped at 100). The org rollup is
-cached 60 s server-side — the `as of` time is when the numbers were computed. A key bound to one
-org lists all your orgs but can read only its own; the others are noted on stderr and skipped.
+3 events shown; more: --cursor eyJhdCI6IjIwMjYtMTEtMTVUMjA6NDE6MTYuODgxWiIs…
+```
+
+**Reading `--stat`.** *Decided* is the current status of the findings first seen in the window, *Activity* is what changed in it, and with no window both say *all time*.
+
+```text
+$ ulu log my-app --stat
+UluOps log - my-app   (org: acme, explicit; project from argument)
+
+Examined   24 runs, 2026-11-13 to 2026-11-15, 7 definitions
+           pre-implementation x16   post-implementation x3   executor x1   exploration x1   manual x1
+           security x1   triage x1
+Found      992 findings
+Decided    fixed 840 (840 with reason) . deferred 4 (4) . wontfix 20 (20)
+           false-positive 5 (5) . observation 86 (86) . open 37
+Came back  0 caught by re-running (0 events; never) . 0 reopened by decision
+Activity   955 decisions, all time (fixed 840 . deferred 4 . wontfix 20 . fp 5 . obs 86 . reopened 0)
+           23 runs with correlation recorded (since 2026-07-08)
+```
+
+**`--orgs`** prints the rollup for every org you belong to, with its projects last-run first (cached 60 s server-side; a key bound to one org skips the others, with a note on stderr).
+
+```text
+$ ulu log --orgs
+acme   (admin)   3 projects . 59 runs . 1,762 findings . 1,192 fixed . 0 regressions   (as of 2026-11-15 23:27 UTC)
+  my-app                24 runs .   992 findings .   840 fixed .   0 regressions
+  billing               28 runs .   385 findings .   218 fixed .   0 regressions
+  web                    7 runs .   385 findings .   134 fixed .   0 regressions
+```
 
 ---
 
