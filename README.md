@@ -182,22 +182,19 @@ If the key is in `./.env` or `~/.uluops/.env`, the CLI loads it back after `env 
 
 ### Which org a command acts in
 
-Every org-scoped command sends `X-Org-Slug` for the org it acts in (`orgs audit-feed` is the
-exception — the org is its argument, not a scope). Resolution, highest first: `--org <slug>`;
-the nearest `.uluops.json` above the current directory (`{ "org": "ulu-labs" }` — put one at the
-root of a work checkout; `{ "org": "personal" }` in a personal repo nested under it stops the walk);
-`ULUOPS_ORG_SLUG` — **from your shell, or from `./.env` / `~/.uluops/.env`, which the CLI loads at
-startup**; else your personal org. The API never infers an org from a project name.
-`ulu runs save` prints where the run landed. `ulu exec` hands the same org to `@uluops/core`.
-**Registry commands** (`ulu def`, `versions`, `forks`, `deps`, …) send the org on definition
-**writes** only (create, update, publish, deprecate, archive, delete, fork); registry **reads** carry
-no org header and return the marketplace view, with your org's private definitions included by
-membership — filter by `namespace` (in `--json` output) to tell orgs' same-named rows apart.
-Before 0.33.0 registry commands ignored the org entirely.
-Prompts that name the source (`projects rehome`) print its provenance in full — the path of the
-`.uluops.json` that answered, or `env-file` when the variable came from a file rather than the
-shell — so a stray `.env` in a checkout cannot pass as "my shell".
+Every org-scoped command sends `X-Org-Slug` for the first of these that is set (the API never infers an org from a project name):
 
+1. `--org <slug>`
+2. The nearest `.uluops.json` above the current directory: `{ "org": "ulu-labs" }` at the root of a work checkout; `{ "org": "personal" }` in a personal repo nested under it stops the walk.
+3. `ULUOPS_ORG_SLUG`, from your shell or from `./.env` / `~/.uluops/.env`.
+4. Your personal org.
+
+- **Registry commands** (`ulu def`, `versions`, `forks`, `deps`, …) send the org on writes only (create, update, publish, deprecate, archive, delete, fork). Reads return the marketplace view, including your org's private definitions; tell same-named rows apart by `namespace` in `--json`.
+- **`orgs audit-feed`** takes the org as its argument, not as a scope.
+- **`ulu exec`** passes the same org to `@uluops/core`; **`ulu runs save`** prints where the run landed.
+- **`projects rehome`** prints where the org came from: the `.uluops.json` path, or `env-file` when the variable came from a file, so a stray `.env` can't pass for your shell.
+
+### Flags
 
 Every command accepts these flags:
 
