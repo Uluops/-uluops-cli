@@ -745,12 +745,6 @@ ulu deps get workflow ship 1.0.0 --max-depth 2
 ulu deps dependents agent code-validator 1.0.0
 ```
 
-> **v0.13.0 changes:** `deps get` output format changed (no longer prints `Edges: N`
-> or cycle warnings — the registry never tracked those). The new `--tree` flag renders
-> the recursive `DependencyNode` graph with `[context]` labels per edge (e.g.,
-> `[invokes.agent]`, `[stage "Final Checks"]`). `deps dependents` now shows
-> `← context` arrows so operators can see how each consumer references the target.
-
 ---
 
 ### Forks
