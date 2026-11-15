@@ -323,14 +323,7 @@ surfaces. `--org` does not apply here — the org is the positional argument.
 ulu orgs audit-feed <slug>        # Org-visible audit feed (any member); ACTOR = user id prefix, system (org purge) or unknown; --limit 1–100, --cursor, --json
 ```
 
-The feed carries the rows an org's writers marked visible to every member — today, projects that
-left the org for someone's personal org (an org admin may do that; the feed is how the org's owner
-sees it). Each row is one line: when, who, and `"billing" moved to alexself2 (personal org) — reason`.
-Page with the `--cursor` the previous page printed; `--json` emits the raw envelope
-(`data.entries[]`, `count`, `hasMore`, `nextCursor`). The feed carries only moves *into a personal
-org* (D19) — an admin's org→org move is not in it. Rendered text is another member's free text
-(the reason, the project name): the CLI strips terminal control sequences and flattens newlines
-before printing it.
+Today the feed lists projects moved out of the org into someone's personal org (org-to-org moves are not in it), one line each (`"billing" moved to alexself2 (personal org) — reason`, with when and who), paged with the `--cursor` the previous page printed, `--json` giving `data.entries[]`, `count`, `hasMore` and `nextCursor`, and other members' text stripped of terminal control sequences and newlines.
 
 ---
 
