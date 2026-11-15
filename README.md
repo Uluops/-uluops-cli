@@ -775,7 +775,7 @@ ulu lang adl -o adl-schema.json   # Write JSON Schema to file
 
 ### Models
 
-AI model catalog.
+The model catalog comes from [models.dev](https://models.dev): the UluOps registry syncs its models, providers and prices (USD per million tokens) from there.
 
 ```bash
 ulu models list                   # List models (--provider, --tier, --capability vision|tools|reasoning, --status)
@@ -785,8 +785,6 @@ ulu models providers              # List providers
 ulu models aliases                # List model aliases
 ulu models resolve <alias>        # Resolve alias to concrete model
 ```
-
-> **Note:** `ulu models providers` lists the providers the platform catalog knows about. `ulu exec` executes against any provider whose API key is set (see [Providers and shell access](#providers-and-shell-access)); the catalog listing does not imply a key is configured.
 
 ---
 
