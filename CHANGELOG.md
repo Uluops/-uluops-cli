@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [0.47.1] - 2026-11-15
+
 ### Changed
 
 - **The `SESSION_REQUIRED` hint names every place a key can come from** (tier-rate-limits spec 0.3.18, OD-AT). ops-api now refuses an API key on `PUT /auth/password` (`ulu auth change-password`) as it already did on `POST /auth/password` (`set-password`) and the other step-up routes. The old hint said to run `ulu auth login` and retry, but the SDK takes credentials from `--api-key`, then `ULUOPS_API_KEY`, then the stored profile, so after a login a key in the flag or the environment is still the one sent, and the retry is refused again. The hint now says to rerun without `--api-key` and with `ULUOPS_API_KEY` unset (`env -u ULUOPS_API_KEY ulu …`; PowerShell `Remove-Item Env:ULUOPS_API_KEY`), and that a password change ends every session and deletes every API key, the one in `ULUOPS_API_KEY` included. It is one static text whatever the key's source and never echoes the command line, which may hold the key. `--json` output is unchanged: the server's error, no hint. (`ulu auth login` replaces a key held in the stored profile: it overwrites the whole profile entry.)
