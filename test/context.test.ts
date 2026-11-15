@@ -1669,4 +1669,49 @@ describe('handleOpsError — re-home refusals (review fold, 2026-09-15)', () => 
       output.restore();
     }
   });
+
+  // OD-AT (tier-rate-limits spec 0.3.18 §2, row A-cli). The SDK takes credentials
+  // from --api-key, then ULUOPS_API_KEY, then the stored profile, so `ulu auth
+  // login` alone leaves a flag or env key in charge. The hint is one static text
+  // whatever the key's source, never echoes argv, and is absent under --json.
+  it('SESSION_REQUIRED names login, --api-key, env -u ULUOPS_API_KEY and the consequence; never echoes argv; no hint under --json', () => {
+    const secret = 'uluops_sk_ARGV_CANARY_7f3e';
+    const argv = process.argv;
+    process.argv = [...argv, '--api-key', secret];
+    try {
+      const err = new OpsApiError(
+        403,
+        'This action requires a signed-in session. Sign in and retry without an API key.',
+        'SESSION_REQUIRED',
+      );
+
+      const human = captureOutput();
+      expect(() => handleOpsError(err, { json: false, debug: false })).toThrow(
+        'process.exit(1)',
+      );
+      const text = human.stderr() + human.stdout();
+      human.restore();
+      expect(text).toContain('ulu auth login');
+      expect(text).toContain('--api-key');
+      expect(text).toContain('env -u ULUOPS_API_KEY');
+      expect(text).toContain('Remove-Item Env:ULUOPS_API_KEY');
+      expect(text).toMatch(
+        /ends every session and deletes every API key, the one in ULUOPS_API_KEY included/,
+      );
+      expect(text).not.toContain(secret);
+
+      const json = captureOutput();
+      expect(() => handleOpsError(err, { json: true, debug: false })).toThrow(
+        'process.exit(1)',
+      );
+      const jsonText = json.stderr() + json.stdout();
+      json.restore();
+      expect(jsonText).toContain('Sign in and retry without an API key.');
+      expect(jsonText).not.toContain('Hint');
+      expect(jsonText).not.toContain('env -u');
+      expect(jsonText).not.toContain(secret);
+    } finally {
+      process.argv = argv;
+    }
+  });
 });

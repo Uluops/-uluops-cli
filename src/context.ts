@@ -669,8 +669,12 @@ function printApiErrorDetails(
         `\nHint: This project was moved to another org${target ? ` (${target})` : ''}; the old address is a tombstone. Re-run the same command with --org ${target ?? '<that org>'}. Do not create a new project under the old name here.`,
       );
     } else if (error.code === 'SESSION_REQUIRED') {
+      // One static text whatever the key's source (tier-rate-limits OD-AT). The
+      // SDK takes credentials from --api-key, then ULUOPS_API_KEY, then the
+      // stored profile, so after "ulu auth login" a flag or env key would still
+      // win. Never echo argv: the command line may hold the key.
       console.error(
-        '\nHint: This action needs a signed-in session, not an API key. Run "ulu auth login" and retry; never mint another key to get past it.',
+        '\nHint: This action needs a signed-in session, not an API key. Run "ulu auth login", then rerun without --api-key and with ULUOPS_API_KEY unset ("env -u ULUOPS_API_KEY ulu …"; PowerShell: "Remove-Item Env:ULUOPS_API_KEY"). A password change ends every session and deletes every API key, the one in ULUOPS_API_KEY included.',
       );
     } else if (error.code === 'INSUFFICIENT_ORG_ROLE') {
       console.error(

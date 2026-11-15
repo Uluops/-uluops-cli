@@ -565,8 +565,8 @@ Examples:
           'Error: --token was given an API key, not a reset token.',
         );
         console.error(
-          '\nHint: To set a password on the account that key authenticates as, run',
-          '`ulu auth set-password` (first password) or `ulu auth change-password`.',
+          '\nHint: `ulu auth set-password` (first password) and `ulu auth change-password`',
+          'need a signed-in session, not an API key: run `ulu auth login` first.',
         );
         process.exit(1);
       }
@@ -641,9 +641,11 @@ Examples:
 
   // ulu auth set-password
   //
-  // First-time password on an account that has none — the API-key-only
-  // system account, an OAuth-only signup. POST /auth/password, authenticated
-  // (an API key or session works). NOT the reset-token flow: reset-password
+  // First-time password on an account that has none — an OAuth-only signup.
+  // POST /auth/password needs a signed-in session: ops-api refuses an API key
+  // with 403 SESSION_REQUIRED, so an account that holds only API keys gets its
+  // first password through the emailed reset (forgot-password, reset-password).
+  // This command is NOT the reset-token flow: reset-password
   // takes an emailed token, and a successful reset deletes every API key on
   // the account (password-auth-service resetPassword) — including the one
   // you'd be authenticating with. The API refuses with "Password already set"
