@@ -924,15 +924,7 @@ OpenRouter is used only when `OPENROUTER_API_KEY` is set and you pick an `openro
 
 **Shell access.** Agents that declare `Bash` get a shell only when you set `ULUOPS_ALLOWED_TOOLS=bash` (a `./.env` or `~/.uluops/.env` line counts), and then every such agent runs commands through `sh -c` from the target directory, not confined to it and not sandboxed but without your API keys or tokens, on Anthropic, OpenAI and OpenRouter models (on others it runs without a shell and core warns).
 
-**Pipeline steps (`--allow-steps`).** A pipeline's `steps:` are shell commands from its definition, and
-core runs them only when told to. `ulu exec pipeline <name> <target> --allow-steps` (also on `exec run`)
-runs them for that invocation and prints a notice on stderr; without it they do not run. Since core
-0.54.0 a pipeline whose conditions read step output is **refused** without steps (`STEP_OUTPUT_STEPS_DISABLED`),
-as is a steps stage behind a blocking gate; the refusal names `--allow-steps`. Nine corpus pipelines read
-step output, `pre-implementation`, `ship`, `post-implementation` and `consumer-validate` among them.
-There is no command allowlist: the flag trusts the pipeline's author with your shell, registry-resolved
-pipelines included, so pin what you run in CI (`--hash`). `ULUOPS_ALLOW_STAGE_STEPS=true` turns steps on
-for every run instead.
+**Pipeline steps (`--allow-steps`).** A pipeline's `steps:` are shell commands from its definition that run only with `--allow-steps` (on `exec pipeline` and `exec run`; `ULUOPS_ALLOW_STAGE_STEPS=true` turns them on for every run), and there is no command allowlist, so the flag trusts the pipeline's author, registry-resolved pipelines included, with your shell: pin what you run in CI with `--hash`.
 
 ### Executions
 
