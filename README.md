@@ -572,14 +572,6 @@ ulu issues history --project my-project          # list recent issues
 ulu issues history a1b2c3d4 --project my-project # then drill in by fingerprint
 ```
 
-> **v0.13.0 breaking change (`--json`):** `ulu issues history --json` now emits the
-> `IssueHistoryEnvelope` shape `{ issueId, events, totalEvents, truncated }` instead of
-> a flat `StatusHistory[]` array. Scripts doing `result[0]` or `Array.isArray(result)`
-> must migrate to `result.events[0]`. The `events[]` array contains discriminated entries
-> with `type: 'occurrence' | 'status' | 'note'` — narrow on `type` before accessing
-> event-specific fields. See [CHANGELOG](./CHANGELOG.md#0130---2026-06-08) for the full
-> migration story.
-
 **Filter options for `issues list`:**
 
 | Flag | Values |
