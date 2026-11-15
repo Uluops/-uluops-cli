@@ -305,26 +305,12 @@ ulu projects delete my-app -y
 ulu projects restore my-app
 
 # Move a project (and its whole history) from org acme to org ulu-labs.
-# The SOURCE is the org this command is scoped to (--org, else the nearest
-# .uluops.json, else ULUOPS_ORG_SLUG, else your personal org) — the project is
-# looked up THERE. Needs admin/owner in both orgs.
+# The project is looked up in the org this command acts in (see "Which org a
+# command acts in"). Needs admin/owner in both orgs.
 ulu projects rehome my-app --org acme --to ulu-labs --reason "team took it over"
 ```
 
-`rehome` prompts with both orgs and the source's provenance (`move project "my-app" from org acme
-(workspace /path/to/.uluops.json) to org ulu-labs at …?`); pass `-y` to skip — the prompt is the
-only place the source is shown *before* the write, so with `-y` the success line repeats base URL
-and provenance and is the record a script keeps. `--to` takes the target's real slug (`personal`
-is refused). After the move the old address in the source org is a tombstone — an org-less write
-there answers `410 PROJECT_REHOMED` naming the new org instead of forking a new project; moving
-back is the same command the other way. **A re-run of the same command after the move answers
-404**, because the project is looked up in the source org where it no longer is — `same_org`
-("already there") is the answer on the *admin* path, whose lookup is by id; the CLI's hints say
-which is which. Other refusals name their reason and the CLI hints each: `name_collision` /
-`soft_deleted_conflict` / `rehomed_away_conflict` (the name is taken in the target),
-`project_soft_deleted`, `export_in_progress`, `moved_during_request`; `402 PROJECT_LIMIT` means
-the target org is at its project cap (not a subscription gate); `403 ORG_ACCESS_DENIED` on a move
-is usually about the *target*.
+After a move, writes to the old address answer `410 PROJECT_REHOMED` naming the new org, instead of creating a new project there; moving back is the same command the other way. The prompt, the success line, each refusal's hint and `ulu projects rehome --help` (which explains why a re-run after the move answers 404) cover the rest.
 
 ---
 
