@@ -341,22 +341,9 @@ ulu log --no-collapse             # One line per issue instead of collapsing sam
 ulu log --json                    # The API's page or rollup, byte-for-byte; never collapsed
 ```
 
-**Which project.** `--project <name>` / `-p`, then the argument, then the **`project` key of the
-nearest `.uluops.json`** — the same file that names the org, so both come from one place — then
-`ULUOPS_PROJECT`, then an error listing your projects. The file's `project` key governs **reads
-only**: `ulu exec` keeps its own resolution (`--project`, `ULUOPS_PROJECT`, the directory name) and
-can track under a different name than `ulu log` reads — a walked file never decides where a run
-*lands*, only what is shown. A file carrying `project` must also carry `org` (`"personal"` for no
-org) or it is refused, so a project-only file can never shadow an outer org. A refused file (owned
-by another user, unparseable, an unknown key) stops resolution with its own message. When the
-nearest file names an org but no project and `ULUOPS_PROJECT` answers, one stderr line says so.
+**Which project.** `--project`/`-p`, then the argument, then the `project` key of the nearest `.uluops.json` (which must also name an `org`, `"personal"` for none, or the file is refused), then `ULUOPS_PROJECT`; otherwise the error lists your projects. That file decides only what `ulu log` shows, never where a run lands: `ulu exec` tracks under `--project`, `ULUOPS_PROJECT` or the directory name, so the two can differ.
 
-> **Before you add `project` to a shared checkout:** every tool that reads `.uluops.json` in that
-> tree must be on `@uluops/ops-sdk` ≥ 6.5.0 — older readers refuse the key *for every command*, not
-> only `ulu log`. This CLI (≥ 0.31.0, with `@uluops/core` ≥ 0.43.5) is; the tracker MCP is from the
-> release that pins ops-sdk 6.5.0. Check with
-> `find <tree> -path '*/@uluops/ops-sdk/dist/config/workspace-org.js'` and read each copy's
-> `package.json` version.
+> **Before adding `project` to a shared checkout,** make sure every tool that reads its `.uluops.json` is on `@uluops/ops-sdk` ≥ 6.5.0 (this CLI is): older ones refuse the file for every command, not only `ulu log`. Find the copies with `find <tree> -path '*/@uluops/ops-sdk/dist/config/workspace-org.js'` and check each one's `package.json` version.
 
 **Reading the stream.** `run #47 2026-09-13 14:02 security-audit security-analyst@1.4.0 +2 score 82, gates ok`
 then its counts (`new 3 . recurring 1 . regression 1`; `-` on runs saved before counts were
