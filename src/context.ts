@@ -676,8 +676,18 @@ function printApiErrorDetails(
       // has no two-factor path yet (a browser device-authorization login is
       // specified separately), so a 2FA account is sent to the web. The password
       // consequence is scoped: this code also answers key mint, TOTP, OAuth link.
+      // One line per case, and the two conditional cases BEFORE the steps: a
+      // reader stops at the first command (consumer-validate run, bored-observer
+      // B-1; dx-validator finding 1).
       console.error(
-        '\nHint: This action needs a signed-in session, not an API key. Run "ulu auth login", then rerun without --api-key and with ULUOPS_API_KEY unset ("env -u ULUOPS_API_KEY ulu …"; PowerShell: "Remove-Item Env:ULUOPS_API_KEY"). If your account uses two-factor sign-in, "ulu auth login" cannot complete it yet: sign in on the web and do this there. If you are changing your password: it ends every session and deletes every API key, the one in ULUOPS_API_KEY included.',
+        [
+          '',
+          'Hint: This action needs a signed-in session, not an API key.',
+          '  Two-factor accounts: "ulu auth login" cannot complete two-factor sign-in yet; sign in on the web and do this there.',
+          '  If you are changing your password: it ends every session and deletes every API key, the one in ULUOPS_API_KEY included.',
+          '  Otherwise: run "ulu auth login" (it prompts on a terminal), then rerun without --api-key and with ULUOPS_API_KEY unset:',
+          '    env -u ULUOPS_API_KEY ulu …        (PowerShell: Remove-Item Env:ULUOPS_API_KEY)',
+        ].join('\n'),
       );
     } else if (error.code === 'INSUFFICIENT_ORG_ROLE') {
       console.error(

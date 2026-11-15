@@ -135,6 +135,10 @@ ulu auth whoami
 # Shows current authenticated user
 ```
 
+- **Two-factor accounts:** `ulu auth login` has no TOTP or passkey step yet, so an account with two-factor sign-in cannot log in here. Use an API key for ordinary commands, and the web for the [session-only actions](#commands-that-need-a-signed-in-session).
+- **Logging in ends your other sessions**, the browser's included: the API keeps one session per user.
+- **It replaces the stored profile entry**, so an API key stored in that profile is overwritten by the session.
+
 ### 3. Email/Password (Environment)
 
 ```bash
@@ -145,14 +149,25 @@ ulu projects list
 
 ### Credential Priority Chain
 
-The CLI resolves credentials in this order:
+The CLI uses the first of these that is set:
 
 1. `--api-key` flag
-2. `ULUOPS_API_KEY` environment variable
-3. `ULUOPS_EMAIL` + `ULUOPS_PASSWORD` environment variables
-4. Session token stored by `ulu auth login`
-5. Profile credentials in `~/.uluops/credentials.json`
-6. Local `.env` file in the current directory
+2. Environment variables, in this order: `ULUOPS_API_KEY`; `ULUOPS_EMAIL` + `ULUOPS_PASSWORD`; `ULUOPS_SESSION_TOKEN`. A `.env` file in the current directory, then `~/.uluops/.env`, fills any of them the shell has not set (it never overrides the shell).
+3. The stored profile in `~/.uluops/credentials.json` (`--profile <name>`, default `default`): the API key or the session `ulu auth login` saved there.
+
+So after `ulu auth login`, a key in `--api-key` or `ULUOPS_API_KEY` is still the one sent.
+
+### Commands that need a signed-in session
+
+Setting or changing a password and minting API keys refuse an API key with `403 SESSION_REQUIRED`, however the key reaches the CLI: `ulu auth set-password`, `ulu auth change-password`, `ulu auth api-keys create` and `ulu auth api-keys rotate`. To run one:
+
+```bash
+ulu auth login                       # prompts on a terminal
+env -u ULUOPS_API_KEY ulu auth change-password -c '…' -n '…'   # no --api-key; ULUOPS_API_KEY unset
+# PowerShell: Remove-Item Env:ULUOPS_API_KEY, then run the command
+```
+
+**Changing or resetting your password ends every session and deletes every API key**, the one in `ULUOPS_API_KEY` included: mint a new key afterwards. A two-factor account cannot log in from the CLI yet, so it does these on the web.
 
 ## Configuration
 
@@ -1142,6 +1157,7 @@ through the single `emitJson()` chokepoint. To change an output shape you must:
 | `ULUOPS_PROJECT` | Project name for `ulu exec` result tracking when `--project` is not passed (useful in CI) | - |
 | `ULUOPS_EMAIL` | Email for session auth | - |
 | `ULUOPS_PASSWORD` | Password for session auth | - |
+| `ULUOPS_SESSION_TOKEN` | A session token to use directly (after `ULUOPS_API_KEY` and email/password) | - |
 | `ULUOPS_ORG_SLUG` | Org a command acts in when no `--org` flag or `.uluops.json` answers — see [Which org a command acts in](#which-org-a-command-acts-in) | personal org |
 | `ULUOPS_BASE_URL` | Tracker API base URL (the `--base-url` flag overrides it) | `https://api.uluops.ai/api/v1` |
 | `ULUOPS_REGISTRY_URL` | Registry API base URL (the `--base-url` flag overrides it on registry commands) | `https://api.uluops.ai/api/v1/registry` |
@@ -1169,6 +1185,7 @@ The CLI provides contextual error messages with actionable hints:
 |-------|------|
 | **401 Unauthorized** | Check `ULUOPS_API_KEY` or run `ulu auth login` |
 | **403 Forbidden** | Insufficient permissions — contact admin |
+| **403 `SESSION_REQUIRED`** | The command needs a signed-in session, not an API key: see [Commands that need a signed-in session](#commands-that-need-a-signed-in-session) |
 | **404 Not Found** | Verify the resource name or ID |
 | **400 Validation** | Check command arguments — run with `--help`; a 400/409 that carries a business `reason` (re-home's `same_org`, `name_collision`, …) is explained as state instead |
 | **402 Project limit** | The destination org is at its project cap — a re-home/create refusal, not a subscription gate |

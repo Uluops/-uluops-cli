@@ -608,7 +608,9 @@ Examples:
   // ulu auth change-password
   auth
     .command('change-password')
-    .description('Change your current password')
+    .description(
+      'Change your current password (needs a signed-in session, not an API key)',
+    )
     .requiredOption('-c, --current <password>', 'Current password')
     .requiredOption('-n, --new-password <password>', 'New password')
     .action(async (options, cmd) => {
@@ -654,7 +656,7 @@ Examples:
   auth
     .command('set-password')
     .description(
-      'Set a first-time password on the authenticated account (no password yet)',
+      'Set a first-time password on the authenticated account (no password yet; needs a signed-in session, not an API key)',
     )
     .option(
       '-p, --password <password>',

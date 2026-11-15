@@ -1700,6 +1700,14 @@ describe('handleOpsError — re-home refusals (review fold, 2026-09-15)', () => 
       );
       // `ulu auth login` has no two-factor path (run #24 P6): the hint must not dead-end there.
       expect(text).toMatch(/two-factor sign-in.*sign in on the web/);
+      // The conditional cases come before the steps, one per line: readers stop at the first
+      // command (consumer-validate: bored-observer B-1, dx-validator 1).
+      const hint = text.slice(text.indexOf('Hint:'));
+      const at = (s: string): number => hint.indexOf(s);
+      expect(at('Two-factor accounts')).toBeGreaterThan(-1);
+      expect(at('Two-factor accounts')).toBeLessThan(at('Otherwise: run "ulu auth login"'));
+      expect(at('If you are changing your password')).toBeLessThan(at('Otherwise: run "ulu auth login"'));
+      expect(hint.split('\n').filter((l) => l.trim().length > 0).length).toBeGreaterThanOrEqual(4);
       expect(text).not.toContain(secret);
 
       const json = captureOutput();
