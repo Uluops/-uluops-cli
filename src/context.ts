@@ -672,9 +672,12 @@ function printApiErrorDetails(
       // One static text whatever the key's source (tier-rate-limits OD-AT). The
       // SDK takes credentials from --api-key, then ULUOPS_API_KEY, then the
       // stored profile, so after "ulu auth login" a flag or env key would still
-      // win. Never echo argv: the command line may hold the key.
+      // win. Never echo argv: the command line may hold the key. "ulu auth login"
+      // has no two-factor path yet (a browser device-authorization login is
+      // specified separately), so a 2FA account is sent to the web. The password
+      // consequence is scoped: this code also answers key mint, TOTP, OAuth link.
       console.error(
-        '\nHint: This action needs a signed-in session, not an API key. Run "ulu auth login", then rerun without --api-key and with ULUOPS_API_KEY unset ("env -u ULUOPS_API_KEY ulu …"; PowerShell: "Remove-Item Env:ULUOPS_API_KEY"). A password change ends every session and deletes every API key, the one in ULUOPS_API_KEY included.',
+        '\nHint: This action needs a signed-in session, not an API key. Run "ulu auth login", then rerun without --api-key and with ULUOPS_API_KEY unset ("env -u ULUOPS_API_KEY ulu …"; PowerShell: "Remove-Item Env:ULUOPS_API_KEY"). If your account uses two-factor sign-in, "ulu auth login" cannot complete it yet: sign in on the web and do this there. If you are changing your password: it ends every session and deletes every API key, the one in ULUOPS_API_KEY included.',
       );
     } else if (error.code === 'INSUFFICIENT_ORG_ROLE') {
       console.error(

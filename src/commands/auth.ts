@@ -566,7 +566,8 @@ Examples:
         );
         console.error(
           '\nHint: `ulu auth set-password` (first password) and `ulu auth change-password`',
-          'need a signed-in session, not an API key: run `ulu auth login` first.',
+          'need a signed-in session, not an API key: run `ulu auth login`, then rerun',
+          'without --api-key and with ULUOPS_API_KEY unset (`env -u ULUOPS_API_KEY ulu …`).',
         );
         process.exit(1);
       }

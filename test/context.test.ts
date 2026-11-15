@@ -1696,8 +1696,10 @@ describe('handleOpsError — re-home refusals (review fold, 2026-09-15)', () => 
       expect(text).toContain('env -u ULUOPS_API_KEY');
       expect(text).toContain('Remove-Item Env:ULUOPS_API_KEY');
       expect(text).toMatch(
-        /ends every session and deletes every API key, the one in ULUOPS_API_KEY included/,
+        /If you are changing your password: it ends every session and deletes every API key, the one in ULUOPS_API_KEY included/,
       );
+      // `ulu auth login` has no two-factor path (run #24 P6): the hint must not dead-end there.
+      expect(text).toMatch(/two-factor sign-in.*sign in on the web/);
       expect(text).not.toContain(secret);
 
       const json = captureOutput();
