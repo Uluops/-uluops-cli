@@ -467,16 +467,12 @@ The same fields work in `runs save` input. snake_case or camelCase both work.
 | summary | `score` | no | 0–100 |
 | summary | `decision_vocabulary`, `system_metrics`, `category_scores`, `epistemic_assessment`, `audit_implications`, `exploration_maps` | no | as the agent reports them; `category_scores` entries are `{ name, weight, score }` with integer `weight` ≥ 1 and integer `score` |
 
-One update carries at most 100 records and 20 summaries; send a larger set in parts with `--record-mode merge`. When a save rejects an entry, the issue printed under `Analysis rejected for …` names the field (`records[1].data: …`).
-
-Send the file with `ulu runs update <project> -n <run> --file fix.json`. `runs save` prints that command with the run filled in. After `ulu exec`, the run is the one in the Dashboard link. `ulu runs latest` can return a different run on a busy project. Records are written per agent, under one of two modes:
+Send it with `ulu runs update <project> -n <run> --file fix.json`, taking the run number from `runs save`'s output or `ulu exec`'s Dashboard link (`ulu runs latest` can be another run on a busy project); an update takes at most 100 records and 20 summaries (send more in parts with `--record-mode merge`) and is refused whole if any entry is invalid (a save's rejection names the field, e.g. `records[1].data: …`). Either mode repairs a rejected agent, but on an agent that already has records a `replace` write retires every record the file leaves out, so the CLI refuses it, naming them, unless you pass `--allow-retire` or switch to `merge`; `--preview` shows the plan and writes nothing.
 
 | `--record-mode` | records of the named agents | summaries |
 |---|---|---|
 | `replace` (default) | superseded; any record **left out of the file is retired** | replaced |
 | `merge` | only the `record_id`s sent are superseded; nothing is retired | replaced |
-
-A rejected agent has no stored analysis, so either mode repairs it. On an agent that does have records, a replace write retires (stops counting as live analysis; only superseded-history reads still show them) every record the file leaves out. So the cli previews every analysis write first, and **refuses a replace write that would retire records**, naming them, unless you pass `--allow-retire`. With it, the retired ids are printed after the write. The refusal names the alternatives and what each costs: send the missing records too; or `--record-mode merge`, which keeps them live, so a record whose `record_id` you changed stays beside its new version. `--preview` shows the full plan (what each agent's write would create, supersede and retire) and writes nothing. Unlike a save, an update is refused **whole** if any entry is invalid, so a bad entry costs nothing.
 
 The preview also catches a tracker that ignores `--record-mode`: the write is then not attempted ("Nothing was written"). If the cli instead reports that **the update was applied** but the server's echo did not match, it exits **5**: do not re-run it (that applies it again); check the run with `ulu runs details`. The SDK's own explanation is printed beneath. Under `--json`, both the refusal and the mismatch are JSON on stderr, with `code` (`WOULD_RETIRE_RECORDS`, `ANALYSIS_ECHO_MISMATCH`) and `applied`. A successful analysis update's JSON is `{ run, analysisWrite, retiredRecordIds }` (kind `run.updateAnalysis`); `--preview --json` is the server's plan (`run.updatePreview`).
 
