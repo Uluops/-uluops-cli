@@ -132,7 +132,7 @@ export function registerRunCommands(program: Command): void {
   const runs = program
     .command('runs')
     .alias('r')
-    .description('Manage validation runs')
+    .description('Manage runs and the findings they produced')
     .addHelpText(
       'after',
       `
@@ -241,9 +241,7 @@ Examples:
   // ulu runs details [project]
   runs
     .command('details <project>')
-    .description(
-      'Get detailed run information including agents and recommendations',
-    )
+    .description('Get detailed run information including agents and findings')
     .option('-n, --number <number>', 'Run number (defaults to latest)')
     .action(async (projectArg: string | undefined, options, cmd) => {
       const globalOpts = cmd.optsWithGlobals() as GlobalOptions;
@@ -311,7 +309,7 @@ Examples:
   // ulu runs save
   runs
     .command('save')
-    .description('Save a validation run')
+    .description('Save a run and its findings')
     .option('-f, --file <path>', 'JSON file containing run data')
     .option('--stdin', 'Read JSON from stdin (auto-detected when piping)')
     .option('-p, --project <name>', 'Override project name in input')

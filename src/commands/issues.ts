@@ -107,7 +107,9 @@ export function registerIssueCommands(program: Command): void {
   const issues = program
     .command('issues')
     .alias('i')
-    .description('Manage validation issues')
+    .description(
+      'Manage issues: findings tracked across runs, and the decisions on them',
+    )
     .addHelpText(
       'after',
       `

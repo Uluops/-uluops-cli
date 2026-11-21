@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+### Changed
+
+- **Help text for `runs`, `runs details`, `runs save`, `issues`, `analytics` and `exec --no-tracking` uses the product's nouns (runs, findings, issues, decisions) instead of "validation".** UluOps is no longer described as a validation product, and the CLI's own `--help` still was; `recommendations` is a legacy wire key, not the noun. Printed help only: no flag, command or exit code changes, and `runs validate` / `def validate` (schema dry-runs) keep their names. `--no-tracking` now reads "Do not save the run to the tracker", in `exec --help`, the inherited-options block every `exec` subcommand prints, and the README option table; two README example comments say "run" instead of "validation run". A test walks every command and option description and fails on the word "validation". Source: agent-read surface census 2026-11-20 (`uluops-specifications/brand/marketing/agent-read-surface-census-2026-11-20.md`, E1-E6).
+
 ## [0.47.1] - 2026-11-15
 
 ### Changed

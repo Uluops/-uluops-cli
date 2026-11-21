@@ -24,7 +24,7 @@ npm install -g @uluops/cli
 # Authenticate
 export ULUOPS_API_KEY=ulr_your-api-key-here
 
-# Create a project and save a validation run
+# Create a project and save a run
 ulu projects create my-project
 ulu runs save --file results.json
 # → Run #1 saved for my-project (3 agents, 12 recommendations)
@@ -406,7 +406,7 @@ ulu runs delete <runId>           # Delete a run
 **Examples:**
 
 ```bash
-# Save a validation run from a JSON file
+# Save a run from a JSON file
 ulu runs save --file validation-results.json
 
 # Save from stdin (pipe from another tool)
@@ -832,7 +832,7 @@ ulu exec describe --type pipeline                       # No name + --type → f
 |--------|-------------|
 | `--local-definitions <dir>` | Local YAML definitions directory |
 | `--project <name>` | Project name for result tracking |
-| `--no-tracking` | Disable validation service submission |
+| `--no-tracking` | Do not save the run to the tracker |
 | `--no-safety-warnings` | Suppress risk warnings and runtime advisories |
 | `--registry-url <url>` | Override the registry URL definitions are resolved from |
 | `--extended-thinking` / `--no-extended-thinking` | Turn extended thinking on or off for this run (every subcommand). Off by default; overrides `ULUOPS_EXTENDED_THINKING`. Thinking tokens are billed as output. Works on OpenAI, Google and OpenRouter models; on direct Anthropic models (the default `sonnet`) it prints "requested but not applied: no-mapping", because that mapping is not built yet — use an `openrouter:anthropic/…` model for Claude thinking. What each run actually did is recorded on the result (`runConditions`). |

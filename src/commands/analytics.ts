@@ -20,7 +20,7 @@ export function registerAnalyticsCommands(program: Command): void {
   const analytics = program
     .command('analytics')
     .alias('a')
-    .description('View validation analytics and metrics')
+    .description('View analytics for runs, findings and issues')
     .addHelpText(
       'after',
       `

@@ -387,7 +387,7 @@ Inherited options (from \`ulu exec\`, work before OR after the subcommand):
   --local-definitions <dir>  Local YAML definitions directory
   --registry-url <url>       Override registry URL
   --project <name>           Project name for result tracking
-  --no-tracking              Disable validation service submission
+  --no-tracking              Do not save the run to the tracker
   --no-safety-warnings       Suppress risk warnings and runtime advisories
 
 Inherited global options (see \`ulu --help\`):
@@ -653,7 +653,7 @@ export function registerExecCommands(program: Command): void {
     .option('--local-definitions <dir>', 'Local YAML definitions directory')
     .option('--registry-url <url>', 'Override registry URL')
     .option('--project <name>', 'Project name for result tracking')
-    .option('--no-tracking', 'Disable validation service submission')
+    .option('--no-tracking', 'Do not save the run to the tracker')
     .option(
       '--no-safety-warnings',
       'Suppress risk warnings and runtime advisories',
