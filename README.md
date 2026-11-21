@@ -54,9 +54,9 @@ ulu exec --project my-project agent code-validator -t ./src --model sonnet
   - [Projects](#projects) (`ulu p`) — Project lifecycle management
   - [Orgs](#orgs) — An org's member-visible activity
   - [Log](#log--the-projects-second-history) — Runs and decisions interleaved, newest first
-  - [Runs](#runs) (`ulu r`) — Validation run management
+  - [Runs](#runs) (`ulu r`) — Runs and the findings they produced
   - [Issues](#issues) (`ulu i`) — Issue tracking & management
-  - [Analytics](#analytics) (`ulu a`) — Validation analytics & metrics
+  - [Analytics](#analytics) (`ulu a`) — Analytics for runs, findings and issues
   - [Taxonomy](#taxonomy) — Failure taxonomy schema
 
   - [Definitions](#definitions) (`ulu def`) — Definition management
@@ -388,7 +388,7 @@ acme   (admin)   3 projects . 59 runs . 1,762 findings . 1,192 fixed . 0 regress
 
 ### Runs
 
-Validation run management — save, compare, and archive pipeline results. Alias: `r`.
+Runs and the findings they produced — save, compare, and archive them. Alias: `r`.
 
 ```bash
 ulu runs list <project>           # List runs (--workflow, --limit)
@@ -589,7 +589,7 @@ ulu issues history a1b2c3d4 --project my-project # then drill in by fingerprint
 
 ### Analytics
 
-Validation analytics and trend metrics. Alias: `a`.
+Analytics and trends for runs, findings and issues. Alias: `a`.
 
 ```bash
 ulu analytics agents              # Agent performance (avg score, pass rate)
@@ -620,7 +620,7 @@ ulu analytics burndown --project my-project --days 90 --granularity weekly
 # Which failure modes are growing fastest?
 ulu analytics velocity --project my-project --threshold 50
 
-# New issues vs recurring — is validation finding new problems?
+# New issues vs recurring — are runs finding new problems?
 ulu analytics discovery --project my-project --group-by week
 
 # Coverage gaps — which domains lack agent coverage?
